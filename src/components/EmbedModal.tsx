@@ -11,7 +11,7 @@ export const EmbedModal: React.FC<EmbedModalProps> = ({ onClose }) => {
   const currentUrl =
     typeof window !== 'undefined' && window.location.origin
       ? window.location.origin
-      : 'https://sherbo-game.vercel.app';
+      : 'https://sherbogame.vercel.app';
 
   const embedCode = `<iframe
   src="${currentUrl}"
