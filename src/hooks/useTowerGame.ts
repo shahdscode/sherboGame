@@ -1,0 +1,286 @@
+import { useState, useEffect, useCallback, useRef } from 'react';
+import {
+  GameState,
+  CheckpointStatus,
+  CheckpointQuestion,
+  towerConfig,
+} from '../data/towerConfig';
+import { checkpointQuestions } from '../data/sampleQuestions';
+import { gameEvents, TouchInputState } from '../game/EventBus';
+
+export interface CheckpointStateItem {
+  checkpointNumber: number;
+  stepRangeLabel: string;
+  targetStep: number;
+  status: CheckpointStatus;
+  attempts: number;
+  solvedOnFirstTry: boolean;
+}
+
+export interface QuestionAttemptFeedback {
+  status: 'idle' | 'incorrect' | 'correct';
+  selectedOptionIndex: number | null;
+  hint: string | null;
+  explanation: string | null;
+  attemptsForCurrentQuestion: number;
+}
+
+export function useTowerGame(
+  questions: CheckpointQuestion[] = checkpointQuestions
+) {
+  const [gameState, setGameState] = useState<GameState>('INTRO');
+  const [currentStep, setCurrentStep] = useState<number>(0);
+  const [highestStep, setHighestStep] = useState<number>(0);
+  const [unlockedSteps, setUnlockedSteps] = useState<number>(
+    towerConfig.stepsPerCheckpoint
+  );
+  const [activeCheckpointNumber, setActiveCheckpointNumber] = useState<
+    number | null
+  >(null);
+  const [totalAttempts, setTotalAttempts] = useState<number>(0);
+  const [firstTryCount, setFirstTryCount] = useState<number>(0);
+  const [xpPoints, setXpPoints] = useState<number>(0);
+
+  const buildInitialCheckpoints = (): CheckpointStateItem[] =>
+    Array.from({ length: towerConfig.numberOfCheckpoints }, (_, idx) => {
+      const cpNum = idx + 1;
+      const startStep = idx * towerConfig.stepsPerCheckpoint + 1;
+      const endStep = cpNum * towerConfig.stepsPerCheckpoint;
+      return {
+        checkpointNumber: cpNum,
+        stepRangeLabel: `Steps ${startStep}–${endStep}`,
+        targetStep: endStep,
+        status: cpNum === 1 ? 'active' : 'locked',
+        attempts: 0,
+        solvedOnFirstTry: false,
+      };
+    });
+
+  const [checkpoints, setCheckpoints] = useState<CheckpointStateItem[]>(
+    buildInitialCheckpoints
+  );
+
+  const [feedback, setFeedback] = useState<QuestionAttemptFeedback>({
+    status: 'idle',
+    selectedOptionIndex: null,
+    hint: null,
+    explanation: null,
+    attemptsForCurrentQuestion: 0,
+  });
+
+  // Guard against accidental double submissions
+  const isSubmittingRef = useRef<boolean>(false);
+
+  // Subscribe to Phaser events
+  useEffect(() => {
+    const unsubStep = gameEvents.on(
+      'evt:step-updated',
+      ({ currentStep: step, highestStep: highest }) => {
+        setCurrentStep(step);
+        setHighestStep((prev) => Math.max(prev, highest));
+      }
+    );
+
+    const unsubCheckpoint = gameEvents.on(
+      'evt:checkpoint-reached',
+      ({ checkpointNumber, stepNumber }) => {
+        setCurrentStep(stepNumber);
+        setHighestStep((prev) => Math.max(prev, stepNumber));
+        setActiveCheckpointNumber(checkpointNumber);
+        setGameState('CHECKPOINT_REACHED');
+        isSubmittingRef.current = false;
+
+        setFeedback({
+          status: 'idle',
+          selectedOptionIndex: null,
+          hint: null,
+          explanation: null,
+          attemptsForCurrentQuestion: 0,
+        });
+
+        setTimeout(() => {
+          setGameState((prev) =>
+            prev === 'CHECKPOINT_REACHED' ? 'QUESTION_ACTIVE' : prev
+          );
+        }, 60);
+      }
+    );
+
+    const unsubSectionUnlocked = gameEvents.on(
+      'evt:section-unlocked',
+      ({ unlockedUpToStep }) => {
+        setUnlockedSteps(unlockedUpToStep);
+        setGameState('PLAYING');
+      }
+    );
+
+    const unsubSummit = gameEvents.on('evt:summit-celebrated', () => {
+      setXpPoints((prev) => prev + towerConfig.rewards.summitBonusXp);
+      setGameState('COMPLETED');
+    });
+
+    return () => {
+      unsubStep();
+      unsubCheckpoint();
+      unsubSectionUnlocked();
+      unsubSummit();
+    };
+  }, []);
+
+  const startGame = useCallback(() => {
+    setGameState('PLAYING');
+    gameEvents.emit('cmd:start-game', undefined);
+  }, []);
+
+  const selectOption = useCallback((optionIndex: number) => {
+    setFeedback((prev) => {
+      if (prev.status === 'correct') return prev;
+      return {
+        ...prev,
+        selectedOptionIndex: optionIndex,
+      };
+    });
+  }, []);
+
+  const activeQuestion: CheckpointQuestion | null =
+    activeCheckpointNumber !== null
+      ? questions.find((q) => q.checkpointNumber === activeCheckpointNumber) ||
+        questions[activeCheckpointNumber - 1] ||
+        null
+      : null;
+
+  const submitAnswer = useCallback(() => {
+    if (
+      isSubmittingRef.current ||
+      !activeQuestion ||
+      activeCheckpointNumber === null ||
+      feedback.selectedOptionIndex === null ||
+      feedback.status === 'correct'
+    ) {
+      return;
+    }
+
+    const chosen = feedback.selectedOptionIndex;
+    const isCorrect = chosen === activeQuestion.correctAnswer;
+    const newAttemptNum = feedback.attemptsForCurrentQuestion + 1;
+
+    setTotalAttempts((prev) => prev + 1);
+
+    if (isCorrect) {
+      isSubmittingRef.current = true;
+      const isFirstTry = newAttemptNum === 1;
+      if (isFirstTry) {
+        setFirstTryCount((prev) => prev + 1);
+      }
+
+      const earnedXp =
+        towerConfig.rewards.xpPerCheckpoint +
+        (isFirstTry ? towerConfig.rewards.firstTryBonusXp : 0);
+
+      setXpPoints((prev) => prev + earnedXp);
+
+      // Update character in Phaser to goodjob.png!
+      gameEvents.emit('cmd:set-character-pose', { pose: 'goodjob' });
+
+      setFeedback({
+        status: 'correct',
+        selectedOptionIndex: chosen,
+        hint: null,
+        explanation: activeQuestion.explanation,
+        attemptsForCurrentQuestion: newAttemptNum,
+      });
+
+      setCheckpoints((prev) =>
+        prev.map((cp) => {
+          if (cp.checkpointNumber === activeCheckpointNumber) {
+            return {
+              ...cp,
+              status: 'passed',
+              attempts: newAttemptNum,
+              solvedOnFirstTry: isFirstTry,
+            };
+          }
+          if (cp.checkpointNumber === activeCheckpointNumber + 1) {
+            return {
+              ...cp,
+              status: 'active',
+            };
+          }
+          return cp;
+        })
+      );
+    } else {
+      // Update character in Phaser to retry.png!
+      gameEvents.emit('cmd:set-character-pose', { pose: 'retry' });
+
+      setFeedback({
+        status: 'incorrect',
+        selectedOptionIndex: chosen,
+        hint: activeQuestion.hint,
+        explanation: null,
+        attemptsForCurrentQuestion: newAttemptNum,
+      });
+    }
+  }, [activeCheckpointNumber, activeQuestion, feedback]);
+
+  const continueAfterCorrectAnswer = useCallback(() => {
+    if (activeCheckpointNumber === null || feedback.status !== 'correct') {
+      return;
+    }
+
+    const cpNum = activeCheckpointNumber;
+    setActiveCheckpointNumber(null);
+    setGameState('UNLOCK_NEXT_SECTION');
+    gameEvents.emit('cmd:unlock-section', { checkpointNumber: cpNum });
+  }, [activeCheckpointNumber, feedback.status]);
+
+  const restartGame = useCallback(() => {
+    isSubmittingRef.current = false;
+    setCurrentStep(0);
+    setHighestStep(0);
+    setUnlockedSteps(towerConfig.stepsPerCheckpoint);
+    setActiveCheckpointNumber(null);
+    setTotalAttempts(0);
+    setFirstTryCount(0);
+    setXpPoints(0);
+    setCheckpoints(buildInitialCheckpoints());
+    setFeedback({
+      status: 'idle',
+      selectedOptionIndex: null,
+      hint: null,
+      explanation: null,
+      attemptsForCurrentQuestion: 0,
+    });
+    setGameState('PLAYING');
+    gameEvents.emit('cmd:restart-game', undefined);
+  }, []);
+
+  const setTouchControls = useCallback((input: TouchInputState) => {
+    gameEvents.emit('cmd:touch-input', input);
+  }, []);
+
+  const completedCheckpointsCount = checkpoints.filter(
+    (c) => c.status === 'passed'
+  ).length;
+
+  return {
+    gameState,
+    currentStep,
+    highestStep,
+    unlockedSteps,
+    checkpoints,
+    completedCheckpointsCount,
+    activeCheckpointNumber,
+    activeQuestion,
+    feedback,
+    totalAttempts,
+    firstTryCount,
+    xpPoints,
+    startGame,
+    selectOption,
+    submitAnswer,
+    continueAfterCorrectAnswer,
+    restartGame,
+    setTouchControls,
+  };
+}
