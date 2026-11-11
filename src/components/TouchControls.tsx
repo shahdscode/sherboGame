@@ -1,10 +1,10 @@
-import React, { useRef, useState, useCallback, useEffect } from 'react';
+import React, { useRef, useCallback, useEffect } from 'react';
 import { ArrowLeft, ArrowRight, ArrowUp } from 'lucide-react';
-import { TouchInputState } from '../game/EventBus';
+import { gameEvents, TouchInputState } from '../game/EventBus';
 
 interface TouchControlsProps {
   disabled: boolean;
-  onChange: (input: TouchInputState) => void;
+  onChange?: (input: TouchInputState) => void;
 }
 
 export const TouchControls: React.FC<TouchControlsProps> = ({
@@ -17,11 +17,23 @@ export const TouchControls: React.FC<TouchControlsProps> = ({
     jump: false,
   });
 
-  const [visualState, setVisualState] = useState<TouchInputState>({
-    left: false,
-    right: false,
-    jump: false,
-  });
+  const btnLeftRef = useRef<HTMLButtonElement | null>(null);
+  const btnRightRef = useRef<HTMLButtonElement | null>(null);
+  const btnJumpRef = useRef<HTMLButtonElement | null>(null);
+
+  const setButtonVisual = (button: keyof TouchInputState, active: boolean) => {
+    let el: HTMLButtonElement | null = null;
+    if (button === 'left') el = btnLeftRef.current;
+    if (button === 'right') el = btnRightRef.current;
+    if (button === 'jump') el = btnJumpRef.current;
+    if (el) {
+      if (active) {
+        el.classList.add('touch-btn-active');
+      } else {
+        el.classList.remove('touch-btn-active');
+      }
+    }
+  };
 
   const updateButton = useCallback(
     (button: keyof TouchInputState, pressed: boolean) => {
@@ -32,41 +44,54 @@ export const TouchControls: React.FC<TouchControlsProps> = ({
         ...stateRef.current,
         [button]: pressed,
       };
-      // If pressing left, release right and vice versa
-      if (button === 'left' && pressed) next.right = false;
-      if (button === 'right' && pressed) next.left = false;
+
+      if (button === 'left' && pressed) {
+        next.right = false;
+        setButtonVisual('right', false);
+      }
+      if (button === 'right' && pressed) {
+        next.left = false;
+        setButtonVisual('left', false);
+      }
 
       stateRef.current = next;
-      setVisualState(next);
-      onChange(next);
+      setButtonVisual(button, pressed);
+
+      // Instant 0ms dispatch directly to Phaser event bus
+      gameEvents.emit('cmd:touch-input', next);
+      if (onChange) onChange(next);
     },
     [disabled, onChange]
   );
 
-  // Clear active inputs if game becomes paused/disabled
   useEffect(() => {
     if (disabled) {
       const cleared = { left: false, right: false, jump: false };
       stateRef.current = cleared;
-      setVisualState(cleared);
-      onChange(cleared);
+      setButtonVisual('left', false);
+      setButtonVisual('right', false);
+      setButtonVisual('jump', false);
+      gameEvents.emit('cmd:touch-input', cleared);
+      if (onChange) onChange(cleared);
     }
   }, [disabled, onChange]);
 
   const bindPressHandlers = (button: keyof TouchInputState) => ({
-    onPointerDown: (e: React.PointerEvent) => {
+    onPointerDown: (e: React.PointerEvent<HTMLButtonElement>) => {
       e.preventDefault();
+      try {
+        e.currentTarget.setPointerCapture(e.pointerId);
+      } catch {}
       updateButton(button, true);
     },
-    onPointerUp: (e: React.PointerEvent) => {
+    onPointerUp: (e: React.PointerEvent<HTMLButtonElement>) => {
       e.preventDefault();
+      try {
+        e.currentTarget.releasePointerCapture(e.pointerId);
+      } catch {}
       updateButton(button, false);
     },
-    onPointerLeave: (e: React.PointerEvent) => {
-      e.preventDefault();
-      updateButton(button, false);
-    },
-    onPointerCancel: (e: React.PointerEvent) => {
+    onPointerCancel: (e: React.PointerEvent<HTMLButtonElement>) => {
       e.preventDefault();
       updateButton(button, false);
     },
@@ -80,26 +105,28 @@ export const TouchControls: React.FC<TouchControlsProps> = ({
     >
       <div className="touch-dpad">
         <button
+          ref={btnLeftRef}
           type="button"
-          className={`touch-btn ${visualState.left ? 'touch-btn-active' : ''}`}
+          className="touch-btn"
           disabled={disabled}
           aria-label="Move Left"
           data-testid="touch-left-btn"
           {...bindPressHandlers('left')}
         >
-          <ArrowLeft size={24} />
+          <ArrowLeft size={22} />
           <span>Left</span>
         </button>
 
         <button
+          ref={btnRightRef}
           type="button"
-          className={`touch-btn ${visualState.right ? 'touch-btn-active' : ''}`}
+          className="touch-btn"
           disabled={disabled}
           aria-label="Move Right"
           data-testid="touch-right-btn"
           {...bindPressHandlers('right')}
         >
-          <ArrowRight size={24} />
+          <ArrowRight size={22} />
           <span>Right</span>
         </button>
       </div>
@@ -110,16 +137,15 @@ export const TouchControls: React.FC<TouchControlsProps> = ({
 
       <div className="touch-action">
         <button
+          ref={btnJumpRef}
           type="button"
-          className={`touch-btn touch-jump-btn ${
-            visualState.jump ? 'touch-btn-active' : ''
-          }`}
+          className="touch-btn touch-jump-btn"
           disabled={disabled}
           aria-label="Jump"
           data-testid="touch-jump-btn"
           {...bindPressHandlers('jump')}
         >
-          <ArrowUp size={24} />
+          <ArrowUp size={22} />
           <span>Jump</span>
         </button>
       </div>

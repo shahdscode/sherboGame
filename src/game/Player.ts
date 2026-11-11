@@ -3,7 +3,7 @@ import { TowerConfigRuntime } from '../data/towerConfig';
 import { TouchInputState, CharacterPose } from './EventBus';
 
 const POSE_TEXTURE_MAP: Record<CharacterPose, string> = {
-  climbing: 'char-climbing',
+  climbing: 'char-idle-0',
   question: 'char-question',
   retry: 'char-retry',
   goodjob: 'char-goodjob',
@@ -13,7 +13,7 @@ export class Player {
   private scene: Phaser.Scene;
   private config: TowerConfigRuntime;
   public sprite!: Phaser.Physics.Arcade.Sprite;
-  private visualSprite!: Phaser.GameObjects.Image;
+  public visualSprite!: Phaser.GameObjects.Sprite;
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private wasd!: {
     W: Phaser.Input.Keyboard.Key;
@@ -27,13 +27,27 @@ export class Player {
     right: false,
     jump: false,
   };
-  private walkAnimTimer: number = 0;
-  private wasAirborne: boolean = false;
   private currentPose: CharacterPose = 'climbing';
-  private baseScale: number = 0.21; // 512px * 0.21 ≈ 108px character height
+  private baseScale: number = 0.58; // 180px * 0.58 ≈ 104px character height
+  private jumpBufferTimer: number = 0;
+  private coyoteTimer: number = 0;
+  private wasAirborne: boolean = false;
 
   public static preloadAssets(scene: Phaser.Scene): void {
-    scene.load.image('char-climbing', '/stickers/climbing figure.png');
+    // 1. Extracted character sheet animation frames
+    for (let i = 0; i < 8; i++) {
+      scene.load.image(`char-idle-${i}`, `/stickers/character/idle_${i}.png`);
+      scene.load.image(`char-run-right-${i}`, `/stickers/character/run_right_${i}.png`);
+      scene.load.image(`char-run-left-${i}`, `/stickers/character/run_left_${i}.png`);
+      scene.load.image(`char-jump-${i}`, `/stickers/character/jump_${i}.png`);
+      scene.load.image(`char-land-${i}`, `/stickers/character/land_${i}.png`);
+    }
+    for (let i = 0; i < 5; i++) {
+      scene.load.image(`char-fall-${i}`, `/stickers/character/fall_${i}.png`);
+    }
+
+    // 2. Checkpoint & feedback stickers (containing speech bubbles)
+    scene.load.image('char-climbing', '/stickers/character/idle_0.png');
     scene.load.image('char-question', '/stickers/question.png');
     scene.load.image('char-retry', '/stickers/retry.png');
     scene.load.image('char-goodjob', '/stickers/goodjob.png');
@@ -43,6 +57,7 @@ export class Player {
     this.scene = scene;
     this.config = config;
     this.createPhysicsPlaceholderTexture();
+    this.createAnimations();
     this.createSprite();
     this.setupKeyboard();
   }
@@ -58,6 +73,31 @@ export class Player {
       this.config.player.height
     );
     g.destroy();
+  }
+
+  private createAnimations(): void {
+    const animDefs = [
+      { key: 'anim-idle', prefix: 'char-idle-', count: 8, rate: 8, repeat: -1 },
+      { key: 'anim-run-right', prefix: 'char-run-right-', count: 8, rate: 14, repeat: -1 },
+      { key: 'anim-run-left', prefix: 'char-run-left-', count: 8, rate: 14, repeat: -1 },
+      { key: 'anim-jump', prefix: 'char-jump-', count: 8, rate: 12, repeat: 0 },
+      { key: 'anim-fall', prefix: 'char-fall-', count: 5, rate: 10, repeat: -1 },
+      { key: 'anim-land', prefix: 'char-land-', count: 8, rate: 16, repeat: 0 },
+    ];
+
+    for (const def of animDefs) {
+      if (!this.scene.anims.exists(def.key)) {
+        const frames = Array.from({ length: def.count }, (_, i) => ({
+          key: `${def.prefix}${i}`,
+        }));
+        this.scene.anims.create({
+          key: def.key,
+          frames,
+          frameRate: def.rate,
+          repeat: def.repeat,
+        });
+      }
+    }
   }
 
   private createSprite(): void {
@@ -77,26 +117,26 @@ export class Player {
     body.setSize(this.config.player.width, this.config.player.height);
     body.setGravityY(this.config.player.gravityY);
     body.setMaxVelocity(this.config.player.moveSpeed, 950);
-    body.setDragX(this.config.player.drag);
     body.setCollideWorldBounds(true);
 
-    // Visible sticker character sprite rendered on top of the physics body
-    this.visualSprite = this.scene.add.image(
+    // Visible animated sprite
+    this.visualSprite = this.scene.add.sprite(
       startX,
       startY,
-      POSE_TEXTURE_MAP.climbing
+      'char-idle-0'
     );
     this.visualSprite.setScale(this.baseScale);
+    this.visualSprite.setOrigin(0.5, 0.88);
     this.visualSprite.setDepth(22);
+    this.visualSprite.play('anim-idle');
     this.syncVisualPosition();
   }
 
   private syncVisualPosition(): void {
     if (!this.visualSprite || !this.sprite) return;
-    // Align feet of the 512x512 sticker (bottom of shoes at ~473/512) with the bottom of the physics body
     const bodyBottomY = this.sprite.y + this.config.player.height / 2;
     this.visualSprite.x = this.sprite.x;
-    this.visualSprite.y = bodyBottomY - 41;
+    this.visualSprite.y = bodyBottomY;
   }
 
   private setupKeyboard(): void {
@@ -116,23 +156,28 @@ export class Player {
   public setPose(pose: CharacterPose): void {
     this.currentPose = pose;
     if (!this.visualSprite) return;
-    const texKey = POSE_TEXTURE_MAP[pose] || POSE_TEXTURE_MAP.climbing;
-    if (this.scene.textures.exists(texKey)) {
-      this.visualSprite.setTexture(texKey);
-    }
-    // Do not horizontally flip textures that contain Arabic speech bubbles!
+
     if (pose !== 'climbing') {
+      // Pause animation and show checkpoint sticker
+      this.visualSprite.stop();
+      const texKey = POSE_TEXTURE_MAP[pose] || 'char-question';
+      if (this.scene.textures.exists(texKey)) {
+        this.visualSprite.setTexture(texKey);
+      }
+      this.visualSprite.setScale(0.24);
+      this.visualSprite.setOrigin(0.5, 0.84);
       this.visualSprite.setFlipX(false);
-      this.visualSprite.setAngle(0);
       this.scene.tweens.add({
         targets: this.visualSprite,
-        scaleX: this.baseScale * 1.12,
-        scaleY: this.baseScale * 1.12,
+        scaleX: 0.27,
+        scaleY: 0.27,
         duration: 160,
         yoyo: true,
       });
     } else {
       this.visualSprite.setScale(this.baseScale);
+      this.visualSprite.setOrigin(0.5, 0.88);
+      this.visualSprite.play('anim-idle', true);
     }
   }
 
@@ -150,9 +195,9 @@ export class Player {
     this.sprite.setPosition(startX, startY);
     this.sprite.setVelocity(0, 0);
     this.sprite.setAcceleration(0, 0);
+    this.jumpBufferTimer = 0;
+    this.coyoteTimer = 0;
     this.setPose('climbing');
-    this.visualSprite.setScale(this.baseScale);
-    this.visualSprite.setAngle(0);
     this.touchInput = { left: false, right: false, jump: false };
     this.syncVisualPosition();
   }
@@ -162,7 +207,7 @@ export class Player {
     if (!body) return;
     this.sprite.setVelocity(0, 0);
     this.sprite.setAcceleration(0, 0);
-    this.visualSprite.setAngle(0);
+    this.jumpBufferTimer = 0;
     this.syncVisualPosition();
   }
 
@@ -174,8 +219,10 @@ export class Player {
     }
 
     if (!canControl) {
-      this.sprite.setAccelerationX(0);
       this.sprite.setVelocityX(0);
+      if (this.currentPose === 'climbing') {
+        this.visualSprite.play('anim-idle', true);
+      }
       this.syncVisualPosition();
       return;
     }
@@ -199,18 +246,30 @@ export class Player {
 
     const onFloor = body.blocked.down || body.touching.down;
 
-    // Horizontal movement — snappy arcade responsiveness
-    if (moveLeft && !moveRight) {
-      if (body.velocity.x > 0) this.sprite.setVelocityX(0);
-      this.sprite.setAccelerationX(-this.config.player.acceleration);
-    } else if (moveRight && !moveLeft) {
-      if (body.velocity.x < 0) this.sprite.setVelocityX(0);
-      this.sprite.setAccelerationX(this.config.player.acceleration);
-    } else {
-      this.sprite.setAccelerationX(0);
+    // Jump Buffering — ensures fast taps register even 180ms before touching the platform
+    if (jumpPressed) {
+      this.jumpBufferTimer = 180;
+    } else if (this.jumpBufferTimer > 0) {
+      this.jumpBufferTimer -= delta;
     }
 
-    // Enforce tower inner boundaries strictly
+    // Coyote Time — 120ms grace window after leaving platform edge
+    if (onFloor) {
+      this.coyoteTimer = 120;
+    } else if (this.coyoteTimer > 0) {
+      this.coyoteTimer -= delta;
+    }
+
+    // Instant zero-lag arcade horizontal movement
+    if (moveLeft && !moveRight) {
+      this.sprite.setVelocityX(-this.config.player.moveSpeed);
+    } else if (moveRight && !moveLeft) {
+      this.sprite.setVelocityX(this.config.player.moveSpeed);
+    } else {
+      this.sprite.setVelocityX(0);
+    }
+
+    // Enforce tower inner boundaries
     const minX = this.config.wallThickness + this.config.player.width / 2;
     const maxX =
       this.config.towerWidth -
@@ -224,39 +283,47 @@ export class Player {
       if (body.velocity.x > 0) this.sprite.setVelocityX(0);
     }
 
-    // Jumping
-    if (jumpPressed && onFloor) {
+    // Jump Execution
+    if (this.jumpBufferTimer > 0 && (onFloor || this.coyoteTimer > 0)) {
       this.sprite.setVelocityY(this.config.player.jumpVelocity);
-      this.scene.tweens.add({
-        targets: this.visualSprite,
-        scaleX: this.baseScale * 0.9,
-        scaleY: this.baseScale * 1.12,
-        duration: 120,
-        yoyo: true,
-      });
+      this.jumpBufferTimer = 0;
+      this.coyoteTimer = 0;
+      if (this.currentPose === 'climbing') {
+        this.visualSprite.play('anim-jump', true);
+      }
     }
 
-    // Landing squash feedback
+    // Landing detection
     if (onFloor && this.wasAirborne) {
-      this.scene.tweens.add({
-        targets: this.visualSprite,
-        scaleX: this.baseScale * 1.1,
-        scaleY: this.baseScale * 0.9,
-        duration: 95,
-        yoyo: true,
-      });
+      if (this.currentPose === 'climbing') {
+        this.visualSprite.play('anim-land', true);
+      }
     }
     this.wasAirborne = !onFloor;
 
-    // Playful climbing/walking bob animation on the climbing figure sticker
-    if (!onFloor) {
-      this.visualSprite.setAngle(body.velocity.x * 0.025);
-    } else if (Math.abs(body.velocity.x) > 20) {
-      this.walkAnimTimer += delta * 0.018;
-      this.visualSprite.setAngle(Math.sin(this.walkAnimTimer) * 6);
-    } else {
-      this.visualSprite.setAngle(0);
-      this.walkAnimTimer = 0;
+    // Sprite Animation Controller
+    if (this.currentPose === 'climbing') {
+      if (onFloor) {
+        if (Math.abs(body.velocity.x) > 15) {
+          if (body.velocity.x > 0) {
+            this.visualSprite.play('anim-run-right', true);
+          } else {
+            this.visualSprite.play('anim-run-left', true);
+          }
+        } else {
+          // If not currently playing landing animation, play idle
+          const currentAnim = this.visualSprite.anims.currentAnim;
+          if (!currentAnim || currentAnim.key !== 'anim-land' || !this.visualSprite.anims.isPlaying) {
+            this.visualSprite.play('anim-idle', true);
+          }
+        }
+      } else {
+        if (body.velocity.y < -30) {
+          this.visualSprite.play('anim-jump', true);
+        } else if (body.velocity.y > 30) {
+          this.visualSprite.play('anim-fall', true);
+        }
+      }
     }
 
     this.syncVisualPosition();

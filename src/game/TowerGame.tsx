@@ -63,6 +63,12 @@ export const TowerGame: React.FC = () => {
       if (!gameInstanceRef.current) return;
       const { width, height } = computeGameDimensions();
       gameInstanceRef.current.scale.resize(width, height);
+      const scene = gameInstanceRef.current.scene.getScene(
+        'TowerScene'
+      ) as TowerScene | null;
+      if (scene && typeof scene.onResize === 'function') {
+        scene.onResize();
+      }
     };
 
     window.addEventListener('resize', handleResize);

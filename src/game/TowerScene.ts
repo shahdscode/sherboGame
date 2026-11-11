@@ -147,6 +147,12 @@ export class TowerScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.DESTROY, cleanupAll);
   }
 
+  public onResize(): void {
+    if (this.cameraManager) {
+      this.cameraManager.updateZoom();
+    }
+  }
+
   public cleanupListeners(): void {
     this.unsubscribeFns.forEach((fn) => fn());
     this.unsubscribeFns = [];
