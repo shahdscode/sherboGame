@@ -15,13 +15,16 @@ export class CameraManager {
   public setup(target: Phaser.GameObjects.GameObject): void {
     const { towerWidth, worldHeight } = this.config;
     this.camera.setBounds(0, 0, towerWidth, worldHeight);
-    // Zoom in so the tower, platforms, and character look larger and centered
-    this.camera.setZoom(1.22);
-    // Follow both horizontally and vertically with smooth lerp so the action stays centered
-    this.camera.startFollow(target, true, 0.12, 0.12, 0, 50);
+    // Keep zoom at 1 so the entire 720px tower width is visible edge-to-edge
+    this.camera.setZoom(1);
+    // Follow the player smoothly on Y; lock X to 0 lerp so camera stays centered on tower
+    this.camera.startFollow(target, true, 0, 0.12, 0, 60);
   }
 
   public resetToBottom(): void {
-    this.camera.centerOn(this.config.towerWidth / 2, this.config.groundY - 120);
+    this.camera.centerOn(
+      this.config.towerWidth / 2,
+      this.config.groundY - (this.camera.height * 0.28)
+    );
   }
 }

@@ -34,10 +34,11 @@ body,
   -webkit-user-select: none;
 }
 
-/* Fullscreen Game Container — Centered & Zoomed In */
+/* Fullscreen Game Container — Responsive & Centered */
 .fullscreen-game-shell {
   position: relative;
   width: 100vw;
+  width: 100dvw;
   height: 100vh;
   height: 100dvh;
   overflow: hidden;
@@ -48,11 +49,14 @@ body,
 }
 
 .phaser-canvas-wrapper {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
 }
 
 .phaser-canvas-wrapper canvas {
@@ -64,10 +68,10 @@ body,
   box-shadow: 0 0 70px rgba(0, 0, 0, 0.8);
 }
 
-/* Floating Top-Center HUD Directly Over the Game (Bigger Font) */
+/* Floating Top-Center HUD Directly Over the Game */
 .floating-top-hud {
   position: absolute;
-  top: max(12px, env(safe-area-inset-top, 12px));
+  top: max(10px, env(safe-area-inset-top, 10px));
   left: 50%;
   transform: translateX(-50%);
   z-index: 25;
@@ -75,25 +79,28 @@ body,
   align-items: center;
   justify-content: center;
   flex-wrap: nowrap;
-  gap: 12px;
-  padding: 8px 14px;
-  border-radius: 18px;
-  background: rgba(15, 23, 42, 0.84);
+  gap: 10px;
+  padding: 6px 14px;
+  border-radius: 16px;
+  background: rgba(15, 23, 42, 0.88);
   border: 1.5px solid rgba(148, 163, 184, 0.3);
   box-shadow: 0 10px 32px rgba(0, 0, 0, 0.55);
   backdrop-filter: blur(10px);
-  max-width: 96vw;
+  -webkit-backdrop-filter: blur(10px);
+  width: max-content;
+  max-width: calc(100vw - 16px);
   pointer-events: none;
+  box-sizing: border-box;
 }
 
 .hud-stat-pill {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   background: rgba(30, 41, 59, 0.92);
   border: 1px solid var(--border-subtle);
-  border-radius: 13px;
-  padding: 7px 15px;
+  border-radius: 12px;
+  padding: 6px 12px;
   white-space: nowrap;
 }
 
@@ -121,39 +128,42 @@ body,
   line-height: 1.2;
 }
 
-/* Floating Bottom Touch Controls Over the Game (Bigger Font) */
+/* Floating Bottom Touch Controls Over the Game */
 .touch-controls-bar {
   position: absolute;
-  bottom: max(14px, env(safe-area-inset-bottom, 14px));
+  bottom: max(10px, env(safe-area-inset-bottom, 10px));
   left: 50%;
   transform: translateX(-50%);
-  width: min(780px, 94vw);
+  width: min(720px, calc(100vw - 16px));
   z-index: 25;
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 6px 10px;
-  gap: 14px;
+  gap: 12px;
   pointer-events: none;
+  box-sizing: border-box;
 }
 
 .touch-dpad,
 .touch-action {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   pointer-events: auto;
 }
 
 .touch-control-hint {
-  font-size: 0.92rem;
+  font-size: 0.9rem;
   color: #f1f5f9;
   background: rgba(15, 23, 42, 0.78);
-  padding: 7px 16px;
+  padding: 6px 14px;
   border-radius: 999px;
   border: 1px solid rgba(148, 163, 184, 0.25);
   backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   font-weight: 600;
   text-align: center;
+  white-space: nowrap;
 }
 
 .touch-btn {
@@ -161,16 +171,17 @@ body,
   align-items: center;
   justify-content: center;
   gap: 8px;
-  min-width: 108px;
-  height: 54px;
-  padding: 0 18px;
+  min-width: 96px;
+  height: 52px;
+  padding: 0 16px;
   border-radius: 14px;
   border: 1.5px solid rgba(148, 163, 184, 0.4);
   background: rgba(30, 41, 59, 0.9);
   backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   color: #f8fafc;
   font-family: var(--font-display);
-  font-size: 1.1rem;
+  font-size: 1.05rem;
   font-weight: 700;
   cursor: pointer;
   touch-action: none;
@@ -194,7 +205,7 @@ body,
   border-color: #fde047;
   color: #0f172a;
   font-weight: 700;
-  min-width: 126px;
+  min-width: 114px;
 }
 
 .touch-jump-btn.touch-btn-active {
@@ -204,16 +215,24 @@ body,
 
 /* Overlays & Modals (Start, Question, Completion) */
 .overlay-backdrop {
-  position: absolute;
+  position: fixed;
   inset: 0;
-  background: rgba(11, 17, 32, 0.84);
-  backdrop-filter: blur(8px);
+  background: rgba(11, 17, 32, 0.88);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 18px;
-  z-index: 40;
+  padding: max(12px, env(safe-area-inset-top, 12px)) max(12px, env(safe-area-inset-right, 12px)) max(12px, env(safe-area-inset-bottom, 12px)) max(12px, env(safe-area-inset-left, 12px));
+  z-index: 50;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   animation: fadeIn 0.2s ease-out;
+  box-sizing: border-box;
+}
+
+.overlay-backdrop > * {
+  margin: auto;
 }
 
 @keyframes fadeIn {
@@ -229,17 +248,19 @@ body,
 
 .modal-card {
   width: 100%;
-  max-width: 620px;
-  max-height: 92dvh;
+  max-width: 600px;
+  max-height: min(92dvh, calc(100dvh - 24px));
   overflow-y: auto;
+  overscroll-behavior: contain;
   background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
   border: 2px solid rgba(129, 140, 248, 0.5);
-  border-radius: 24px;
-  padding: 24px 28px;
+  border-radius: 20px;
+  padding: 22px 26px;
   box-shadow: 0 26px 65px rgba(0, 0, 0, 0.75);
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
+  box-sizing: border-box;
 }
 
 .badge-pill {
@@ -739,61 +760,188 @@ kbd {
 }
 
 /* Responsive Breakpoints for Tablets & Phones */
-@media (max-width: 900px) {
+@media (max-width: 820px) {
   .question-stage-layout {
     flex-direction: column;
-    gap: 10px;
+    gap: 4px;
+    width: 100%;
+  }
+
+  .question-side-sticker-container {
+    margin-bottom: -18px;
+    z-index: 2;
   }
 
   .question-character-sticker-large {
-    width: clamp(145px, 28vh, 210px);
-    height: clamp(145px, 28vh, 210px);
+    width: 82px;
+    height: 82px;
+    filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.6));
   }
 }
 
-@media (max-width: 680px) {
+@media (max-width: 640px) {
   .floating-top-hud {
-    gap: 6px;
-    padding: 5px 8px;
-    border-radius: 14px;
+    top: max(6px, env(safe-area-inset-top, 6px));
+    gap: 4px;
+    padding: 4px 6px;
+    border-radius: 12px;
+    width: calc(100vw - 12px);
+    max-width: 440px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
   }
 
   .hud-stat-pill {
-    padding: 4px 8px;
-    gap: 5px;
-    border-radius: 9px;
+    padding: 4px 2px;
+    gap: 3px;
+    border-radius: 8px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    min-width: 0;
+  }
+
+  .hud-stat-pill svg {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
   }
 
   .stat-label {
     font-size: 0.58rem;
+    letter-spacing: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
   }
 
   .stat-value {
-    font-size: 0.86rem;
+    font-size: 0.78rem;
+    white-space: nowrap;
+  }
+
+  .touch-controls-bar {
+    bottom: max(6px, env(safe-area-inset-bottom, 6px));
+    padding: 3px;
+    gap: 6px;
   }
 
   .touch-control-hint {
     display: none;
   }
 
+  .touch-dpad {
+    gap: 6px;
+  }
+
   .touch-btn {
-    min-width: 86px;
-    height: 48px;
-    font-size: 0.95rem;
-    padding: 0 14px;
+    min-width: 72px;
+    height: 46px;
+    font-size: 0.92rem;
+    padding: 0 10px;
+    gap: 4px;
+    border-radius: 11px;
   }
 
   .touch-jump-btn {
-    min-width: 104px;
+    min-width: 90px;
   }
 
   .info-grid,
   .options-list {
     grid-template-columns: 1fr;
+    gap: 8px;
   }
 
   .modal-card {
-    padding: 16px 18px;
-    gap: 12px;
+    padding: 14px 16px;
+    gap: 10px;
+    border-radius: 16px;
+  }
+
+  .game-title {
+    font-size: 1.8rem;
+  }
+
+  .game-subtitle {
+    font-size: 0.95rem;
+  }
+
+  .question-title {
+    font-size: 1.25rem;
+  }
+
+  .question-prompt {
+    font-size: 0.98rem;
+    padding: 10px 12px;
+  }
+
+  .option-btn {
+    padding: 10px 12px;
+    font-size: 0.95rem;
+    gap: 8px;
+    border-radius: 11px;
+  }
+
+  .option-letter {
+    width: 28px;
+    height: 28px;
+    font-size: 0.88rem;
+    border-radius: 8px;
+  }
+
+  .primary-cta-btn {
+    padding: 12px 18px;
+    font-size: 1.05rem;
+    border-radius: 13px;
+  }
+
+  .completion-title {
+    font-size: 1.7rem;
+  }
+
+  .trophy-circle {
+    width: 62px;
+    height: 62px;
+  }
+
+  .trophy-circle svg {
+    width: 32px;
+    height: 32px;
+  }
+
+  .stat-box {
+    padding: 8px 10px;
+  }
+
+  .stat-box-val {
+    font-size: 1.15rem;
+  }
+}
+
+@media (max-height: 560px) {
+  .modal-card {
+    max-height: calc(100dvh - 16px);
+    padding: 12px 14px;
+    gap: 8px;
+  }
+
+  .question-side-sticker-container {
+    display: none;
+  }
+
+  .badge-pill {
+    padding: 3px 8px;
+    font-size: 0.72rem;
+  }
+
+  .game-title {
+    font-size: 1.4rem;
+  }
+
+  .trophy-circle {
+    display: none;
   }
 }
