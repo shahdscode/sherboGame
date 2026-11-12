@@ -1,6 +1,6 @@
 /**
- * Tiny synthesized sound effects using the Web Audio API.
- * No audio files needed — everything is generated on the fly.
+ * Robust synthesized sound effects using the Web Audio API.
+ * Tuned for mobile phone speakers (audible harmonics) with bulletproof iOS/Android gesture unlocking.
  */
 
 type Wave = OscillatorType;
@@ -14,7 +14,9 @@ function audio(): AudioContext | null {
   if (typeof window === 'undefined') return null;
   if (!ctx) {
     const Ctor =
-      window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext?: typeof AudioContext })
+        .webkitAudioContext;
     if (!Ctor) return null;
     ctx = new Ctor();
   }
@@ -24,11 +26,45 @@ function audio(): AudioContext | null {
   return ctx;
 }
 
+/**
+ * Bulletproof iOS / Android Web Audio unlocker.
+ * Plays an immediate 1-sample silent buffer during a user gesture to satisfy
+ * mobile Safari/Chrome audio hardware restrictions.
+ */
+function unlockAudioContext(ac: AudioContext): void {
+  if (ac.state === 'suspended') {
+    void ac.resume();
+  }
+  try {
+    const buffer = ac.createBuffer(1, 1, 22050);
+    const source = ac.createBufferSource();
+    source.buffer = buffer;
+    source.connect(ac.destination);
+    source.start(0);
+  } catch {
+    /* ignore */
+  }
+}
+
+// Auto-bind one-time interaction listeners to window on mobile devices
+if (typeof window !== 'undefined') {
+  const onFirstInteraction = () => {
+    const ac = audio();
+    if (ac) {
+      unlockAudioContext(ac);
+    }
+  };
+
+  ['touchstart', 'touchend', 'pointerdown', 'click', 'keydown'].forEach((evt) => {
+    window.addEventListener(evt, onFirstInteraction, { passive: true });
+  });
+}
+
 function tone(
   freq: number,
   duration: number,
   type: Wave = 'sine',
-  volume = 0.12,
+  volume = 0.2,
   slideTo?: number,
   delay = 0
 ): void {
@@ -36,59 +72,76 @@ function tone(
   const ac = audio();
   if (!ac) return;
 
+  if (ac.state === 'suspended') {
+    void ac.resume();
+  }
+
   const start = ac.currentTime + delay;
   const osc = ac.createOscillator();
   const gain = ac.createGain();
 
   osc.type = type;
   osc.frequency.setValueAtTime(freq, start);
-  if (slideTo) {
-    osc.frequency.exponentialRampToValueAtTime(slideTo, start + duration);
+  if (slideTo && slideTo > 0) {
+    try {
+      osc.frequency.exponentialRampToValueAtTime(slideTo, start + duration);
+    } catch {
+      osc.frequency.linearRampToValueAtTime(slideTo, start + duration);
+    }
   }
 
-  gain.gain.setValueAtTime(0.0001, start);
-  gain.gain.exponentialRampToValueAtTime(volume, start + 0.012);
-  gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+  // Use linear ramps for bulletproof mobile WebKit compatibility
+  gain.gain.setValueAtTime(0, start);
+  gain.gain.linearRampToValueAtTime(volume, start + 0.012);
+  gain.gain.linearRampToValueAtTime(0, start + duration);
 
   osc.connect(gain).connect(ac.destination);
   osc.start(start);
-  osc.stop(start + duration + 0.02);
+  osc.stop(start + duration + 0.03);
 }
 
 export const sfx = {
-  /** Call from a user gesture (tap/click) to unlock audio on iOS. */
+  /** Call from any touch / click gesture to immediately unlock audio on iOS and Android. */
   unlock(): void {
-    audio();
+    const ac = audio();
+    if (ac) {
+      unlockAudioContext(ac);
+    }
   },
+  /** Upbeat jump chirp — tuned for mobile phone speakers */
   jump(): void {
-    tone(380, 0.16, 'square', 0.035, 760);
+    tone(340, 0.15, 'triangle', 0.22, 680);
   },
+  /**
+   * Bouncy landing sound — uses triangle wave (260Hz -> 140Hz) so its 2nd/3rd harmonics
+   * resonate clearly on mobile phone speakers (which physically cut off sub-200Hz sine waves).
+   */
   land(): void {
-    tone(150, 0.09, 'sine', 0.1, 70);
+    tone(260, 0.11, 'triangle', 0.26, 140);
   },
   click(): void {
-    tone(720, 0.05, 'triangle', 0.07);
+    tone(720, 0.06, 'triangle', 0.18);
   },
   checkpoint(): void {
-    tone(523, 0.12, 'triangle', 0.09);
-    tone(784, 0.18, 'triangle', 0.09, undefined, 0.1);
+    tone(523, 0.12, 'triangle', 0.2);
+    tone(784, 0.18, 'triangle', 0.2, undefined, 0.1);
   },
   correct(): void {
     [523, 659, 784, 1047].forEach((f, i) =>
-      tone(f, 0.18, 'triangle', 0.1, undefined, i * 0.075)
+      tone(f, 0.18, 'triangle', 0.22, undefined, i * 0.075)
     );
   },
   wrong(): void {
-    tone(240, 0.16, 'sawtooth', 0.05, 160);
-    tone(170, 0.24, 'sawtooth', 0.05, 110, 0.12);
+    tone(240, 0.16, 'sawtooth', 0.16, 160);
+    tone(170, 0.24, 'sawtooth', 0.16, 110, 0.12);
   },
   unlockGate(): void {
-    tone(300, 0.25, 'sine', 0.08, 900);
-    tone(900, 0.2, 'triangle', 0.06, 1400, 0.18);
+    tone(300, 0.25, 'triangle', 0.22, 900);
+    tone(900, 0.2, 'triangle', 0.18, 1400, 0.18);
   },
   victory(): void {
     const notes = [523, 659, 784, 1047, 784, 1047, 1319];
-    notes.forEach((f, i) => tone(f, 0.22, 'triangle', 0.1, undefined, i * 0.11));
+    notes.forEach((f, i) => tone(f, 0.22, 'triangle', 0.22, undefined, i * 0.11));
   },
   isMuted(): boolean {
     return muted;

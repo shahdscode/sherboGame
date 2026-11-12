@@ -1,6 +1,7 @@
 import React, { useRef, useCallback, useEffect } from 'react';
 import { ArrowLeft, ArrowRight, ArrowUp } from 'lucide-react';
 import { gameEvents, TouchInputState } from '../game/EventBus';
+import { sfx } from '../game/sfx';
 
 interface TouchControlsProps {
   disabled: boolean;
@@ -79,6 +80,7 @@ export const TouchControls: React.FC<TouchControlsProps> = ({
   const bindPressHandlers = (button: keyof TouchInputState) => ({
     onPointerDown: (e: React.PointerEvent<HTMLButtonElement>) => {
       e.preventDefault();
+      sfx.unlock();
       try {
         e.currentTarget.setPointerCapture(e.pointerId);
       } catch {}
