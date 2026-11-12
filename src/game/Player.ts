@@ -34,9 +34,10 @@ export class Player {
   private jumpBufferTimer: number = 0;
   private coyoteTimer: number = 0;
   private wasAirborne: boolean = false;
+  private facing: 'left' | 'right' = 'right';
 
   public static preloadAssets(scene: Phaser.Scene): void {
-    // 1. Extracted 2x HD character sheet animation frames
+    // 1. Extracted 2x HD character sheet animation frames (all 7 movement rows)
     for (let i = 0; i < 8; i++) {
       scene.load.image(`char-idle-${i}`, `/stickers/character/idle_${i}.png`);
       scene.load.image(
@@ -47,11 +48,17 @@ export class Player {
         `char-run-left-${i}`,
         `/stickers/character/run_left_${i}.png`
       );
+      scene.load.image(
+        `char-jump-right-${i}`,
+        `/stickers/character/jump_right_${i}.png`
+      );
+      scene.load.image(
+        `char-jump-left-${i}`,
+        `/stickers/character/jump_left_${i}.png`
+      );
       scene.load.image(`char-jump-${i}`, `/stickers/character/jump_${i}.png`);
-      scene.load.image(`char-land-${i}`, `/stickers/character/land_${i}.png`);
-    }
-    for (let i = 0; i < 5; i++) {
       scene.load.image(`char-fall-${i}`, `/stickers/character/fall_${i}.png`);
+      scene.load.image(`char-land-${i}`, `/stickers/character/land_${i}.png`);
     }
 
     // 2. High-DPI (1024x1024) checkpoint & feedback stickers
@@ -100,11 +107,31 @@ export class Player {
         rate: 14,
         repeat: -1,
       },
-      { key: 'anim-jump', prefix: 'char-jump-', count: 8, rate: 12, repeat: 0 },
+      {
+        key: 'anim-jump-right',
+        prefix: 'char-jump-right-',
+        count: 8,
+        rate: 12,
+        repeat: 0,
+      },
+      {
+        key: 'anim-jump-left',
+        prefix: 'char-jump-left-',
+        count: 8,
+        rate: 12,
+        repeat: 0,
+      },
+      {
+        key: 'anim-jump',
+        prefix: 'char-jump-',
+        count: 8,
+        rate: 12,
+        repeat: 0,
+      },
       {
         key: 'anim-fall',
         prefix: 'char-fall-',
-        count: 5,
+        count: 8,
         rate: 10,
         repeat: -1,
       },
@@ -146,7 +173,7 @@ export class Player {
 
     this.visualSprite = this.scene.add.sprite(startX, startY, 'char-idle-0');
     this.visualSprite.setScale(this.baseScale);
-    this.visualSprite.setOrigin(0.5, 0.88);
+    this.visualSprite.setOrigin(0.5, 0.96);
     this.visualSprite.setDepth(22);
     this.visualSprite.play('anim-idle');
     this.syncVisualPosition();
@@ -225,7 +252,7 @@ export class Player {
       });
     } else {
       this.visualSprite.setScale(this.baseScale);
-      this.visualSprite.setOrigin(0.5, 0.88);
+      this.visualSprite.setOrigin(0.5, 0.96);
       this.visualSprite.play('anim-idle', true);
     }
   }
@@ -246,6 +273,7 @@ export class Player {
     this.sprite.setAcceleration(0, 0);
     this.jumpBufferTimer = 0;
     this.coyoteTimer = 0;
+    this.facing = 'right';
     this.setPose('climbing');
     this.touchInput = { left: false, right: false, jump: false };
     this.syncVisualPosition();
@@ -308,8 +336,10 @@ export class Player {
     }
 
     if (moveLeft && !moveRight) {
+      this.facing = 'left';
       this.sprite.setVelocityX(-this.config.player.moveSpeed);
     } else if (moveRight && !moveLeft) {
+      this.facing = 'right';
       this.sprite.setVelocityX(this.config.player.moveSpeed);
     } else {
       this.sprite.setVelocityX(0);
@@ -336,7 +366,9 @@ export class Player {
       this.spawnDustPuff(6);
       sfx.jump();
       if (this.currentPose === 'climbing') {
-        this.visualSprite.play('anim-jump', true);
+        const jumpAnim =
+          this.facing === 'left' ? 'anim-jump-left' : 'anim-jump-right';
+        this.visualSprite.play(jumpAnim, true);
       }
     }
 
@@ -370,7 +402,12 @@ export class Player {
         }
       } else {
         if (body.velocity.y < -30) {
-          this.visualSprite.play('anim-jump', true);
+          const jumpAnim =
+            body.velocity.x < -15 ||
+            (body.velocity.x <= 15 && this.facing === 'left')
+              ? 'anim-jump-left'
+              : 'anim-jump-right';
+          this.visualSprite.play(jumpAnim, true);
         } else if (body.velocity.y > 30) {
           this.visualSprite.play('anim-fall', true);
         }
