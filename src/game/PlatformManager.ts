@@ -22,6 +22,14 @@ export interface PlatformData {
   unlocked: boolean;
 }
 
+interface BackgroundCloud {
+  container: Phaser.GameObjects.Graphics;
+  x: number;
+  y: number;
+  speed: number;
+  width: number;
+}
+
 export class PlatformManager {
   private scene: Phaser.Scene;
   private config: TowerConfigRuntime;
@@ -32,6 +40,7 @@ export class PlatformManager {
   private ceilingLabel!: Phaser.GameObjects.Text;
   private unlockedSection: number = 1;
   private wavingFlags: WavingFlag[] = [];
+  private clouds: BackgroundCloud[] = [];
 
   constructor(scene: Phaser.Scene, config: TowerConfigRuntime) {
     this.scene = scene;
@@ -62,6 +71,8 @@ export class PlatformManager {
   public buildTower(): void {
     this.wavingFlags.forEach((flag) => flag.destroy());
     this.wavingFlags = [];
+    this.clouds.forEach((cloud) => cloud.container.destroy());
+    this.clouds = [];
     this.createTextures();
     this.createTowerBackgroundAndWalls();
     this.createGroundPlatform();
@@ -203,63 +214,249 @@ export class PlatformManager {
   private createTowerBackgroundAndWalls(): void {
     const { towerWidth, worldHeight, wallThickness, groundY } = this.config;
 
-    // Outer ambient warm cream sky (matching slide background)
+    // 1. Full-World Multi-Altitude Sky Gradient (Option 1: Ascending Altitude)
     const outerBg = this.scene.add.graphics();
-    outerBg.fillGradientStyle(0xf8e7d6, 0xf8e7d6, 0xf3decb, 0xfaecd9, 1);
-    outerBg.fillRect(-900, 0, towerWidth + 1800, worldHeight);
-    outerBg.setDepth(-25);
+    outerBg.setDepth(-30);
 
-    // Inner tower backdrop with soft peach tint
-    const bg = this.scene.add.graphics();
-    bg.fillGradientStyle(0xfdf7f0, 0xfdf7f0, 0xf8e7d6, 0xf2dec9, 1);
-    bg.fillRect(0, 0, towerWidth, worldHeight);
-    bg.setDepth(-20);
+    const fullW = towerWidth + 1800;
+    const startX = -900;
 
-    // Subtle vertical guide lines
-    const deco = this.scene.add.graphics();
-    deco.setDepth(-15);
-    deco.fillStyle(0xee7b3c, 0.04);
-    deco.fillRect(towerWidth * 0.25, 0, 70, worldHeight);
-    deco.fillRect(towerWidth * 0.62, 0, 50, worldHeight);
+    // 4 Seamless Vertical Gradient Bands across the 3800px tower ascent
+    // Band 1: Summit Starry Midnight Navy (y = 0 -> 1100, Steps 22-30)
+    outerBg.fillGradientStyle(0x0a1226, 0x0a1226, 0x1b2a53, 0x1b2a53, 1);
+    outerBg.fillRect(startX, 0, fullW, 1100);
 
-    for (let y = groundY; y > 150; y -= 180) {
-      // Carved stone bricks in subtle warm navy
-      deco.fillStyle(0x1b2a53, 0.04);
-      deco.fillRoundedRect(wallThickness + 45, y - 100, 92, 40, 6);
-      deco.fillRoundedRect(towerWidth - wallThickness - 137, y - 30, 92, 40, 6);
+    // Band 2: Sunset Twilight / Crimson Amber (y = 1100 -> 1950, Steps 15-22)
+    outerBg.fillGradientStyle(0x1b2a53, 0x1b2a53, 0xb84b2c, 0xb84b2c, 1);
+    outerBg.fillRect(startX, 1100, fullW, 850);
 
-      // Arched castle windows with deep navy interior
-      if (Math.abs(groundY - y) % 540 === 0 && y < groundY - 100) {
-        const winX = towerWidth / 2;
-        deco.fillStyle(0x1b2a53, 0.88);
-        deco.fillRoundedRect(winX - 40, y - 84, 80, 118, 40);
-        deco.lineStyle(3, 0xee7b3c, 0.65);
-        deco.strokeRoundedRect(winX - 40, y - 84, 80, 118, 40);
+    // Band 3: Golden Hour Amber Glow (y = 1950 -> 2800, Steps 8-15)
+    outerBg.fillGradientStyle(0xb84b2c, 0xb84b2c, 0xf5cca5, 0xf5cca5, 1);
+    outerBg.fillRect(startX, 1950, fullW, 850);
 
-        // Window crossbars
-        deco.lineStyle(2, 0x3b4d7c, 0.6);
-        deco.lineBetween(winX, y - 82, winX, y + 32);
-        deco.lineBetween(winX - 38, y - 24, winX + 38, y - 24);
+    // Band 4: Morning Dawn Base (y = 2800 -> 3800, Steps 1-8)
+    outerBg.fillGradientStyle(0xf5cca5, 0xf5cca5, 0xf8e7d6, 0xf8e7d6, 1);
+    outerBg.fillRect(startX, 2800, fullW, worldHeight - 2800);
 
-        // Stars inside window
-        deco.fillStyle(0xfde047, 0.85);
-        deco.fillCircle(winX - 15, y - 48, 2.5);
-        deco.fillCircle(winX + 16, y - 40, 2);
-        deco.fillStyle(0xee7b3c, 0.8);
-        deco.fillCircle(winX + 12, y - 6, 2.2);
+    // 2. Celestial Layer at Summit (Stars, Constellations & Crescent Moon)
+    const celestial = this.scene.add.graphics();
+    celestial.setDepth(-28);
+
+    // Scattered glittering stars in the summit night sky (y < 1280)
+    for (let i = 0; i < 75; i++) {
+      const sx = ((i * 47 + Math.sin(i * 73) * 280) % (towerWidth - 40)) + 20;
+      const sy = 40 + (i * 21) % 1180;
+      const r = i % 4 === 0 ? 2.2 : (i % 2 === 0 ? 1.4 : 1.0);
+      const alpha = 0.55 + ((i % 5) * 0.09);
+      celestial.fillStyle(i % 3 === 0 ? 0xfef08a : 0xffffff, alpha);
+      celestial.fillCircle(sx, sy, r);
+    }
+
+    // Sequence Constellation Lines (Geometric progression ratios)
+    celestial.lineStyle(1, 0xee7b3c, 0.4);
+    const constPts = [
+      { x: 140, y: 320 },
+      { x: 210, y: 260 },
+      { x: 310, y: 280 },
+      { x: 420, y: 210 },
+      { x: 530, y: 240 },
+    ];
+    celestial.strokePoints(constPts, false);
+    for (const pt of constPts) {
+      celestial.fillStyle(0xfef08a, 0.95);
+      celestial.fillCircle(pt.x, pt.y, 3);
+      celestial.fillStyle(0xee7b3c, 0.35);
+      celestial.fillCircle(pt.x, pt.y, 7);
+    }
+
+    // Radiant Crescent Moon at Summit (y = 190)
+    const moonX = towerWidth - wallThickness - 100;
+    const moonY = 190;
+    celestial.fillStyle(0xee7b3c, 0.25);
+    celestial.fillCircle(moonX, moonY, 32);
+    celestial.fillStyle(0xfef08a, 0.95);
+    celestial.fillCircle(moonX, moonY, 20);
+    celestial.fillStyle(0x0c1529, 1);
+    celestial.fillCircle(moonX - 7, moonY - 4, 18);
+
+    // 3. Animated Drifting Geometric Clouds
+    // 14 clouds positioned across various altitudes
+    const cloudConfigs = [
+      // Base / Dawn clouds (warm white & peach)
+      { y: 3520, w: 140, h: 42, speed: 18, color: 0xffffff, alpha: 0.55 },
+      { y: 3340, w: 110, h: 36, speed: 14, color: 0xfbeee0, alpha: 0.50 },
+      { y: 3120, w: 160, h: 46, speed: 20, color: 0xffffff, alpha: 0.48 },
+      { y: 2900, w: 125, h: 38, speed: 16, color: 0xfbeee0, alpha: 0.52 },
+      // Golden Hour clouds (amber / gold tint)
+      { y: 2650, w: 150, h: 44, speed: 22, color: 0xfef08a, alpha: 0.45 },
+      { y: 2420, w: 120, h: 36, speed: 17, color: 0xffe8d6, alpha: 0.48 },
+      { y: 2200, w: 170, h: 48, speed: 24, color: 0xfef08a, alpha: 0.40 },
+      { y: 1980, w: 130, h: 40, speed: 19, color: 0xffe8d6, alpha: 0.42 },
+      // Sunset / Twilight clouds
+      { y: 1740, w: 160, h: 44, speed: 23, color: 0xfbd5b5, alpha: 0.38 },
+      { y: 1500, w: 120, h: 36, speed: 18, color: 0xf5cca5, alpha: 0.35 },
+      // Summit night mist clouds
+      { y: 1240, w: 150, h: 38, speed: 20, color: 0xffffff, alpha: 0.18 },
+      { y: 980, w: 130, h: 34, speed: 16, color: 0xffffff, alpha: 0.16 },
+      { y: 720, w: 160, h: 40, speed: 22, color: 0xffffff, alpha: 0.15 },
+      { y: 440, w: 140, h: 36, speed: 18, color: 0xffffff, alpha: 0.14 },
+    ];
+
+    for (let i = 0; i < cloudConfigs.length; i++) {
+      const cc = cloudConfigs[i];
+      const startCloudX = ((i * 190) % (towerWidth + 240)) - 120;
+      const cg = this.scene.add.graphics();
+      cg.setDepth(-25);
+
+      // Draw stylized multi-puff cloud shape
+      cg.fillStyle(cc.color, cc.alpha);
+      cg.fillRoundedRect(-cc.w / 2, -cc.h / 4, cc.w, cc.h / 2, cc.h / 4);
+      cg.fillCircle(-cc.w * 0.22, -cc.h * 0.2, cc.h * 0.38);
+      cg.fillCircle(cc.w * 0.08, -cc.h * 0.32, cc.h * 0.46);
+      cg.fillCircle(cc.w * 0.28, -cc.h * 0.16, cc.h * 0.32);
+
+      cg.setX(startCloudX);
+      cg.setY(cc.y);
+
+      this.clouds.push({
+        container: cg,
+        x: startCloudX,
+        y: cc.y,
+        speed: cc.speed,
+        width: cc.w,
+      });
+    }
+
+    // 4. Inner Tower Wall Backdrop & Architectural Wash
+    const innerBg = this.scene.add.graphics();
+    innerBg.setDepth(-22);
+
+    // Inner tower architectural stone wash
+    innerBg.fillStyle(0x1b2a53, 0.06);
+    innerBg.fillRect(wallThickness, 0, towerWidth - wallThickness * 2, worldHeight);
+
+    // Masonry stone bricks courses (NO bookshelves)
+    innerBg.fillStyle(0x1b2a53, 0.04);
+    for (let y = groundY; y > 150; y -= 160) {
+      innerBg.fillRoundedRect(wallThickness + 40, y - 90, 88, 36, 5);
+      innerBg.fillRoundedRect(towerWidth - wallThickness - 128, y - 40, 88, 36, 5);
+      innerBg.fillRoundedRect(towerWidth / 2 - 44, y - 140, 88, 36, 5);
+    }
+
+    // 5. Grand Cathedral Windows (Option 2) with Stained Glass & Diagonal Sunbeams
+    const winGraphics = this.scene.add.graphics();
+    winGraphics.setDepth(-20);
+
+    const windowYPositions = [3320, 2780, 2240, 1700, 1160, 620];
+    const stainedPanes = [0x3f9f9b, 0xd8356c, 0xee7b3c, 0x7e57d8]; // Teal, Rose, Orange, Violet
+
+    for (let i = 0; i < windowYPositions.length; i++) {
+      const wy = windowYPositions[i];
+      // Slightly alternate window center position for dynamic visual rhythm
+      const wx = towerWidth / 2 + (i % 2 === 0 ? -24 : 24);
+      const ww = 88;
+      const wh = 136;
+      const archR = 44;
+
+      // Outer Deep Navy stone frame
+      winGraphics.fillStyle(0x1b2a53, 0.95);
+      winGraphics.fillCircle(wx, wy - wh / 2 + archR, archR + 6);
+      winGraphics.fillRect(wx - ww / 2 - 6, wy - wh / 2 + archR, ww + 12, wh - archR + 6);
+
+      // Sherbeni Orange decorative window casing
+      winGraphics.lineStyle(3, 0xee7b3c, 0.85);
+      winGraphics.strokeCircle(wx, wy - wh / 2 + archR, archR + 6);
+      winGraphics.strokeRect(wx - ww / 2 - 6, wy - wh / 2 + archR, ww + 12, wh - archR + 6);
+
+      // Window Interior Cutout (Sky shows through)
+      const isNightWindow = wy <= 1500;
+      winGraphics.fillStyle(isNightWindow ? 0x0c1529 : 0xf8e7d6, 0.92);
+      winGraphics.fillCircle(wx, wy - wh / 2 + archR, archR);
+      winGraphics.fillRect(wx - ww / 2, wy - wh / 2 + archR, ww, wh - archR);
+
+      // 4 Stained Glass Accent Corner Panes (Sherbeni Slide Colors)
+      const paneW = 16;
+      const paneH = 22;
+      winGraphics.fillStyle(stainedPanes[0], 0.85);
+      winGraphics.fillRect(wx - ww / 2 + 4, wy - wh / 2 + archR + 4, paneW, paneH);
+      winGraphics.fillStyle(stainedPanes[1], 0.85);
+      winGraphics.fillRect(wx + ww / 2 - paneW - 4, wy - wh / 2 + archR + 4, paneW, paneH);
+      winGraphics.fillStyle(stainedPanes[2], 0.85);
+      winGraphics.fillRect(wx - ww / 2 + 4, wy + wh / 2 - paneH - 4, paneW, paneH);
+      winGraphics.fillStyle(stainedPanes[3], 0.85);
+      winGraphics.fillRect(wx + ww / 2 - paneW - 4, wy + wh / 2 - paneH - 4, paneW, paneH);
+
+      // Gothic stone tracery crossbars
+      winGraphics.lineStyle(2, 0x1b2a53, 0.85);
+      winGraphics.lineBetween(wx, wy - wh / 2, wx, wy + wh / 2);
+      winGraphics.lineBetween(wx - ww / 2, wy + 8, wx + ww / 2, wy + 8);
+      winGraphics.lineBetween(wx - ww / 2 + 6, wy - 18, wx + ww / 2 - 6, wy - 18);
+
+      if (isNightWindow) {
+        // Glowing stars visible inside night window
+        winGraphics.fillStyle(0xfef08a, 0.95);
+        winGraphics.fillCircle(wx - 16, wy - 20, 2.5);
+        winGraphics.fillCircle(wx + 18, wy - 12, 2.0);
+        winGraphics.fillCircle(wx - 10, wy + 26, 1.8);
+        winGraphics.fillStyle(0xee7b3c, 0.9);
+        winGraphics.fillCircle(wx + 14, wy + 24, 2.2);
+      } else {
+        // Warm Diagonal Sunbeam streaming into the tower from daylight/golden windows
+        winGraphics.fillStyle(0xee7b3c, 0.12);
+        winGraphics.fillPoints(
+          [
+            { x: wx - ww / 2, y: wy - 10 },
+            { x: wx + ww / 2, y: wy + 20 },
+            { x: wx + ww / 2 + 180, y: wy + 260 },
+            { x: wx - ww / 2 + 80, y: wy + 260 },
+          ],
+          true
+        );
       }
+    }
 
-      // Glowing Sherbeni Orange wall sconces every 360px
-      if (Math.abs(groundY - y) % 360 === 0) {
-        const leftSconceX = wallThickness + 16;
-        const rightSconceX = towerWidth - wallThickness - 16;
-        deco.fillStyle(0xee7b3c, 0.18);
-        deco.fillCircle(leftSconceX, y - 60, 22);
-        deco.fillCircle(rightSconceX, y - 60, 22);
-        deco.fillStyle(0xee7b3c, 0.9);
-        deco.fillCircle(leftSconceX, y - 60, 4.5);
-        deco.fillCircle(rightSconceX, y - 60, 4.5);
-      }
+    // Grand Rose Window at Summit (y = 220)
+    const roseX = towerWidth / 2;
+    const roseY = 220;
+    winGraphics.fillStyle(0x1b2a53, 0.95);
+    winGraphics.fillCircle(roseX, roseY, 44);
+    winGraphics.lineStyle(3, 0xee7b3c, 0.9);
+    winGraphics.strokeCircle(roseX, roseY, 44);
+    winGraphics.fillStyle(0x0c1529, 0.95);
+    winGraphics.fillCircle(roseX, roseY, 38);
+    // Radial spokes
+    winGraphics.lineStyle(1.5, 0xee7b3c, 0.7);
+    for (let a = 0; a < Math.PI * 2; a += Math.PI / 4) {
+      winGraphics.lineBetween(roseX, roseY, roseX + Math.cos(a) * 38, roseY + Math.sin(a) * 38);
+    }
+    winGraphics.fillStyle(0xfef08a, 0.95);
+    winGraphics.fillCircle(roseX, roseY, 8);
+
+    // 6. Glowing Sherbeni Orange Wall Sconces & Torches (NO bookshelves)
+    const sconceG = this.scene.add.graphics();
+    sconceG.setDepth(-15);
+
+    for (let y = groundY; y > 150; y -= 320) {
+      const leftX = wallThickness + 16;
+      const rightX = towerWidth - wallThickness - 16;
+
+      // Soft ambient light aura
+      sconceG.fillStyle(0xee7b3c, 0.16);
+      sconceG.fillCircle(leftX, y - 50, 24);
+      sconceG.fillCircle(rightX, y - 50, 24);
+
+      // Deep Navy bracket
+      sconceG.fillStyle(0x1b2a53, 1);
+      sconceG.fillRect(leftX - 4, y - 48, 8, 14);
+      sconceG.fillRect(rightX - 4, y - 48, 8, 14);
+
+      // Torch flame core
+      sconceG.fillStyle(0xee7b3c, 0.95);
+      sconceG.fillCircle(leftX, y - 54, 4.5);
+      sconceG.fillCircle(rightX, y - 54, 4.5);
+      sconceG.fillStyle(0xfef08a, 1);
+      sconceG.fillCircle(leftX, y - 54, 2);
+      sconceG.fillCircle(rightX, y - 54, 2);
     }
 
     const wallGraphics = this.scene.add.graphics();
@@ -699,9 +896,25 @@ export class PlatformManager {
     this.ceilingLabel.setText('🔒 LAND ON GATE 1 PLATFORM BELOW TO UNLOCK');
   }
 
-  public update(time: number, _delta: number): void {
+  public update(time: number, delta: number): void {
+    // 1. Update physically-simulated waving flags
     for (let i = 0; i < this.wavingFlags.length; i++) {
       this.wavingFlags[i].update(time);
+    }
+
+    // 2. Update drifting clouds across the tower
+    const dt = delta * 0.001;
+    const minX = -140;
+    const maxX = this.config.towerWidth + 140;
+    const span = maxX - minX;
+
+    for (let i = 0; i < this.clouds.length; i++) {
+      const c = this.clouds[i];
+      c.x += c.speed * dt;
+      if (c.x > maxX) {
+        c.x -= span;
+      }
+      c.container.setX(c.x);
     }
   }
 }
