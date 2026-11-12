@@ -32,6 +32,33 @@ let activeGame: Phaser.Game | null = null;
  * Uses Phaser's snapshot API so the WebGL canvas does not need `preserveDrawingBuffer`,
  * which costs a full-screen buffer copy on every single frame.
  */
+export function getSummitViewRatios(): { summitRatioY: number; playerRatioX: number } {
+  const fallback = { summitRatioY: 0.36, playerRatioX: 0.35 };
+  try {
+    const game = activeGame;
+    if (!game) return fallback;
+    const scene = game.scene.getScene('TowerScene') as TowerScene | null;
+    const cam = scene?.cameras?.main;
+    if (!cam || !cam.worldView || cam.worldView.height <= 0) return fallback;
+    // Step 30 finish line is at groundY (3620) - 30 * 108 = 380
+    const summitWorldY = 380;
+    const summitRatioY = Phaser.Math.Clamp(
+      (summitWorldY - cam.worldView.y) / cam.worldView.height,
+      0.18,
+      0.75
+    );
+    const playerWorldX = scene?.player?.sprite?.x ?? 260;
+    const playerRatioX = Phaser.Math.Clamp(
+      (playerWorldX - cam.worldView.x) / cam.worldView.width,
+      0.15,
+      0.85
+    );
+    return { summitRatioY, playerRatioX };
+  } catch {
+    return fallback;
+  }
+}
+
 export function captureGameFrame(): Promise<HTMLImageElement | null> {
   return new Promise((resolve) => {
     const game = activeGame;

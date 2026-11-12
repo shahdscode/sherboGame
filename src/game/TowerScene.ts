@@ -10,7 +10,7 @@ import { sfx } from './sfx';
 export class TowerScene extends Phaser.Scene {
   private config: TowerConfigRuntime = towerConfig;
   private platformManager!: PlatformManager;
-  private player!: Player;
+  public player!: Player;
   private cameraManager!: CameraManager;
   private checkpointManager!: CheckpointManager;
 
