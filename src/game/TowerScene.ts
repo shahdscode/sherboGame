@@ -26,6 +26,16 @@ export class TowerScene extends Phaser.Scene {
   }
 
   public preload(): void {
+    gameEvents.sceneReady = false;
+    this.load.on(Phaser.Loader.Events.PROGRESS, (progress: number) => {
+      gameEvents.emit('evt:load-progress', { progress });
+    });
+    this.load.on(
+      Phaser.Loader.Events.FILE_LOAD_ERROR,
+      (file: Phaser.Loader.File) => {
+        gameEvents.emit('evt:load-error', { file: String(file?.key ?? '') });
+      }
+    );
     Player.preloadAssets(this);
   }
 
@@ -71,11 +81,14 @@ export class TowerScene extends Phaser.Scene {
     this.isPlaying = false;
     this.physics.world.pause();
 
-    if (typeof window !== 'undefined') {
+    // Debug handles for local development / automated tests only (never in production,
+    // otherwise students could skip gates from the browser console).
+    if (import.meta.env.DEV && typeof window !== 'undefined') {
       (window as any).__TOWER_SCENE__ = this;
       (window as any).__TOWER_EVENTS__ = gameEvents;
     }
 
+    gameEvents.sceneReady = true;
     gameEvents.emit('evt:scene-ready', undefined);
   }
 
@@ -129,6 +142,7 @@ export class TowerScene extends Phaser.Scene {
 
     this.unsubscribeFns.push(
       gameEvents.on('cmd:teleport-to-step', ({ stepNumber }) => {
+        if (!import.meta.env.DEV) return;
         const platform = this.platformManager.getPlatform(stepNumber);
         if (platform && platform.unlocked) {
           this.player.sprite.setPosition(
@@ -141,6 +155,7 @@ export class TowerScene extends Phaser.Scene {
     );
 
     const cleanupAll = () => {
+      gameEvents.sceneReady = false;
       this.unsubscribeFns.forEach((fn) => fn());
       this.unsubscribeFns = [];
     };
@@ -172,9 +187,8 @@ export class TowerScene extends Phaser.Scene {
       return;
     }
 
-    const matchedPlatform = this.platformManager
-      .getAllPlatforms()
-      .find((p) => p.sprite === platformSprite);
+    const matchedPlatform =
+      this.platformManager.getPlatformBySprite(platformSprite);
 
     if (!matchedPlatform || !matchedPlatform.unlocked) {
       return;

@@ -1648,3 +1648,116 @@ kbd {
     display: none;
   }
 }
+
+/* ==========================================================================
+   Loading state on the start screen
+   ========================================================================== */
+.start-loading {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.start-loading-track {
+  width: 100%;
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(27, 42, 83, 0.12);
+  border: 1.5px solid rgba(27, 42, 83, 0.25);
+  overflow: hidden;
+}
+
+.start-loading-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #f58e54 0%, #ee7b3c 100%);
+  transition: width 0.25s ease-out;
+}
+
+.start-loading-label {
+  font-family: var(--font-display);
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.spin-icon {
+  animation: spinIcon 0.9s linear infinite;
+}
+
+@keyframes spinIcon {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ==========================================================================
+   Mobile behaviour & performance
+   ========================================================================== */
+
+/* Stop pull-to-refresh / rubber-banding from reloading or dragging the game mid-jump,
+   and stop double-tap zoom on fast Jump tapping. */
+html,
+body {
+  overscroll-behavior: none;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+}
+
+.phaser-canvas-wrapper canvas {
+  touch-action: none;
+}
+
+/* A full-screen blur on top of a live WebGL canvas is one of the most expensive things a
+   phone GPU can be asked to do. On touch devices use a plain (slightly more opaque) scrim. */
+@media (pointer: coarse) {
+  .overlay-backdrop {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: radial-gradient(
+      circle at center,
+      rgba(248, 231, 214, 0.95) 0%,
+      rgba(27, 42, 83, 0.86) 100%
+    );
+  }
+
+  .floating-top-hud,
+  .hud-stat-pill,
+  .touch-btn,
+  .completion-side-card {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+
+/* ==========================================================================
+   Small-phone layout fixes
+   ========================================================================== */
+@media (max-width: 480px) {
+  /* Gate bar: pill + 5 crystals + XP bounty no longer fit on one line */
+  .arcade-gate-topbar {
+    flex-wrap: wrap;
+    justify-content: center;
+    row-gap: 6px;
+    border-radius: 20px;
+  }
+
+  /* Keep the whole question card (incl. hint + confirm button) on screen after a mistake */
+  .question-character-sticker-large {
+    width: clamp(84px, 13vh, 130px);
+    height: clamp(84px, 13vh, 130px);
+  }
+}
+
+@media (max-width: 600px) {
+  /* The final score card was capped at half the screen, hiding its own buttons */
+  .completion-side-card {
+    max-height: calc(100dvh - 96px);
+  }
+
+  .completion-side-wrapper {
+    bottom: max(12px, env(safe-area-inset-bottom, 12px));
+  }
+}

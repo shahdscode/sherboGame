@@ -3,8 +3,29 @@ import { TowerConfigRuntime } from '../data/towerConfig';
 import { TouchInputState, CharacterPose } from './EventBus';
 import { sfx } from './sfx';
 
+/** Single sprite sheet holding every character animation frame (see scripts/pack-sprites.py). */
+const CHAR_ATLAS_KEY = 'char-atlas';
+/** Row order of the animations inside the sprite sheet (8 frames per row). */
+const CHAR_ATLAS_ROWS = [
+  'idle',
+  'run-right',
+  'run-left',
+  'jump-right',
+  'jump-left',
+  'jump',
+  'land',
+  'fall',
+] as const;
+
+function charFrame(
+  anim: (typeof CHAR_ATLAS_ROWS)[number],
+  index: number
+): { key: string; frame: number } {
+  return { key: CHAR_ATLAS_KEY, frame: CHAR_ATLAS_ROWS.indexOf(anim) * 8 + index };
+}
+
 const POSE_TEXTURE_MAP: Record<CharacterPose, string> = {
-  climbing: 'char-idle-0',
+  climbing: CHAR_ATLAS_KEY,
   question: 'char-question',
   retry: 'char-retry',
   goodjob: 'char-goodjob',
@@ -39,36 +60,18 @@ export class Player {
 
   public static preloadAssets(scene: Phaser.Scene): void {
     // 1. Extracted 2x HD character sheet animation frames
-    for (let i = 0; i < 8; i++) {
-      scene.load.image(`char-idle-${i}`, `/stickers/character/idle_${i}.png`);
-      scene.load.image(
-        `char-run-right-${i}`,
-        `/stickers/character/run_right_${i}.png`
-      );
-      scene.load.image(
-        `char-run-left-${i}`,
-        `/stickers/character/run_left_${i}.png`
-      );
-      scene.load.image(
-        `char-jump-right-${i}`,
-        `/stickers/character/jump_right_${i}.png`
-      );
-      scene.load.image(
-        `char-jump-left-${i}`,
-        `/stickers/character/jump_left_${i}.png`
-      );
-      scene.load.image(`char-jump-${i}`, `/stickers/character/jump_${i}.png`);
-      scene.load.image(`char-land-${i}`, `/stickers/character/land_${i}.png`);
-    }
-    for (let i = 0; i < 5; i++) {
-      scene.load.image(`char-fall-${i}`, `/stickers/character/fall_${i}.png`);
-    }
+    // 1. All 64 character frames packed into ONE WebP sprite sheet (8 columns x 8 rows).
+    //    One request (~0.5 MB) instead of 61 separate PNGs (~6.5 MB).
+    scene.load.spritesheet(CHAR_ATLAS_KEY, '/stickers/character-atlas.webp', {
+      frameWidth: 240,
+      frameHeight: 360,
+      spacing: 4,
+    });
 
-    // 2. High-DPI (1024x1024) checkpoint & feedback stickers
-    scene.load.image('char-climbing', '/stickers/character/idle_0.png');
-    scene.load.image('char-question', '/stickers/question.png');
-    scene.load.image('char-retry', '/stickers/retry.png');
-    scene.load.image('char-goodjob', '/stickers/goodjob.png');
+    // 2. Checkpoint & feedback stickers (512x512 WebP)
+    scene.load.image('char-question', '/stickers/question.webp');
+    scene.load.image('char-retry', '/stickers/retry.webp');
+    scene.load.image('char-goodjob', '/stickers/goodjob.webp');
   }
 
   constructor(scene: Phaser.Scene, config: TowerConfigRuntime) {
@@ -96,53 +99,45 @@ export class Player {
   private createAnimations(): void {
     const animDefs: Array<{
       key: string;
-      frames: Array<{ key: string }>;
+      frames: Array<{ key: string; frame: number }>;
       rate: number;
       repeat: number;
     }> = [
       {
         key: 'anim-idle',
-        frames: Array.from({ length: 8 }, (_, i) => ({ key: `char-idle-${i}` })),
+        frames: Array.from({ length: 8 }, (_, i) => (charFrame('idle', i))),
         rate: 9,
         repeat: -1,
       },
       {
         key: 'anim-run-right',
-        frames: Array.from({ length: 8 }, (_, i) => ({
-          key: `char-run-right-${i}`,
-        })),
+        frames: Array.from({ length: 8 }, (_, i) => (charFrame('run-right', i))),
         rate: 15,
         repeat: -1,
       },
       {
         key: 'anim-run-left',
-        frames: Array.from({ length: 8 }, (_, i) => ({
-          key: `char-run-left-${i}`,
-        })),
+        frames: Array.from({ length: 8 }, (_, i) => (charFrame('run-left', i))),
         rate: 15,
         repeat: -1,
       },
       {
         key: 'anim-jump-right',
         // Frames 0..6 are airborne; frame 7 is ground landing squat
-        frames: Array.from({ length: 7 }, (_, i) => ({
-          key: `char-jump-right-${i}`,
-        })),
+        frames: Array.from({ length: 7 }, (_, i) => (charFrame('jump-right', i))),
         rate: 14,
         repeat: 0,
       },
       {
         key: 'anim-jump-left',
         // Frames 0..6 are airborne; frame 7 is ground landing squat
-        frames: Array.from({ length: 7 }, (_, i) => ({
-          key: `char-jump-left-${i}`,
-        })),
+        frames: Array.from({ length: 7 }, (_, i) => (charFrame('jump-left', i))),
         rate: 14,
         repeat: 0,
       },
       {
         key: 'anim-jump',
-        frames: Array.from({ length: 7 }, (_, i) => ({ key: `char-jump-${i}` })),
+        frames: Array.from({ length: 7 }, (_, i) => (charFrame('jump', i))),
         rate: 14,
         repeat: 0,
       },
@@ -150,12 +145,12 @@ export class Player {
         key: 'anim-fall',
         // Smooth airborne falling oscillation using airborne frames 0..3
         frames: [
-          { key: 'char-fall-0' },
-          { key: 'char-fall-1' },
-          { key: 'char-fall-2' },
-          { key: 'char-fall-3' },
-          { key: 'char-fall-2' },
-          { key: 'char-fall-1' },
+          charFrame('fall', 0),
+          charFrame('fall', 1),
+          charFrame('fall', 2),
+          charFrame('fall', 3),
+          charFrame('fall', 2),
+          charFrame('fall', 1),
         ],
         rate: 12,
         repeat: -1,
@@ -164,8 +159,8 @@ export class Player {
         key: 'anim-land',
         // Impact crouch (fall-4) into 8-frame recovery to upright standing
         frames: [
-          { key: 'char-fall-4' },
-          ...Array.from({ length: 8 }, (_, i) => ({ key: `char-land-${i}` })),
+          charFrame('fall', 4),
+          ...Array.from({ length: 8 }, (_, i) => (charFrame('land', i))),
         ],
         rate: 18,
         repeat: 0,
@@ -202,7 +197,7 @@ export class Player {
     body.setMaxVelocity(this.config.player.moveSpeed, 950);
     body.setCollideWorldBounds(true);
 
-    this.visualSprite = this.scene.add.sprite(startX, startY, 'char-idle-0');
+    this.visualSprite = this.scene.add.sprite(startX, startY, CHAR_ATLAS_KEY, 0);
     this.visualSprite.setScale(this.baseScale);
     this.visualSprite.setOrigin(0.5, 0.96);
     this.visualSprite.setDepth(22);
@@ -270,14 +265,14 @@ export class Player {
       if (this.scene.textures.exists(texKey)) {
         this.visualSprite.setTexture(texKey);
       }
-      // 1024x1024 stickers scaled to 0.12 ≈ 122px in-world height
-      this.visualSprite.setScale(0.12);
+      // 512x512 stickers scaled to 0.24 ≈ 122px in-world height
+      this.visualSprite.setScale(0.24);
       this.visualSprite.setOrigin(0.5, 0.84);
       this.visualSprite.setFlipX(false);
       this.scene.tweens.add({
         targets: this.visualSprite,
-        scaleX: 0.135,
-        scaleY: 0.135,
+        scaleX: 0.27,
+        scaleY: 0.27,
         duration: 160,
         yoyo: true,
       });

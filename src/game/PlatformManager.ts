@@ -23,7 +23,9 @@ export interface PlatformData {
 }
 
 interface BackgroundCloud {
-  container: Phaser.GameObjects.Graphics;
+  container: Phaser.GameObjects.Image;
+  /** Offset between the cloud's logical centre and the top-left of its baked image. */
+  offsetX: number;
   x: number;
   y: number;
   speed: number;
@@ -52,6 +54,9 @@ export class PlatformManager {
   private ceilingBarrier!: Phaser.Physics.Arcade.Sprite;
   private unlockedSection: number = 1;
   private wavingFlags: WavingFlag[] = [];
+  /** Step number each waving flag stands on (parallel to wavingFlags) — used for off-screen culling. */
+  private flagSteps: number[] = [];
+  private spriteToPlatform: Map<Phaser.GameObjects.GameObject, PlatformData> = new Map();
   private clouds: BackgroundCloud[] = [];
 
   constructor(scene: Phaser.Scene, config: TowerConfigRuntime) {
@@ -72,6 +77,12 @@ export class PlatformManager {
     return this.platforms.get(stepNumber);
   }
 
+  public getPlatformBySprite(
+    sprite: Phaser.GameObjects.GameObject
+  ): PlatformData | undefined {
+    return this.spriteToPlatform.get(sprite);
+  }
+
   public getAllPlatforms(): PlatformData[] {
     return Array.from(this.platforms.values());
   }
@@ -83,6 +94,8 @@ export class PlatformManager {
   public buildTower(): void {
     this.wavingFlags.forEach((flag) => flag.destroy());
     this.wavingFlags = [];
+    this.flagSteps = [];
+    this.spriteToPlatform.clear();
     this.clouds.forEach((cloud) => cloud.container.destroy());
     this.clouds = [];
     this.createTextures();
@@ -223,17 +236,52 @@ export class PlatformManager {
     }
   }
 
+  /**
+   * Draws vector art ONCE into a texture. A baked texture costs a single quad per frame,
+   * while a live Graphics object is re-tessellated on the CPU every frame (very slow on phones).
+   */
+  private bake(
+    key: string,
+    x0: number,
+    y0: number,
+    w: number,
+    h: number,
+    draw: (g: Phaser.GameObjects.Graphics) => void,
+    res: number = TEX_SCALE
+  ): void {
+    if (this.scene.textures.exists(key)) return;
+    const g = this.scene.make.graphics({ x: 0, y: 0 }, false);
+    g.scaleCanvas(res, res);
+    g.translateCanvas(-x0, -y0);
+    draw(g);
+    g.generateTexture(key, Math.ceil(w * res), Math.ceil(h * res));
+    g.destroy();
+  }
+
+  private addBaked(
+    key: string,
+    x0: number,
+    y0: number,
+    depth: number,
+    res: number = TEX_SCALE
+  ): Phaser.GameObjects.Image {
+    return this.scene.add
+      .image(x0, y0, key)
+      .setOrigin(0, 0)
+      .setScale(1 / res)
+      .setDepth(depth);
+  }
+
   private createTowerBackgroundAndWalls(): void {
     const { towerWidth, worldHeight, wallThickness, groundY } = this.config;
 
-    // 1. Full-World Multi-Altitude Sky Gradient (Option 1: Ascending Altitude)
+    // 1. Full-World Multi-Altitude Sky Gradient (4 rectangles only — cheap to keep as live Graphics)
     const outerBg = this.scene.add.graphics();
     outerBg.setDepth(-30);
 
     const fullW = towerWidth + 1800;
     const startX = -900;
 
-    // 4 Seamless Vertical Gradient Bands across the 3800px tower ascent
     // Band 1: Summit Starry Midnight Navy (y = 0 -> 1100, Steps 22-30)
     outerBg.fillGradientStyle(0x0a1226, 0x0a1226, 0x1b2a53, 0x1b2a53, 1);
     outerBg.fillRect(startX, 0, fullW, 1100);
@@ -251,21 +299,34 @@ export class PlatformManager {
     outerBg.fillRect(startX, 2800, fullW, worldHeight - 2800);
 
     // 2. Celestial Layer at Summit (Stars, Constellations & Crescent Moon)
-    const celestial = this.scene.add.graphics();
-    celestial.setDepth(-28);
+    this.bake(
+      'tex-star',
+      0,
+      0,
+      16,
+      16,
+      (g) => {
+        g.fillStyle(0xffffff, 1);
+        g.fillCircle(8, 8, 8);
+      },
+      1
+    );
 
     // Scattered glittering stars in the summit night sky (y < 1280)
     for (let i = 0; i < 75; i++) {
       const sx = ((i * 47 + Math.sin(i * 73) * 280) % (towerWidth - 40)) + 20;
-      const sy = 40 + (i * 21) % 1180;
-      const r = i % 4 === 0 ? 2.2 : (i % 2 === 0 ? 1.4 : 1.0);
-      const alpha = 0.55 + ((i % 5) * 0.09);
-      celestial.fillStyle(i % 3 === 0 ? 0xfef08a : 0xffffff, alpha);
-      celestial.fillCircle(sx, sy, r);
+      const sy = 40 + ((i * 21) % 1180);
+      const r = i % 4 === 0 ? 2.2 : i % 2 === 0 ? 1.4 : 1.0;
+      const alpha = 0.55 + (i % 5) * 0.09;
+      const star = this.scene.add
+        .image(sx, sy, 'tex-star')
+        .setScale(r / 8)
+        .setAlpha(alpha)
+        .setDepth(-28);
+      if (i % 3 === 0) star.setTint(0xfef08a);
     }
 
     // Sequence Constellation Lines (Geometric progression ratios)
-    celestial.lineStyle(1, 0xee7b3c, 0.4);
     const constPts = [
       { x: 140, y: 320 },
       { x: 210, y: 260 },
@@ -273,36 +334,43 @@ export class PlatformManager {
       { x: 420, y: 210 },
       { x: 530, y: 240 },
     ];
-    celestial.strokePoints(constPts, false);
-    for (const pt of constPts) {
-      celestial.fillStyle(0xfef08a, 0.95);
-      celestial.fillCircle(pt.x, pt.y, 3);
-      celestial.fillStyle(0xee7b3c, 0.35);
-      celestial.fillCircle(pt.x, pt.y, 7);
-    }
+    this.bake('tex-constellation', 128, 200, 414, 132, (g) => {
+      g.lineStyle(1, 0xee7b3c, 0.4);
+      g.strokePoints(constPts, false);
+      for (const pt of constPts) {
+        g.fillStyle(0xfef08a, 0.95);
+        g.fillCircle(pt.x, pt.y, 3);
+        g.fillStyle(0xee7b3c, 0.35);
+        g.fillCircle(pt.x, pt.y, 7);
+      }
+    });
+    this.addBaked('tex-constellation', 128, 200, -28);
 
     // Radiant Crescent Moon at Summit (y = 190)
     const moonX = towerWidth - wallThickness - 100;
     const moonY = 190;
-    celestial.fillStyle(0xee7b3c, 0.25);
-    celestial.fillCircle(moonX, moonY, 32);
-    celestial.fillStyle(0xfef08a, 0.95);
-    celestial.fillCircle(moonX, moonY, 20);
-    celestial.fillStyle(0x0c1529, 1);
-    celestial.fillCircle(moonX - 7, moonY - 4, 18);
+    this.bake('tex-moon', moonX - 34, moonY - 34, 68, 68, (g) => {
+      g.fillStyle(0xee7b3c, 0.25);
+      g.fillCircle(moonX, moonY, 32);
+      g.fillStyle(0xfef08a, 0.95);
+      g.fillCircle(moonX, moonY, 20);
+      g.fillStyle(0x0c1529, 1);
+      g.fillCircle(moonX - 7, moonY - 4, 18);
+    });
+    this.addBaked('tex-moon', moonX - 34, moonY - 34, -28);
 
     // 3. Animated Drifting Geometric Clouds
     // 14 clouds positioned across various altitudes
     const cloudConfigs = [
       // Base / Dawn clouds (warm white & peach)
       { y: 3520, w: 140, h: 42, speed: 18, color: 0xffffff, alpha: 0.55 },
-      { y: 3340, w: 110, h: 36, speed: 14, color: 0xfbeee0, alpha: 0.50 },
+      { y: 3340, w: 110, h: 36, speed: 14, color: 0xfbeee0, alpha: 0.5 },
       { y: 3120, w: 160, h: 46, speed: 20, color: 0xffffff, alpha: 0.48 },
       { y: 2900, w: 125, h: 38, speed: 16, color: 0xfbeee0, alpha: 0.52 },
       // Golden Hour clouds (amber / gold tint)
       { y: 2650, w: 150, h: 44, speed: 22, color: 0xfef08a, alpha: 0.45 },
       { y: 2420, w: 120, h: 36, speed: 17, color: 0xffe8d6, alpha: 0.48 },
-      { y: 2200, w: 170, h: 48, speed: 24, color: 0xfef08a, alpha: 0.40 },
+      { y: 2200, w: 170, h: 48, speed: 24, color: 0xfef08a, alpha: 0.4 },
       { y: 1980, w: 130, h: 40, speed: 19, color: 0xffe8d6, alpha: 0.42 },
       // Sunset / Twilight clouds
       { y: 1740, w: 160, h: 44, speed: 23, color: 0xfbd5b5, alpha: 0.38 },
@@ -317,48 +385,54 @@ export class PlatformManager {
     for (let i = 0; i < cloudConfigs.length; i++) {
       const cc = cloudConfigs[i];
       const startCloudX = ((i * 190) % (towerWidth + 240)) - 120;
-      const cg = this.scene.add.graphics();
-      cg.setDepth(-25);
+      const key = `tex-cloud-${i}`;
+      const localX = -cc.w / 2 - 2;
+      const localY = -cc.h * 0.8 - 2;
 
-      // Draw stylized multi-puff cloud shape
-      cg.fillStyle(cc.color, cc.alpha);
-      cg.fillRoundedRect(-cc.w / 2, -cc.h / 4, cc.w, cc.h / 2, cc.h / 4);
-      cg.fillCircle(-cc.w * 0.22, -cc.h * 0.2, cc.h * 0.38);
-      cg.fillCircle(cc.w * 0.08, -cc.h * 0.32, cc.h * 0.46);
-      cg.fillCircle(cc.w * 0.28, -cc.h * 0.16, cc.h * 0.32);
-
-      cg.setX(startCloudX);
-      cg.setY(cc.y);
+      // Stylized multi-puff cloud shape, drawn once
+      this.bake(key, localX, localY, cc.w + 4, cc.h * 1.1 + 4, (g) => {
+        g.fillStyle(cc.color, cc.alpha);
+        g.fillRoundedRect(-cc.w / 2, -cc.h / 4, cc.w, cc.h / 2, cc.h / 4);
+        g.fillCircle(-cc.w * 0.22, -cc.h * 0.2, cc.h * 0.38);
+        g.fillCircle(cc.w * 0.08, -cc.h * 0.32, cc.h * 0.46);
+        g.fillCircle(cc.w * 0.28, -cc.h * 0.16, cc.h * 0.32);
+      });
+      const cloud = this.addBaked(key, startCloudX + localX, cc.y + localY, -25);
 
       this.clouds.push({
-        container: cg,
+        container: cloud,
         x: startCloudX,
         y: cc.y,
         speed: cc.speed,
         width: cc.w,
+        offsetX: localX,
       });
     }
 
     // 4. Inner Tower Wall Backdrop & Architectural Wash
-    const innerBg = this.scene.add.graphics();
-    innerBg.setDepth(-22);
+    this.scene.add
+      .rectangle(
+        towerWidth / 2,
+        worldHeight / 2,
+        towerWidth - wallThickness * 2,
+        worldHeight,
+        0x1b2a53,
+        0.06
+      )
+      .setDepth(-22);
 
-    // Inner tower architectural stone wash
-    innerBg.fillStyle(0x1b2a53, 0.06);
-    innerBg.fillRect(wallThickness, 0, towerWidth - wallThickness * 2, worldHeight);
-
-    // Masonry stone bricks courses (NO bookshelves)
-    innerBg.fillStyle(0x1b2a53, 0.04);
+    // Masonry stone bricks courses (NO bookshelves) — one shared texture
+    this.bake('tex-brick', 0, 0, 88, 36, (g) => {
+      g.fillStyle(0x1b2a53, 1);
+      g.fillRoundedRect(0, 0, 88, 36, 5);
+    });
     for (let y = groundY; y > 150; y -= 160) {
-      innerBg.fillRoundedRect(wallThickness + 40, y - 90, 88, 36, 5);
-      innerBg.fillRoundedRect(towerWidth - wallThickness - 128, y - 40, 88, 36, 5);
-      innerBg.fillRoundedRect(towerWidth / 2 - 44, y - 140, 88, 36, 5);
+      this.addBaked('tex-brick', wallThickness + 40, y - 90, -22).setAlpha(0.04);
+      this.addBaked('tex-brick', towerWidth - wallThickness - 128, y - 40, -22).setAlpha(0.04);
+      this.addBaked('tex-brick', towerWidth / 2 - 44, y - 140, -22).setAlpha(0.04);
     }
 
     // 5. Grand Academy Squared Windows (Staggered Left & Right, Away from Steps)
-    const winGraphics = this.scene.add.graphics();
-    winGraphics.setDepth(-20);
-
     interface SquareWindowDef {
       x: number;
       y: number;
@@ -394,6 +468,10 @@ export class PlatformManager {
 
     const stainedPanes = [0x3f9f9b, 0xd8356c, 0xee7b3c, 0x7e57d8]; // Teal, Rose, Orange, Violet
 
+    // Sunbeams are a handful of big translucent polygons — kept as one small live Graphics
+    const beamGraphics = this.scene.add.graphics();
+    beamGraphics.setDepth(-20);
+
     for (let i = 0; i < squareWindows.length; i++) {
       const win = squareWindows[i];
       const wx = win.x;
@@ -403,190 +481,188 @@ export class PlatformManager {
       const grid = win.gridSize || 2;
       const framePad = 8;
       const frameSize = size + framePad * 2;
-
-      // 1. Outer Deep Navy Stone Frame (Crisply Squared)
-      winGraphics.fillStyle(0x0f1830, 0.98);
-      winGraphics.fillRect(wx - frameSize / 2, wy - frameSize / 2, frameSize, frameSize);
-      winGraphics.fillStyle(0x1b2a53, 1);
-      winGraphics.fillRect(wx - frameSize / 2 + 2, wy - frameSize / 2 + 2, frameSize - 4, frameSize - 4);
-
-      // 2. Sherbeni Flame Orange Inner Casing Line
-      winGraphics.lineStyle(2.5, 0xee7b3c, 0.9);
-      winGraphics.strokeRect(wx - size / 2 - 1, wy - size / 2 - 1, size + 2, size + 2);
-
-      // 3. Projecting Architectural Stone Windowsill Underneath
       const sillW = frameSize + 14;
       const sillH = 6;
-      winGraphics.fillStyle(0x0f1830, 1);
-      winGraphics.fillRect(wx - sillW / 2, wy + frameSize / 2, sillW, sillH);
-      winGraphics.fillStyle(0x162244, 1);
-      winGraphics.fillRect(wx - sillW / 2 + 1, wy + frameSize / 2, sillW - 2, sillH - 2);
-      winGraphics.fillStyle(0xee7b3c, 0.85);
-      winGraphics.fillRect(wx - sillW / 2 + 2, wy + frameSize / 2, sillW - 4, 1.5);
 
-      // 4. Window Interior Cutout (Sky shows through)
-      const skyBg = isNightWindow
-        ? 0x091124
-        : wy > 2800
-          ? 0xf8e7d6
-          : wy > 2000
-            ? 0xf5cca5
-            : 0xd97757;
-      winGraphics.fillStyle(skyBg, 0.94);
-      winGraphics.fillRect(wx - size / 2, wy - size / 2, size, size);
+      const regionX = wx - sillW / 2 - 2;
+      const regionY = wy - frameSize / 2 - 2;
+      const key = `tex-window-${i}`;
 
-      // 5. Stained Glass Accent Corner Panes (Sherbeni Slide Colors)
-      const cornerSize = Math.max(8, Math.floor(size * 0.16));
-      // Top-Left (Teal)
-      winGraphics.fillStyle(stainedPanes[0], 0.88);
-      winGraphics.fillRect(wx - size / 2 + 3, wy - size / 2 + 3, cornerSize, cornerSize);
-      // Top-Right (Rose)
-      winGraphics.fillStyle(stainedPanes[1], 0.88);
-      winGraphics.fillRect(wx + size / 2 - cornerSize - 3, wy - size / 2 + 3, cornerSize, cornerSize);
-      // Bottom-Left (Flame Orange)
-      winGraphics.fillStyle(stainedPanes[2], 0.88);
-      winGraphics.fillRect(wx - size / 2 + 3, wy + size / 2 - cornerSize - 3, cornerSize, cornerSize);
-      // Bottom-Right (Violet)
-      winGraphics.fillStyle(stainedPanes[3], 0.88);
-      winGraphics.fillRect(wx + size / 2 - cornerSize - 3, wy + size / 2 - cornerSize - 3, cornerSize, cornerSize);
+      this.bake(key, regionX, regionY, sillW + 4, frameSize + sillH + 4, (winGraphics) => {
+        // 1. Outer Deep Navy Stone Frame (Crisply Squared)
+        winGraphics.fillStyle(0x0f1830, 0.98);
+        winGraphics.fillRect(wx - frameSize / 2, wy - frameSize / 2, frameSize, frameSize);
+        winGraphics.fillStyle(0x1b2a53, 1);
+        winGraphics.fillRect(wx - frameSize / 2 + 2, wy - frameSize / 2 + 2, frameSize - 4, frameSize - 4);
 
-      // 6. Squared Mullions (Crossbars)
-      if (grid === 2) {
-        // 2x2 Clean Square Panes
-        winGraphics.fillStyle(0x1b2a53, 0.95);
-        winGraphics.fillRect(wx - size / 2, wy - 1.5, size, 3);
-        winGraphics.fillRect(wx - 1.5, wy - size / 2, 3, size);
-        // Subtle orange edge trim on mullions
-        winGraphics.lineStyle(1, 0xee7b3c, 0.5);
-        winGraphics.lineBetween(wx - size / 2, wy, wx + size / 2, wy);
-        winGraphics.lineBetween(wx, wy - size / 2, wx, wy + size / 2);
-        // Brass center rosette
-        winGraphics.fillStyle(0xfef08a, 1);
-        winGraphics.fillRect(wx - 2.5, wy - 2.5, 5, 5);
-      } else {
-        // 3x3 Grand Observatory Grid for Summit Gallery
-        const colW = size / 3;
-        winGraphics.fillStyle(0x1b2a53, 0.95);
-        winGraphics.fillRect(wx - size / 2 + colW - 1, wy - size / 2, 2.5, size);
-        winGraphics.fillRect(wx - size / 2 + colW * 2 - 1, wy - size / 2, 2.5, size);
-        winGraphics.fillRect(wx - size / 2, wy - size / 2 + colW - 1, size, 2.5);
-        winGraphics.fillRect(wx - size / 2, wy - size / 2 + colW * 2 - 1, size, 2.5);
-        // Center jewel
-        winGraphics.fillStyle(0xfef08a, 1);
-        winGraphics.fillRect(wx - 3, wy - 3, 6, 6);
-      }
+        // 2. Sherbeni Flame Orange Inner Casing Line
+        winGraphics.lineStyle(2.5, 0xee7b3c, 0.9);
+        winGraphics.strokeRect(wx - size / 2 - 1, wy - size / 2 - 1, size + 2, size + 2);
 
-      // 7. Glass Sheen / Translucent Reflection across upper pane
-      winGraphics.fillStyle(0xffffff, 0.1);
-      winGraphics.fillPoints(
-        [
-          { x: wx - size / 2 + 4, y: wy - size / 2 + 4 },
-          { x: wx - size / 2 + size * 0.45, y: wy - size / 2 + 4 },
-          { x: wx - size / 2 + 4, y: wy - size / 2 + size * 0.45 },
-        ],
-        true
-      );
+        // 3. Projecting Architectural Stone Windowsill Underneath
+        winGraphics.fillStyle(0x0f1830, 1);
+        winGraphics.fillRect(wx - sillW / 2, wy + frameSize / 2, sillW, sillH);
+        winGraphics.fillStyle(0x162244, 1);
+        winGraphics.fillRect(wx - sillW / 2 + 1, wy + frameSize / 2, sillW - 2, sillH - 2);
+        winGraphics.fillStyle(0xee7b3c, 0.85);
+        winGraphics.fillRect(wx - sillW / 2 + 2, wy + frameSize / 2, sillW - 4, 1.5);
 
-      // 8. Night Sky Stars vs Daytime Sunbeams
-      if (isNightWindow) {
-        // Glowing stars visible inside night window opening
-        winGraphics.fillStyle(0xfef08a, 0.95);
-        winGraphics.fillCircle(wx - size * 0.22, wy - size * 0.2, 2.2);
-        winGraphics.fillCircle(wx + size * 0.24, wy - size * 0.12, 1.8);
-        winGraphics.fillCircle(wx - size * 0.14, wy + size * 0.22, 1.8);
-        winGraphics.fillStyle(0xee7b3c, 0.9);
-        winGraphics.fillCircle(wx + size * 0.18, wy + size * 0.24, 2.0);
-      } else if (win.sunbeam) {
+        // 4. Window Interior Cutout (Sky shows through)
+        const skyBg = isNightWindow
+          ? 0x091124
+          : wy > 2800
+            ? 0xf8e7d6
+            : wy > 2000
+              ? 0xf5cca5
+              : 0xd97757;
+        winGraphics.fillStyle(skyBg, 0.94);
+        winGraphics.fillRect(wx - size / 2, wy - size / 2, size, size);
+
+        // 5. Stained Glass Accent Corner Panes (Sherbeni Slide Colors)
+        const cornerSize = Math.max(8, Math.floor(size * 0.16));
+        winGraphics.fillStyle(stainedPanes[0], 0.88);
+        winGraphics.fillRect(wx - size / 2 + 3, wy - size / 2 + 3, cornerSize, cornerSize);
+        winGraphics.fillStyle(stainedPanes[1], 0.88);
+        winGraphics.fillRect(wx + size / 2 - cornerSize - 3, wy - size / 2 + 3, cornerSize, cornerSize);
+        winGraphics.fillStyle(stainedPanes[2], 0.88);
+        winGraphics.fillRect(wx - size / 2 + 3, wy + size / 2 - cornerSize - 3, cornerSize, cornerSize);
+        winGraphics.fillStyle(stainedPanes[3], 0.88);
+        winGraphics.fillRect(wx + size / 2 - cornerSize - 3, wy + size / 2 - cornerSize - 3, cornerSize, cornerSize);
+
+        // 6. Squared Mullions (Crossbars)
+        if (grid === 2) {
+          winGraphics.fillStyle(0x1b2a53, 0.95);
+          winGraphics.fillRect(wx - size / 2, wy - 1.5, size, 3);
+          winGraphics.fillRect(wx - 1.5, wy - size / 2, 3, size);
+          winGraphics.lineStyle(1, 0xee7b3c, 0.5);
+          winGraphics.lineBetween(wx - size / 2, wy, wx + size / 2, wy);
+          winGraphics.lineBetween(wx, wy - size / 2, wx, wy + size / 2);
+          winGraphics.fillStyle(0xfef08a, 1);
+          winGraphics.fillRect(wx - 2.5, wy - 2.5, 5, 5);
+        } else {
+          const colW = size / 3;
+          winGraphics.fillStyle(0x1b2a53, 0.95);
+          winGraphics.fillRect(wx - size / 2 + colW - 1, wy - size / 2, 2.5, size);
+          winGraphics.fillRect(wx - size / 2 + colW * 2 - 1, wy - size / 2, 2.5, size);
+          winGraphics.fillRect(wx - size / 2, wy - size / 2 + colW - 1, size, 2.5);
+          winGraphics.fillRect(wx - size / 2, wy - size / 2 + colW * 2 - 1, size, 2.5);
+          winGraphics.fillStyle(0xfef08a, 1);
+          winGraphics.fillRect(wx - 3, wy - 3, 6, 6);
+        }
+
+        // 7. Glass Sheen / Translucent Reflection across upper pane
+        winGraphics.fillStyle(0xffffff, 0.1);
+        winGraphics.fillPoints(
+          [
+            { x: wx - size / 2 + 4, y: wy - size / 2 + 4 },
+            { x: wx - size / 2 + size * 0.45, y: wy - size / 2 + 4 },
+            { x: wx - size / 2 + 4, y: wy - size / 2 + size * 0.45 },
+          ],
+          true
+        );
+
+        // 8. Night Sky Stars inside night windows
+        if (isNightWindow) {
+          winGraphics.fillStyle(0xfef08a, 0.95);
+          winGraphics.fillCircle(wx - size * 0.22, wy - size * 0.2, 2.2);
+          winGraphics.fillCircle(wx + size * 0.24, wy - size * 0.12, 1.8);
+          winGraphics.fillCircle(wx - size * 0.14, wy + size * 0.22, 1.8);
+          winGraphics.fillStyle(0xee7b3c, 0.9);
+          winGraphics.fillCircle(wx + size * 0.18, wy + size * 0.24, 2.0);
+        }
+      });
+      this.addBaked(key, regionX, regionY, -20);
+
+      if (!isNightWindow && win.sunbeam) {
         // Soft diagonal sunbeam pouring inwards into the room
         const beamW = 120;
         const beamH = 110;
         const dir = win.side === 'left' ? 1 : -1;
-        const startX = win.side === 'left' ? wx + size / 2 : wx - size / 2;
+        const beamStartX = win.side === 'left' ? wx + size / 2 : wx - size / 2;
 
-        winGraphics.fillStyle(0xee7b3c, 0.09);
-        winGraphics.fillPoints(
+        beamGraphics.fillStyle(0xee7b3c, 0.09);
+        beamGraphics.fillPoints(
           [
-            { x: startX, y: wy - size * 0.25 },
-            { x: startX, y: wy + size * 0.45 },
-            { x: startX + dir * beamW, y: wy + size * 0.45 + beamH },
-            { x: startX + dir * (beamW * 0.45), y: wy + size * 0.45 + beamH },
+            { x: beamStartX, y: wy - size * 0.25 },
+            { x: beamStartX, y: wy + size * 0.45 },
+            { x: beamStartX + dir * beamW, y: wy + size * 0.45 + beamH },
+            { x: beamStartX + dir * (beamW * 0.45), y: wy + size * 0.45 + beamH },
           ],
           true
         );
 
-        winGraphics.fillStyle(0xfef08a, 0.05);
-        winGraphics.fillPoints(
+        beamGraphics.fillStyle(0xfef08a, 0.05);
+        beamGraphics.fillPoints(
           [
-            { x: startX, y: wy },
-            { x: startX, y: wy + size * 0.35 },
-            { x: startX + dir * (beamW * 0.75), y: wy + size * 0.35 + beamH * 0.8 },
-            { x: startX + dir * (beamW * 0.35), y: wy + size * 0.35 + beamH * 0.8 },
+            { x: beamStartX, y: wy },
+            { x: beamStartX, y: wy + size * 0.35 },
+            { x: beamStartX + dir * (beamW * 0.75), y: wy + size * 0.35 + beamH * 0.8 },
+            { x: beamStartX + dir * (beamW * 0.35), y: wy + size * 0.35 + beamH * 0.8 },
           ],
           true
         );
       }
     }
 
-    // 6. Glowing Sherbeni Orange Wall Sconces & Torches (NO bookshelves)
-    const sconceG = this.scene.add.graphics();
-    sconceG.setDepth(-15);
-
+    // 6. Glowing Sherbeni Orange Wall Sconces & Torches — one shared texture
+    this.bake('tex-sconce', -26, -76, 52, 52, (g) => {
+      // Soft ambient light aura
+      g.fillStyle(0xee7b3c, 0.16);
+      g.fillCircle(0, -50, 24);
+      // Deep Navy bracket
+      g.fillStyle(0x1b2a53, 1);
+      g.fillRect(-4, -48, 8, 14);
+      // Torch flame core
+      g.fillStyle(0xee7b3c, 0.95);
+      g.fillCircle(0, -54, 4.5);
+      g.fillStyle(0xfef08a, 1);
+      g.fillCircle(0, -54, 2);
+    });
     for (let y = groundY; y > 150; y -= 320) {
       const leftX = wallThickness + 16;
       const rightX = towerWidth - wallThickness - 16;
-
-      // Soft ambient light aura
-      sconceG.fillStyle(0xee7b3c, 0.16);
-      sconceG.fillCircle(leftX, y - 50, 24);
-      sconceG.fillCircle(rightX, y - 50, 24);
-
-      // Deep Navy bracket
-      sconceG.fillStyle(0x1b2a53, 1);
-      sconceG.fillRect(leftX - 4, y - 48, 8, 14);
-      sconceG.fillRect(rightX - 4, y - 48, 8, 14);
-
-      // Torch flame core
-      sconceG.fillStyle(0xee7b3c, 0.95);
-      sconceG.fillCircle(leftX, y - 54, 4.5);
-      sconceG.fillCircle(rightX, y - 54, 4.5);
-      sconceG.fillStyle(0xfef08a, 1);
-      sconceG.fillCircle(leftX, y - 54, 2);
-      sconceG.fillCircle(rightX, y - 54, 2);
+      this.addBaked('tex-sconce', leftX - 26, y - 76, -15);
+      this.addBaked('tex-sconce', rightX - 26, y - 76, -15);
     }
 
-    const wallGraphics = this.scene.add.graphics();
-    wallGraphics.setDepth(15);
-
-    // Left Wall in Deep Navy with Orange inner edge
-    wallGraphics.fillStyle(0x0f1830, 1);
-    wallGraphics.fillRect(-4, 0, wallThickness + 4, worldHeight);
-    wallGraphics.fillStyle(0x1b2a53, 1);
-    wallGraphics.fillRect(0, 0, wallThickness, worldHeight);
-    wallGraphics.fillStyle(0x273b70, 1);
-    for (let y = 0; y < worldHeight; y += 48) {
-      wallGraphics.fillRoundedRect(4, y + 4, wallThickness - 10, 40, 5);
-    }
-    wallGraphics.fillStyle(0xee7b3c, 1);
-    wallGraphics.fillRect(wallThickness - 4, 0, 4, worldHeight);
-
-    // Right Wall in Deep Navy with Orange inner edge
+    // 7. Tower walls — the brick pattern repeats every 48px, so one short segment
+    //    texture per side is reused all the way up the tower.
+    const brickPeriod = 48;
+    const segH = brickPeriod * 10;
+    const bakeH = segH + 2; // 2px overlap hides any seam between segments
+    const wallW = wallThickness + 4;
     const rightX = towerWidth - wallThickness;
-    wallGraphics.fillStyle(0x0f1830, 1);
-    wallGraphics.fillRect(rightX, 0, wallThickness + 4, worldHeight);
-    wallGraphics.fillStyle(0x1b2a53, 1);
-    wallGraphics.fillRect(rightX, 0, wallThickness, worldHeight);
-    wallGraphics.fillStyle(0x273b70, 1);
-    for (let y = 0; y < worldHeight; y += 48) {
-      wallGraphics.fillRoundedRect(
-        rightX + 6,
-        y + 4,
-        wallThickness - 10,
-        40,
-        5
-      );
+
+    this.bake('tex-wall-left', -4, 0, wallW, bakeH, (g) => {
+      g.fillStyle(0x0f1830, 1);
+      g.fillRect(-4, 0, wallThickness + 4, bakeH);
+      g.fillStyle(0x1b2a53, 1);
+      g.fillRect(0, 0, wallThickness, bakeH);
+      g.fillStyle(0x273b70, 1);
+      for (let y = 0; y < bakeH; y += brickPeriod) {
+        g.fillRoundedRect(4, y + 4, wallThickness - 10, 40, 5);
+      }
+      g.fillStyle(0xee7b3c, 1);
+      g.fillRect(wallThickness - 4, 0, 4, bakeH);
+    });
+
+    this.bake('tex-wall-right', rightX, 0, wallW, bakeH, (g) => {
+      g.fillStyle(0x0f1830, 1);
+      g.fillRect(rightX, 0, wallThickness + 4, bakeH);
+      g.fillStyle(0x1b2a53, 1);
+      g.fillRect(rightX, 0, wallThickness, bakeH);
+      g.fillStyle(0x273b70, 1);
+      for (let y = 0; y < bakeH; y += brickPeriod) {
+        g.fillRoundedRect(rightX + 6, y + 4, wallThickness - 10, 40, 5);
+      }
+      g.fillStyle(0xee7b3c, 1);
+      g.fillRect(rightX, 0, 4, bakeH);
+    });
+
+    for (let y = 0; y < worldHeight; y += segH) {
+      this.addBaked('tex-wall-left', -4, y, 15);
+      this.addBaked('tex-wall-right', rightX, y, 15);
     }
-    wallGraphics.fillStyle(0xee7b3c, 1);
-    wallGraphics.fillRect(rightX, 0, 4, worldHeight);
   }
 
   private createGroundPlatform(): void {
@@ -758,6 +834,7 @@ export class PlatformManager {
           isSummit: false,
         });
         this.wavingFlags.push(flag);
+        this.flagSteps.push(step);
 
         const cpSign = this.scene.add
           .text(flagX - 8, y - 46, `🔑 ${gateTitle}`, {
@@ -801,6 +878,7 @@ export class PlatformManager {
           isSummit: true,
         });
         this.wavingFlags.push(summitFlag);
+        this.flagSteps.push(step);
 
         const finishSign = this.scene.add
           .text(flagX - 8, y - 46, '🏁 FINISH LINE', {
@@ -853,6 +931,7 @@ export class PlatformManager {
       };
 
       this.platforms.set(step, platformData);
+      this.spriteToPlatform.set(sprite, platformData);
       this.applyPlatformLockState(platformData, isInitiallyUnlocked, false);
     }
   }
@@ -1143,10 +1222,29 @@ export class PlatformManager {
   }
 
   public update(time: number, delta: number): void {
+    // Only animate / draw flags and gate doors that are actually near the camera.
+    // (Each one is a live vector Graphics that is expensive to rebuild every frame.)
+    const view = this.scene.cameras.main.worldView;
+    const top = view.y - 180;
+    const bottom = view.bottom + 180;
+
     // 1. Update physically-simulated waving flags
     for (let i = 0; i < this.wavingFlags.length; i++) {
-      this.wavingFlags[i].update(time);
+      const platform = this.platforms.get(this.flagSteps[i]);
+      const onScreen =
+        !!platform && platform.unlocked && platform.y > top && platform.y < bottom;
+      this.wavingFlags[i].setVisible(onScreen);
+      if (onScreen) this.wavingFlags[i].update(time);
     }
+
+    this.checkpointDoors.forEach((door, checkpointNumber) => {
+      const platform = this.platforms.get(
+        checkpointNumber * this.config.stepsPerCheckpoint
+      );
+      door.container.setVisible(
+        !!platform && platform.unlocked && platform.y > top && platform.y < bottom
+      );
+    });
 
     // 2. Update drifting clouds across the tower
     const dt = delta * 0.001;
@@ -1160,7 +1258,7 @@ export class PlatformManager {
       if (c.x > maxX) {
         c.x -= span;
       }
-      c.container.setX(c.x);
+      c.container.setX(c.x + c.offsetX);
     }
   }
 }

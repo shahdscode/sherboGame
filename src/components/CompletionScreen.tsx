@@ -10,6 +10,7 @@ import {
   Download,
 } from 'lucide-react';
 import { towerConfig } from '../data/towerConfig';
+import { captureGameFrame } from '../game/TowerGame';
 
 interface CompletionScreenProps {
   completedCheckpointsCount: number;
@@ -45,13 +46,11 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
     setIsExporting(true);
 
     try {
-      // 1. Get Phaser game canvas from the DOM
-      const phaserCanvas = document.querySelector(
-        '#phaser-tower-container canvas'
-      ) as HTMLCanvasElement | null;
+      // 1. Grab the current game frame (works without preserveDrawingBuffer)
+      const frame = await captureGameFrame();
 
-      const outW = phaserCanvas ? phaserCanvas.width : 1200;
-      const outH = phaserCanvas ? phaserCanvas.height : 900;
+      const outW = frame ? frame.naturalWidth || frame.width : 1200;
+      const outH = frame ? frame.naturalHeight || frame.height : 900;
 
       const exportCanvas = document.createElement('canvas');
       exportCanvas.width = outW;
@@ -60,8 +59,8 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
       if (!ctx) return;
 
       // Draw background / game scene
-      if (phaserCanvas) {
-        ctx.drawImage(phaserCanvas, 0, 0, outW, outH);
+      if (frame) {
+        ctx.drawImage(frame, 0, 0, outW, outH);
       } else {
         ctx.fillStyle = '#0a1226';
         ctx.fillRect(0, 0, outW, outH);
@@ -183,14 +182,43 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
         cardY + 326 * scale
       );
 
-      // Trigger automatic image download
-      const dataUrl = exportCanvas.toDataURL('image/png');
+      const fileName = `sherbos-tower-score-${xpPoints}xp.png`;
+      const blob: Blob | null = await new Promise((resolve) =>
+        exportCanvas.toBlob((b) => resolve(b), 'image/png')
+      );
+      if (!blob) return;
+
+      // On phones use the native share sheet (save to photos / send on WhatsApp).
+      // A plain download link silently does nothing inside in-app browsers such as
+      // Facebook / Messenger, which is where most students open the game from.
+      const isTouchDevice =
+        !!window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+      if (isTouchDevice && typeof navigator.share === 'function') {
+        try {
+          const file = new File([blob], fileName, { type: 'image/png' });
+          if (!navigator.canShare || navigator.canShare({ files: [file] })) {
+            await navigator.share({
+              files: [file],
+              title: "Sherbo's Tower",
+              text: `I scored ${xpPoints} / ${towerConfig.rewards.maxTotalScore} XP on Sherbo's Tower!`,
+            });
+            return;
+          }
+        } catch (shareErr) {
+          // The student closed the share sheet — that's not an error
+          if ((shareErr as DOMException)?.name === 'AbortError') return;
+        }
+      }
+
+      // Desktop (or share unavailable): download the image
+      const objectUrl = URL.createObjectURL(blob);
       const downloadLink = document.createElement('a');
-      downloadLink.download = `sherbos-tower-score-${xpPoints}xp.png`;
-      downloadLink.href = dataUrl;
+      downloadLink.download = fileName;
+      downloadLink.href = objectUrl;
       document.body.appendChild(downloadLink);
       downloadLink.click();
       document.body.removeChild(downloadLink);
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 4000);
     } catch (err) {
       console.error('Failed to export score card image:', err);
     } finally {

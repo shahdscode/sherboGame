@@ -97,6 +97,11 @@ export const TouchControls: React.FC<TouchControlsProps> = ({
       e.preventDefault();
       updateButton(button, false);
     },
+    // Safety net: if the browser steals the pointer (notification, gesture, tab switch)
+    // the button must never stay "stuck" pressed.
+    onLostPointerCapture: () => {
+      updateButton(button, false);
+    },
     onContextMenu: (e: React.MouseEvent) => e.preventDefault(),
   });
 

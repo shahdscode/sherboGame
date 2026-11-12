@@ -83,7 +83,7 @@ export const QuestionModal: React.FC<QuestionModalProps> = ({
     }
   }, [isCorrect]);
 
-  // Keyboard shortcuts: 1-4 or A-D to pick a power block, Enter/Space to continue after solving
+  // Keyboard shortcuts: 1-4 or A-D to pick a power block, Enter to confirm, Enter/Space to continue after solving
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (isCorrect) {
@@ -91,6 +91,12 @@ export const QuestionModal: React.FC<QuestionModalProps> = ({
           e.preventDefault();
           onContinue();
         }
+        return;
+      }
+
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        onSubmitAnswer();
         return;
       }
 
@@ -103,14 +109,14 @@ export const QuestionModal: React.FC<QuestionModalProps> = ({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isCorrect, onContinue, onSelectOption]);
+  }, [isCorrect, onContinue, onSelectOption, onSubmitAnswer]);
 
   // Determine which sticker character to display
   const characterImgSrc = isCorrect
-    ? '/stickers/goodjob.png'
+    ? '/stickers/goodjob.webp'
     : isIncorrect
-      ? '/stickers/retry.png'
-      : '/stickers/question.png';
+      ? '/stickers/retry.webp'
+      : '/stickers/question.webp';
 
   const characterImgAlt = isCorrect
     ? 'Good Job Character'
@@ -422,7 +428,11 @@ export const QuestionModal: React.FC<QuestionModalProps> = ({
                   data-testid="submit-answer-btn"
                 >
                   <Zap size={18} />
-                  <span>Tap Any Power Stone Above to Unlock</span>
+                  <span>
+                    {feedback.selectedOptionIndex === null
+                      ? 'Pick a Power Stone'
+                      : 'Confirm Answer'}
+                  </span>
                 </button>
               ) : (
                 <button

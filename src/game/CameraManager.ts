@@ -3,8 +3,12 @@ import { TowerConfigRuntime } from '../data/towerConfig';
 
 /** Target vertical world span visible on screen (~5.5 steps, zoomed-in arcade feel). */
 const VISIBLE_WORLD_HEIGHT = 620;
-/** Minimum horizontal world span on portrait phones so adjacent platforms stay in view. */
-const MIN_VISIBLE_WORLD_WIDTH = 390;
+/**
+ * Minimum horizontal world span on portrait phones. Platforms zig-zag up to ~240px either
+ * side of the tower centre, so the view must be wide enough that the NEXT platform is
+ * always on screen (with 390 students had to jump blind towards off-screen platforms).
+ */
+const MIN_VISIBLE_WORLD_WIDTH = 600;
 
 export class CameraManager {
   private scene: Phaser.Scene;

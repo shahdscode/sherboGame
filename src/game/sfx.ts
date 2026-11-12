@@ -32,6 +32,8 @@ function audio(): AudioContext | null {
  * mobile Safari/Chrome audio hardware restrictions.
  */
 function unlockAudioContext(ac: AudioContext): void {
+  // Already running: nothing to unlock. (This runs on every touch, so keep it free.)
+  if (ac.state === 'running') return;
   if (ac.state === 'suspended') {
     void ac.resume();
   }
@@ -101,6 +103,27 @@ function tone(
 }
 
 let activeAudioElement: HTMLAudioElement | null = null;
+const audioCache = new Map<string, HTMLAudioElement>();
+
+function getAudioElement(relativePath: string): HTMLAudioElement {
+  let el = audioCache.get(relativePath);
+  if (!el) {
+    el = new Audio(relativePath);
+    el.preload = 'auto';
+    audioCache.set(relativePath, el);
+  }
+  return el;
+}
+
+/** Download voice lines ahead of time so they play instantly on slow connections. */
+function preloadAudioFiles(paths: string[]): void {
+  if (typeof window === 'undefined') return;
+  try {
+    paths.forEach((p) => getAudioElement(p).load());
+  } catch {
+    /* ignore */
+  }
+}
 
 function playAudioFile(relativePath: string, volume = 0.85): void {
   if (muted || typeof window === 'undefined') return;
@@ -110,7 +133,8 @@ function playAudioFile(relativePath: string, volume = 0.85): void {
       activeAudioElement.currentTime = 0;
       activeAudioElement = null;
     }
-    const audioEl = new Audio(relativePath);
+    const audioEl = getAudioElement(relativePath);
+    audioEl.currentTime = 0;
     audioEl.volume = volume;
     activeAudioElement = audioEl;
     const playPromise = audioEl.play();
@@ -174,6 +198,16 @@ export const sfx = {
       const picked = sounds3[Math.floor(Math.random() * sounds3.length)];
       playAudioFile(picked, 0.95);
     }
+  },
+  /** Warm the cache for the wrong-answer voice lines (call from a user gesture). */
+  preloadVoices(): void {
+    preloadAudioFiles([
+      '/sounds/ehheeeee.mp3',
+      '/sounds/msh hashaga3ak.mp3',
+      '/sounds/matgawdshhhh.mp3',
+      '/sounds/enta ghaby.mp3',
+      '/sounds/wana bahes enk aabet.mp3',
+    ]);
   },
   unlockGate(): void {
     tone(300, 0.25, 'triangle', 0.22, 900);

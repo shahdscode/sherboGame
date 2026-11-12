@@ -19,6 +19,9 @@ export const App: React.FC = () => {
     totalAttempts,
     firstTryCount,
     xpPoints,
+    sceneReady,
+    loadProgress,
+    loadFailed,
     startGame,
     selectOption,
     submitAnswer,
@@ -43,7 +46,12 @@ export const App: React.FC = () => {
         xpPoints={xpPoints}
       />
 
-      {gameState === 'INTRO' && <StartScreen onStart={startGame} />}
+      {gameState === 'INTRO' && <StartScreen
+          onStart={startGame}
+          ready={sceneReady}
+          progress={loadProgress}
+          loadFailed={loadFailed}
+        />}
 
       {isQuestionVisible && activeQuestion && (
         <QuestionModal
@@ -65,10 +73,12 @@ export const App: React.FC = () => {
         />
       )}
 
-      <TouchControls
-        disabled={gameState !== 'PLAYING'}
-        onChange={setTouchControls}
-      />
+      {gameState !== 'COMPLETED' && (
+        <TouchControls
+          disabled={gameState !== 'PLAYING'}
+          onChange={setTouchControls}
+        />
+      )}
     </div>
   );
 };

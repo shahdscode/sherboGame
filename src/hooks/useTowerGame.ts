@@ -58,6 +58,10 @@ export function useTowerGame(
   const [totalAttempts, setTotalAttempts] = useState<number>(0);
   const [firstTryCount, setFirstTryCount] = useState<number>(0);
   const [xpPoints, setXpPoints] = useState<number>(0);
+  // The Start button stays locked until the Phaser scene has loaded its assets
+  const [sceneReady, setSceneReady] = useState<boolean>(gameEvents.sceneReady);
+  const [loadProgress, setLoadProgress] = useState<number>(0);
+  const [loadFailed, setLoadFailed] = useState<boolean>(false);
 
   const buildInitialCheckpoints = (): CheckpointStateItem[] =>
     Array.from({ length: towerConfig.numberOfCheckpoints }, (_, idx) => {
@@ -96,6 +100,18 @@ export function useTowerGame(
 
   // Subscribe to Phaser events
   useEffect(() => {
+    if (gameEvents.sceneReady) setSceneReady(true);
+    const unsubReady = gameEvents.on('evt:scene-ready', () => {
+      setLoadProgress(1);
+      setSceneReady(true);
+    });
+    const unsubProgress = gameEvents.on('evt:load-progress', ({ progress }) => {
+      setLoadProgress(progress);
+    });
+    const unsubLoadError = gameEvents.on('evt:load-error', () => {
+      setLoadFailed(true);
+    });
+
     const unsubStep = gameEvents.on(
       'evt:step-updated',
       ({ currentStep: step, highestStep: highest }) => {
@@ -150,6 +166,9 @@ export function useTowerGame(
     });
 
     return () => {
+      unsubReady();
+      unsubProgress();
+      unsubLoadError();
       unsubStep();
       unsubCheckpoint();
       unsubSectionUnlocked();
@@ -158,8 +177,12 @@ export function useTowerGame(
   }, []);
 
   const startGame = useCallback(() => {
+    // Never start before the scene is listening — the command would be lost and the
+    // game would sit frozen behind a dismissed start screen.
+    if (!gameEvents.sceneReady) return;
     sfx.unlock();
     sfx.click();
+    sfx.preloadVoices();
     setGameState('PLAYING');
     gameEvents.emit('cmd:start-game', undefined);
   }, []);
@@ -258,7 +281,8 @@ export function useTowerGame(
 
         setFeedback((prev) => ({
           status: 'incorrect',
-          selectedOptionIndex: chosen,
+          // Clear the selection so the student must deliberately pick another stone
+          selectedOptionIndex: null,
           wrongOptionIndices: newWrongIndices,
           earnedXp: null,
           currentLoss: penalty,
@@ -276,12 +300,24 @@ export function useTowerGame(
     [activeCheckpointNumber, activeQuestion, feedback]
   );
 
-  // Instant 1-tap arcade block selection + evaluation
+  // Tapping a stone only SELECTS it; the answer is graded when the student confirms.
+  // (On phones an accidental tap used to cost XP immediately.)
   const selectOption = useCallback(
     (optionIndex: number) => {
-      evaluateChoice(optionIndex);
+      if (isSubmittingRef.current) return;
+      setFeedback((prev) => {
+        if (
+          prev.status === 'correct' ||
+          prev.wrongOptionIndices.includes(optionIndex) ||
+          prev.selectedOptionIndex === optionIndex
+        ) {
+          return prev;
+        }
+        return { ...prev, selectedOptionIndex: optionIndex };
+      });
+      sfx.click();
     },
-    [evaluateChoice]
+    []
   );
 
   const submitAnswer = useCallback(() => {
@@ -349,6 +385,9 @@ export function useTowerGame(
     totalAttempts,
     firstTryCount,
     xpPoints,
+    sceneReady,
+    loadProgress,
+    loadFailed,
     startGame,
     selectOption,
     submitAnswer,

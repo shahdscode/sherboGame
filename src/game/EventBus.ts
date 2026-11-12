@@ -34,6 +34,10 @@ export interface TowerEventMap {
 
   // Phaser -> React events
   'evt:scene-ready': void;
+  /** Asset download progress, 0..1 */
+  'evt:load-progress': { progress: number };
+  /** An asset failed to download (bad connection) */
+  'evt:load-error': { file: string };
   'evt:step-updated': StepUpdatePayload;
   'evt:checkpoint-reached': CheckpointReachedPayload;
   'evt:section-unlocked': SectionUnlockedPayload;
@@ -44,6 +48,12 @@ type Listener<T> = (payload: T) => void;
 
 class TowerEventBus {
   private listeners: Map<keyof TowerEventMap, Set<Listener<any>>> = new Map();
+
+  /**
+   * True once the Phaser scene has finished loading and is listening for commands.
+   * The UI must not send 'cmd:start-game' before this (it would be silently lost).
+   */
+  public sceneReady = false;
 
   public on<K extends keyof TowerEventMap>(
     event: K,
