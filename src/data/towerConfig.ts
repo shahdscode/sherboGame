@@ -40,7 +40,11 @@ export interface TowerConfig {
     gravityY: number;
   };
   rewards: {
+    maxTotalScore: number;
     xpPerCheckpoint: number;
+    penalty1stMistake: number;
+    penalty2ndMistake: number;
+    penalty3rdMistake: number;
     firstTryBonusXp: number;
     summitBonusXp: number;
   };
@@ -72,9 +76,13 @@ export const towerConfig: TowerConfigRuntime = {
     gravityY: 1220,
   },
   rewards: {
-    xpPerCheckpoint: 150,
-    firstTryBonusXp: 50,
-    summitBonusXp: 300,
+    maxTotalScore: 1500,
+    xpPerCheckpoint: 300,
+    penalty1stMistake: 50,
+    penalty2ndMistake: 150,
+    penalty3rdMistake: 300,
+    firstTryBonusXp: 0,
+    summitBonusXp: 0,
   },
   worldHeight: 3800,
   groundY: 3620,

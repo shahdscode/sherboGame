@@ -49,8 +49,7 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart }) => {
             <Sparkles size={14} /> {towerConfig.numberOfCheckpoints} Rune Gates
           </span>
           <span className="feature-chip chip-emerald">
-            <Zap size={14} /> +{towerConfig.rewards.firstTryBonusXp} XP 1st-Try
-            Bonus
+            <Zap size={14} /> 1500 Max Score (300 XP / Gate)
           </span>
         </div>
 
@@ -62,9 +61,12 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart }) => {
             </div>
             <p>
               Every <strong>{towerConfig.stepsPerCheckpoint} steps</strong>, a
-              magic Rune Gate blocks the tower. Tap the right{' '}
-              <strong>Power Stone</strong> to shatter the barrier and keep
-              climbing!
+              magic Rune Gate blocks the tower. Solve each gate for up to{' '}
+              <strong>300 XP</strong> (<strong>1500 XP total</strong>).
+              Mistakes reduce points:{' '}
+              <strong>-50 XP</strong> for 1st mistake,{' '}
+              <strong>-150 XP</strong> for 2nd mistake, and{' '}
+              <strong>-300 XP</strong> for 3rd mistake!
             </p>
           </div>
 

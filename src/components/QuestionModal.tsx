@@ -120,14 +120,18 @@ export const QuestionModal: React.FC<QuestionModalProps> = ({
 
   const characterMoodTag = isCorrect
     ? 'GATE UNLOCKED!'
-    : isIncorrect
-      ? 'TRY ANOTHER STONE!'
-      : 'CRACK THE CODE!';
+    : feedback.wrongOptionIndices.length === 1
+      ? 'TRY ANOTHER STONE! (-50 XP)'
+      : feedback.wrongOptionIndices.length === 2
+        ? 'KEEP TRYING! (-150 XP)'
+        : feedback.wrongOptionIndices.length >= 3
+          ? 'LAST CHANCE! (0 XP)'
+          : 'CRACK THE CODE!';
 
-  const potentialXp =
-    feedback.attemptsForCurrentQuestion === 0
-      ? towerConfig.rewards.xpPerCheckpoint + towerConfig.rewards.firstTryBonusXp
-      : towerConfig.rewards.xpPerCheckpoint;
+  const currentPotentialXp =
+    feedback.status === 'correct'
+      ? feedback.earnedXp ?? 300
+      : feedback.potentialXp ?? 300;
 
   const solvedAnswerText = question.options[question.correctAnswer];
 
@@ -178,14 +182,25 @@ export const QuestionModal: React.FC<QuestionModalProps> = ({
           </div>
 
           <div
-            className={`gate-xp-bounty ${isCorrect ? 'gate-xp-earned' : ''}`}
+            className={`gate-xp-bounty ${
+              isCorrect
+                ? 'gate-xp-earned'
+                : isIncorrect
+                  ? 'gate-xp-penalized'
+                  : ''
+            }`}
           >
             <Zap size={15} />
             <span>
               {isCorrect
-                ? `+${feedback.earnedXp ?? potentialXp} XP EARNED!`
-                : `+${potentialXp} XP`}
+                ? `+${currentPotentialXp} / 300 XP EARNED!`
+                : `+${currentPotentialXp} / 300 XP`}
             </span>
+            {isIncorrect && feedback.currentLoss && (
+              <span className="live-penalty-pill">
+                -{feedback.currentLoss} XP
+              </span>
+            )}
           </div>
         </div>
 
@@ -297,6 +312,7 @@ export const QuestionModal: React.FC<QuestionModalProps> = ({
                 const isWrongTried = feedback.wrongOptionIndices.includes(index);
                 const isSolvedRight =
                   isCorrect && index === question.correctAnswer;
+                const optionPenalty = feedback.wrongPenalties?.[index];
 
                 let stateClass = BLOCK_THEMES[index % BLOCK_THEMES.length];
                 if (isSolvedRight) {
@@ -328,6 +344,11 @@ export const QuestionModal: React.FC<QuestionModalProps> = ({
                     <span className="option-text">
                       {renderFormattedMathText(optionText)}
                     </span>
+                    {optionPenalty && (
+                      <span className="option-penalty-badge">
+                        -{optionPenalty} XP
+                      </span>
+                    )}
                   </button>
                 );
               })}
@@ -342,7 +363,17 @@ export const QuestionModal: React.FC<QuestionModalProps> = ({
               >
                 <div className="feedback-title">
                   <ShieldAlert size={18} />
-                  <span>That stone fizzled! Pick another glowing stone.</span>
+                  <span>
+                    {feedback.wrongOptionIndices.length === 1 && (
+                      <>1st Mistake: <strong>-50 XP</strong> deducted! Pick another glowing stone.</>
+                    )}
+                    {feedback.wrongOptionIndices.length === 2 && (
+                      <>2nd Mistake: <strong>-150 XP</strong> total penalty! Pick another glowing stone.</>
+                    )}
+                    {feedback.wrongOptionIndices.length >= 3 && (
+                      <>3rd Mistake: <strong>-300 XP</strong> penalty (0 XP left)! Crack the code to pass.</>
+                    )}
+                  </span>
                 </div>
                 {feedback.hint && (
                   <div className="feedback-hint" data-testid="feedback-hint">
@@ -366,8 +397,7 @@ export const QuestionModal: React.FC<QuestionModalProps> = ({
                 <div className="feedback-title">
                   <CheckCircle2 size={19} />
                   <span>
-                    Boom! Gate Unlocked! (+{feedback.earnedXp ?? potentialXp}{' '}
-                    XP)
+                    Boom! Gate Unlocked! (+{currentPotentialXp} / 300 XP)
                   </span>
                 </div>
                 {feedback.explanation && (

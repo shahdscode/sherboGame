@@ -81,7 +81,7 @@ export const GameHUD: React.FC<GameHUDProps> = ({
         <Zap size={16} className="icon-amber" />
         <div>
           <span className="stat-label">Score</span>
-          <span className="stat-value">{xpPoints} XP</span>
+          <span className="stat-value">{xpPoints} / 1500 XP</span>
         </div>
       </div>
 

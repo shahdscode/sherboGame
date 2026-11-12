@@ -104,8 +104,10 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
         <div className="xp-reward-banner" data-testid="stat-total-xp">
           <Zap size={24} className="icon-amber" />
           <div>
-            <div className="xp-banner-title">Total Arcade Score</div>
-            <div className="xp-banner-score">{xpPoints} XP</div>
+            <div className="xp-banner-title">Final Score</div>
+            <div className="xp-banner-score">
+              {xpPoints} / 1500 XP ({Math.round((xpPoints / 1500) * 100)}%)
+            </div>
           </div>
         </div>
 

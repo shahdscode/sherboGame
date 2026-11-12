@@ -23,9 +23,24 @@ export interface QuestionAttemptFeedback {
   selectedOptionIndex: number | null;
   wrongOptionIndices: number[];
   earnedXp: number | null;
+  currentLoss: number | null;
+  potentialXp: number;
+  wrongPenalties: Record<number, number>;
   hint: string | null;
   explanation: string | null;
   attemptsForCurrentQuestion: number;
+}
+
+export function getPenaltyForMistakes(mistakes: number): number {
+  if (mistakes <= 0) return 0;
+  if (mistakes === 1) return towerConfig.rewards.penalty1stMistake; // 50
+  if (mistakes === 2) return towerConfig.rewards.penalty2ndMistake; // 150
+  return towerConfig.rewards.penalty3rdMistake; // 300
+}
+
+export function getQuestionXpForMistakes(mistakes: number): number {
+  const penalty = getPenaltyForMistakes(mistakes);
+  return Math.max(0, towerConfig.rewards.xpPerCheckpoint - penalty);
 }
 
 export function useTowerGame(
@@ -68,6 +83,9 @@ export function useTowerGame(
     selectedOptionIndex: null,
     wrongOptionIndices: [],
     earnedXp: null,
+    currentLoss: null,
+    potentialXp: towerConfig.rewards.xpPerCheckpoint,
+    wrongPenalties: {},
     hint: null,
     explanation: null,
     attemptsForCurrentQuestion: 0,
@@ -100,6 +118,9 @@ export function useTowerGame(
           selectedOptionIndex: null,
           wrongOptionIndices: [],
           earnedXp: null,
+          currentLoss: null,
+          potentialXp: towerConfig.rewards.xpPerCheckpoint,
+          wrongPenalties: {},
           hint: null,
           explanation: null,
           attemptsForCurrentQuestion: 0,
@@ -122,7 +143,9 @@ export function useTowerGame(
     );
 
     const unsubSummit = gameEvents.on('evt:summit-celebrated', () => {
-      setXpPoints((prev) => prev + towerConfig.rewards.summitBonusXp);
+      if (towerConfig.rewards.summitBonusXp > 0) {
+        setXpPoints((prev) => prev + towerConfig.rewards.summitBonusXp);
+      }
       setGameState('COMPLETED');
     });
 
@@ -173,14 +196,13 @@ export function useTowerGame(
         isSubmittingRef.current = true;
         sfx.correct();
 
-        const isFirstTry = newAttemptNum === 1;
+        const mistakes = feedback.wrongOptionIndices.length;
+        const isFirstTry = mistakes === 0;
         if (isFirstTry) {
           setFirstTryCount((prev) => prev + 1);
         }
 
-        const earnedXp =
-          towerConfig.rewards.xpPerCheckpoint +
-          (isFirstTry ? towerConfig.rewards.firstTryBonusXp : 0);
+        const earnedXp = getQuestionXpForMistakes(mistakes);
 
         setXpPoints((prev) => prev + earnedXp);
 
@@ -192,6 +214,9 @@ export function useTowerGame(
           selectedOptionIndex: chosen,
           wrongOptionIndices: prev.wrongOptionIndices,
           earnedXp,
+          currentLoss: null,
+          potentialXp: earnedXp,
+          wrongPenalties: prev.wrongPenalties,
           hint: null,
           explanation: activeQuestion.explanation,
           attemptsForCurrentQuestion: newAttemptNum,
@@ -222,13 +247,24 @@ export function useTowerGame(
         // Update character in Phaser to retry.png!
         gameEvents.emit('cmd:set-character-pose', { pose: 'retry' });
 
+        const newWrongIndices = feedback.wrongOptionIndices.includes(chosen)
+          ? feedback.wrongOptionIndices
+          : [...feedback.wrongOptionIndices, chosen];
+        const mistakeNumber = newWrongIndices.length;
+        const penalty = getPenaltyForMistakes(mistakeNumber);
+        const remainingXp = Math.max(0, towerConfig.rewards.xpPerCheckpoint - penalty);
+
         setFeedback((prev) => ({
           status: 'incorrect',
           selectedOptionIndex: chosen,
-          wrongOptionIndices: prev.wrongOptionIndices.includes(chosen)
-            ? prev.wrongOptionIndices
-            : [...prev.wrongOptionIndices, chosen],
+          wrongOptionIndices: newWrongIndices,
           earnedXp: null,
+          currentLoss: penalty,
+          potentialXp: remainingXp,
+          wrongPenalties: {
+            ...prev.wrongPenalties,
+            [chosen]: penalty,
+          },
           hint: activeQuestion.hint,
           explanation: null,
           attemptsForCurrentQuestion: newAttemptNum,
@@ -279,6 +315,9 @@ export function useTowerGame(
       selectedOptionIndex: null,
       wrongOptionIndices: [],
       earnedXp: null,
+      currentLoss: null,
+      potentialXp: towerConfig.rewards.xpPerCheckpoint,
+      wrongPenalties: {},
       hint: null,
       explanation: null,
       attemptsForCurrentQuestion: 0,
