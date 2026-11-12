@@ -721,16 +721,17 @@ kbd {
 .question-modal-card {
   flex: 1;
   max-width: 600px;
+  background: #f8e7d6;
 }
 
 /* Comic Speech Bubble from Sherbo */
 .sherbo-speech-bubble {
   position: relative;
-  background: #fdf7f0;
+  background: #ffffff;
   border: 2px solid #1b2a53;
   border-radius: 18px;
   padding: 14px 16px;
-  box-shadow: 0 4px 12px rgba(27, 42, 83, 0.1);
+  box-shadow: 0 4px 12px rgba(27, 42, 83, 0.08);
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -833,7 +834,7 @@ kbd {
   gap: 6px;
   font-size: 0.84rem;
   font-weight: 700;
-  color: #576582;
+  color: #1b2a53;
   text-transform: uppercase;
   letter-spacing: 0.4px;
 }
