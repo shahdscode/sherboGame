@@ -151,23 +151,17 @@ export const sfx = {
     tone(784, 0.18, 'triangle', 0.2, undefined, 0.1);
   },
   correct(): void {
-    [523, 659, 784, 1047].forEach((f, i) =>
-      tone(f, 0.18, 'triangle', 0.22, undefined, i * 0.075)
-    );
+    // Sound effect removed per user request
   },
   /**
-   * Mistake sound effects:
+   * Mistake voice lines:
    * - 1st mistake: plays "ehheeeee.mp3"
    * - 2nd & 3rd mistakes: plays a random sound from:
    *   "enta ghaby.mp3", "matgawdshhhh.mp3", "msh hashaga3ak.mp3", "wana bahes enk aabet.mp3"
    */
   wrong(mistakeNumber: number = 1): void {
-    // Keep synthetic tone for punchy tactile audio feedback
-    tone(240, 0.16, 'sawtooth', 0.16, 160);
-    tone(170, 0.24, 'sawtooth', 0.16, 110, 0.12);
-
     if (mistakeNumber <= 1) {
-      playAudioFile('/sounds/ehheeeee.mp3', 0.9);
+      playAudioFile('/sounds/ehheeeee.mp3', 0.95);
     } else {
       const followUpSounds = [
         '/sounds/enta ghaby.mp3',
@@ -177,7 +171,7 @@ export const sfx = {
       ];
       const picked =
         followUpSounds[Math.floor(Math.random() * followUpSounds.length)];
-      playAudioFile(picked, 0.9);
+      playAudioFile(picked, 0.95);
     }
   },
   unlockGate(): void {
