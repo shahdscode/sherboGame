@@ -692,32 +692,40 @@ export class PlatformManager {
           ? gateNames[checkpointNumber] || `GATE ${checkpointNumber}`
           : '';
 
-      const stepBadge = this.scene.add
-        .text(
-          isCheckpoint || isSummit ? this.config.wallThickness + 58 : x,
-          y - 1,
-          isSummit
-            ? '🏁 STEP 30 — SUMMIT CROWN 🏁'
-            : isCheckpoint
-              ? `⚡ ${gateTitle}`
-              : `${step}`,
-          {
+      if (isCheckpoint) {
+        const stepBadge = this.scene.add
+          .text(
+            this.config.wallThickness + 58,
+            y - 1,
+            `⚡ ${gateTitle}`,
+            {
+              fontFamily: '"Fredoka", sans-serif',
+              fontSize: '14px',
+              color: '#ffffff',
+              backgroundColor: '#ee7b3c',
+              padding: { x: 8, y: 2 },
+              fontStyle: 'bold',
+            }
+          )
+          .setResolution(TEXT_RES)
+          .setOrigin(0, 0.5)
+          .setDepth(6);
+        decorations.push(stepBadge);
+      } else if (!isSummit) {
+        const stepBadge = this.scene.add
+          .text(x, y - 1, `${step}`, {
             fontFamily: '"Fredoka", sans-serif',
-            fontSize: isCheckpoint || isSummit ? '14px' : '13px',
+            fontSize: '13px',
             color: '#ffffff',
-            backgroundColor: isSummit
-              ? '#1b2a53'
-              : isCheckpoint
-                ? '#ee7b3c'
-                : '#1b2a53',
+            backgroundColor: '#1b2a53',
             padding: { x: 8, y: 2 },
             fontStyle: 'bold',
-          }
-        )
-        .setResolution(TEXT_RES)
-        .setOrigin(isCheckpoint || isSummit ? 0 : 0.5, 0.5)
-        .setDepth(6);
-      decorations.push(stepBadge);
+          })
+          .setResolution(TEXT_RES)
+          .setOrigin(0.5, 0.5)
+          .setDepth(6);
+        decorations.push(stepBadge);
+      }
 
       if (isCheckpoint && checkpointNumber !== null) {
         // Create an architectural locked Gate Door positioned directly on the checkpoint platform

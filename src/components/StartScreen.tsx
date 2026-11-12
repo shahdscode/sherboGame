@@ -28,45 +28,19 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart }) => {
             />
           </div>
           <div className="start-hero-text">
-            <div className="badge-pill">
-              <Sparkles size={14} />
-              <span>SHERBO ARCADE TOWER</span>
-            </div>
-            <h1 className="game-title">Knowledge Tower</h1>
-            <p className="game-subtitle">
-              Leap across {towerConfig.totalSteps} stones, crack{' '}
-              {towerConfig.numberOfCheckpoints} Rune Gates, and claim the Summit
-              Crown!
-            </p>
+            <h1 className="game-title">Sherbo's Tower</h1>
           </div>
-        </div>
-
-        <div className="start-feature-chips">
-          <span className="feature-chip chip-cyan">
-            <Flag size={14} /> {towerConfig.totalSteps} Tower Steps
-          </span>
-          <span className="feature-chip chip-gold">
-            <Sparkles size={14} /> {towerConfig.numberOfCheckpoints} Rune Gates
-          </span>
-          <span className="feature-chip chip-emerald">
-            <Zap size={14} /> 1500 Max Score (300 XP / Gate)
-          </span>
         </div>
 
         <div className="info-grid">
           <div className="info-box">
             <div className="info-box-header">
               <Flag size={18} className="icon-gold" />
-              <h3>Quest Rules</h3>
+              <h3>Tower Rules</h3>
             </div>
             <p>
-              Every <strong>{towerConfig.stepsPerCheckpoint} steps</strong>, a
-              magic Rune Gate blocks the tower. Solve each gate for up to{' '}
-              <strong>300 XP</strong> (<strong>1500 XP total</strong>).
-              Mistakes reduce points:{' '}
-              <strong>-50 XP</strong> for 1st mistake,{' '}
-              <strong>-150 XP</strong> for 2nd mistake, and{' '}
-              <strong>-300 XP</strong> for 3rd mistake!
+              climb, solve and choose correct answers to acheive the highest
+              score and unlock the gates
             </p>
           </div>
 
@@ -81,11 +55,9 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart }) => {
                   <kbd>
                     <ArrowLeft size={13} />
                   </kbd>
-                  <kbd>A</kbd>
                   <kbd>
                     <ArrowRight size={13} />
                   </kbd>
-                  <kbd>D</kbd>
                 </span>
                 <span>Run Left / Right</span>
               </div>
@@ -95,13 +67,8 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart }) => {
                   <kbd>
                     <ArrowUp size={13} />
                   </kbd>
-                  <kbd>W</kbd>
                 </span>
                 <span>Jump Up</span>
-              </div>
-              <div className="control-row">
-                <span className="mobile-tag">Phone / Tablet</span>
-                <span>On-screen arcade buttons</span>
               </div>
             </div>
           </div>

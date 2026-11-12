@@ -304,31 +304,39 @@ body,
 .start-hero-banner {
   display: flex;
   align-items: center;
-  gap: 18px;
+  gap: 20px;
   background: linear-gradient(135deg, #fdf8f2 0%, #faecd9 100%);
   border: 2px solid #1b2a53;
   border-radius: 18px;
-  padding: 14px 18px;
+  padding: 14px 20px;
+  overflow: visible;
+  position: relative;
 }
 
 .start-hero-sticker-wrap {
   flex-shrink: 0;
-  width: 108px;
-  height: 108px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(238, 123, 60, 0.22) 0%, rgba(248, 231, 214, 0.7) 75%);
-  border: 2px solid #ee7b3c;
+  width: 130px;
+  height: 130px;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 0 24px rgba(238, 123, 60, 0.25);
+  position: relative;
+  margin-top: -22px;
+  margin-bottom: -16px;
+  margin-left: -6px;
 }
 
 .start-hero-sticker {
-  width: 98px;
-  height: 98px;
+  width: 142px;
+  height: 142px;
   object-fit: contain;
-  filter: drop-shadow(0 6px 12px rgba(27, 42, 83, 0.25));
+  filter: drop-shadow(0 10px 18px rgba(27, 42, 83, 0.28));
+  transform: scale(1.12);
+  transition: transform 0.25s ease;
+}
+
+.start-hero-sticker:hover {
+  transform: scale(1.18);
 }
 
 .start-hero-text {
@@ -1468,18 +1476,21 @@ kbd {
   }
 
   .start-hero-banner {
-    padding: 11px 13px;
-    gap: 12px;
+    padding: 12px 14px;
+    gap: 14px;
   }
 
   .start-hero-sticker-wrap {
-    width: 78px;
-    height: 78px;
+    width: 96px;
+    height: 96px;
+    margin-top: -14px;
+    margin-bottom: -10px;
+    margin-left: -4px;
   }
 
   .start-hero-sticker {
-    width: 72px;
-    height: 72px;
+    width: 104px;
+    height: 104px;
   }
 
   .info-grid {
