@@ -242,15 +242,17 @@ export function useTowerGame(
           })
         );
       } else {
-        sfx.wrong();
-
-        // Update character in Phaser to retry.png!
-        gameEvents.emit('cmd:set-character-pose', { pose: 'retry' });
-
         const newWrongIndices = feedback.wrongOptionIndices.includes(chosen)
           ? feedback.wrongOptionIndices
           : [...feedback.wrongOptionIndices, chosen];
         const mistakeNumber = newWrongIndices.length;
+
+        // Play custom voice line based on mistake count (1st mistake vs 2nd/3rd)
+        sfx.wrong(mistakeNumber);
+
+        // Update character in Phaser to retry.png!
+        gameEvents.emit('cmd:set-character-pose', { pose: 'retry' });
+
         const penalty = getPenaltyForMistakes(mistakeNumber);
         const remainingXp = Math.max(0, towerConfig.rewards.xpPerCheckpoint - penalty);
 

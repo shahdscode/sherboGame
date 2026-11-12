@@ -100,6 +100,30 @@ function tone(
   osc.stop(start + duration + 0.03);
 }
 
+let activeAudioElement: HTMLAudioElement | null = null;
+
+function playAudioFile(relativePath: string, volume = 0.85): void {
+  if (muted || typeof window === 'undefined') return;
+  try {
+    if (activeAudioElement) {
+      activeAudioElement.pause();
+      activeAudioElement.currentTime = 0;
+      activeAudioElement = null;
+    }
+    const audioEl = new Audio(relativePath);
+    audioEl.volume = volume;
+    activeAudioElement = audioEl;
+    const playPromise = audioEl.play();
+    if (playPromise !== undefined) {
+      playPromise.catch(() => {
+        /* Autoplay / user gesture policy handled gracefully */
+      });
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
 export const sfx = {
   /** Call from any touch / click gesture to immediately unlock audio on iOS and Android. */
   unlock(): void {
@@ -131,9 +155,30 @@ export const sfx = {
       tone(f, 0.18, 'triangle', 0.22, undefined, i * 0.075)
     );
   },
-  wrong(): void {
+  /**
+   * Mistake sound effects:
+   * - 1st mistake: plays "ehheeeee.mp3"
+   * - 2nd & 3rd mistakes: plays a random sound from:
+   *   "enta ghaby.mp3", "matgawdshhhh.mp3", "msh hashaga3ak.mp3", "wana bahes enk aabet.mp3"
+   */
+  wrong(mistakeNumber: number = 1): void {
+    // Keep synthetic tone for punchy tactile audio feedback
     tone(240, 0.16, 'sawtooth', 0.16, 160);
     tone(170, 0.24, 'sawtooth', 0.16, 110, 0.12);
+
+    if (mistakeNumber <= 1) {
+      playAudioFile('/sounds/ehheeeee.mp3', 0.9);
+    } else {
+      const followUpSounds = [
+        '/sounds/enta ghaby.mp3',
+        '/sounds/matgawdshhhh.mp3',
+        '/sounds/msh hashaga3ak.mp3',
+        '/sounds/wana bahes enk aabet.mp3',
+      ];
+      const picked =
+        followUpSounds[Math.floor(Math.random() * followUpSounds.length)];
+      playAudioFile(picked, 0.9);
+    }
   },
   unlockGate(): void {
     tone(300, 0.25, 'triangle', 0.22, 900);

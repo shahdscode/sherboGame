@@ -34,8 +34,10 @@ interface CheckpointDoor {
   checkpointNumber: number;
   container: Phaser.GameObjects.Container;
   doorFrame: Phaser.GameObjects.Graphics;
+  doorInterior: Phaser.GameObjects.Graphics;
   doorLeft: Phaser.GameObjects.Graphics;
   doorRight: Phaser.GameObjects.Graphics;
+  lightRays: Phaser.GameObjects.Graphics;
   lockIcon: Phaser.GameObjects.Text;
   glow: Phaser.GameObjects.Arc;
   isUnlocked: boolean;
@@ -852,52 +854,79 @@ export class PlatformManager {
     platformCenterX: number,
     platformY: number
   ): CheckpointDoor {
-    const doorW = 56;
-    const doorH = 68;
+    const doorW = 76;
+    const doorH = 92;
     const footY = platformY - 6; // Rests squarely on the checkpoint platform
     const doorTopY = footY - doorH;
 
     const container = this.scene.add.container(platformCenterX, 0);
     container.setDepth(6);
 
-    // 1. Outer Heavy Stone Arch Frame (Deep Navy with Sherbeni Orange border)
+    // 1. Outer Heavy Architectural Stone Arch Frame (Deep Navy with Sherbeni Orange border & keystone)
     const doorFrame = this.scene.add.graphics();
-    // Dark deep navy arch
-    doorFrame.fillStyle(0x0f1830, 0.95);
-    doorFrame.fillRoundedRect(-doorW / 2 - 6, doorTopY - 6, doorW + 12, doorH + 6, 8);
+    // Shadow backing
+    doorFrame.fillStyle(0x0a1020, 0.98);
+    doorFrame.fillRoundedRect(-doorW / 2 - 8, doorTopY - 8, doorW + 16, doorH + 8, 10);
+    // Deep Navy stone arch
     doorFrame.fillStyle(0x1b2a53, 1);
-    doorFrame.fillRoundedRect(-doorW / 2 - 3, doorTopY - 3, doorW + 6, doorH + 3, 6);
-    // Orange inner border
-    doorFrame.lineStyle(2, 0xee7b3c, 0.9);
-    doorFrame.strokeRoundedRect(-doorW / 2 - 1, doorTopY - 1, doorW + 2, doorH + 1, 5);
+    doorFrame.fillRoundedRect(-doorW / 2 - 4, doorTopY - 4, doorW + 8, doorH + 4, 8);
+    // Sherbeni Flame Orange inner casing
+    doorFrame.lineStyle(2.5, 0xee7b3c, 0.95);
+    doorFrame.strokeRoundedRect(-doorW / 2 - 1, doorTopY - 1, doorW + 2, doorH + 1, 6);
+    // Arch Keystone at top center
+    doorFrame.fillStyle(0xee7b3c, 1);
+    doorFrame.fillRect(-6, doorTopY - 7, 12, 7);
+    doorFrame.fillStyle(0xfef08a, 1);
+    doorFrame.fillRect(-2, doorTopY - 5, 4, 3);
 
-    // 2. Door Leaves (Left & Right halves for opening swing animation)
-    const halfW = doorW / 2;
+    // 2. Interior Portal Room / Sky Cutout (revealed brilliantly when doors swing open)
+    const doorInterior = this.scene.add.graphics();
+    doorInterior.fillGradientStyle(0xf8e7d6, 0xf8e7d6, 0xee7b3c, 0xee7b3c, 1);
+    doorInterior.fillRoundedRect(-doorW / 2 + 2, doorTopY + 2, doorW - 4, doorH - 4, 4);
+
+    // 3. Volumetric Light Rays pouring outward when opened
+    const lightRays = this.scene.add.graphics();
+    lightRays.fillStyle(0xfef08a, 0.28);
+    lightRays.fillTriangle(-15, footY - 10, -55, footY + 12, 10, footY + 12);
+    lightRays.fillTriangle(15, footY - 10, -10, footY + 12, 55, footY + 12);
+    lightRays.fillTriangle(0, doorTopY + 20, -45, footY + 15, 45, footY + 15);
+    lightRays.setAlpha(0); // Starts invisible while locked
+
+    // 4. Two Heavy Wooden / Reinforced Iron Door Leaves
+    const halfW = doorW / 2 - 2;
+    // Left Door Leaf (x position will pivot / translate left on open)
     const doorLeft = this.scene.add.graphics();
-    doorLeft.fillStyle(0x1b2a53, 1);
-    doorLeft.fillRoundedRect(-halfW, doorTopY, halfW - 1, doorH, { tl: 5, bl: 0, tr: 0, br: 0 });
-    // Wood / Iron planking grooves
-    doorLeft.lineStyle(1.5, 0x0f1830, 0.8);
-    doorLeft.strokeRect(-halfW + 3, doorTopY + 5, halfW - 7, doorH - 10);
+    doorLeft.fillStyle(0x152244, 1);
+    doorLeft.fillRoundedRect(-halfW - 1, doorTopY + 2, halfW, doorH - 4, { tl: 4, bl: 0, tr: 0, br: 0 });
+    // Wood / Iron planking grooves & rivets
+    doorLeft.lineStyle(1.5, 0x0f1830, 0.85);
+    doorLeft.strokeRect(-halfW + 3, doorTopY + 6, halfW - 7, doorH - 12);
     doorLeft.fillStyle(0xee7b3c, 1);
-    doorLeft.fillCircle(-halfW + 6, doorTopY + 12, 1.8);
-    doorLeft.fillCircle(-halfW + 6, footY - 12, 1.8);
+    doorLeft.fillCircle(-halfW + 7, doorTopY + 16, 2.2);
+    doorLeft.fillCircle(-halfW + 7, footY - 18, 2.2);
+    // Brass handle ring
+    doorLeft.lineStyle(2, 0xfef08a, 1);
+    doorLeft.strokeCircle(-5, doorTopY + doorH * 0.52, 4);
 
+    // Right Door Leaf (x position will pivot / translate right on open)
     const doorRight = this.scene.add.graphics();
-    doorRight.fillStyle(0x1b2a53, 1);
-    doorRight.fillRoundedRect(1, doorTopY, halfW - 1, doorH, { tr: 5, br: 0, tl: 0, bl: 0 });
-    doorRight.lineStyle(1.5, 0x0f1830, 0.8);
-    doorRight.strokeRect(4, doorTopY + 5, halfW - 7, doorH - 10);
+    doorRight.fillStyle(0x152244, 1);
+    doorRight.fillRoundedRect(1, doorTopY + 2, halfW, doorH - 4, { tr: 4, br: 0, tl: 0, bl: 0 });
+    doorRight.lineStyle(1.5, 0x0f1830, 0.85);
+    doorRight.strokeRect(4, doorTopY + 6, halfW - 7, doorH - 12);
     doorRight.fillStyle(0xee7b3c, 1);
-    doorRight.fillCircle(halfW - 6, doorTopY + 12, 1.8);
-    doorRight.fillCircle(halfW - 6, footY - 12, 1.8);
+    doorRight.fillCircle(halfW - 5, doorTopY + 16, 2.2);
+    doorRight.fillCircle(halfW - 5, footY - 18, 2.2);
+    // Brass handle ring
+    doorRight.lineStyle(2, 0xfef08a, 1);
+    doorRight.strokeCircle(5, doorTopY + doorH * 0.52, 4);
 
-    // 3. Central Pulsing Lock Core
-    const glow = this.scene.add.circle(0, doorTopY + doorH * 0.52, 16, 0xee7b3c, 0.4);
+    // 5. Central Pulsing Lock Core
+    const glow = this.scene.add.circle(0, doorTopY + doorH * 0.52, 22, 0xee7b3c, 0.45);
     this.scene.tweens.add({
       targets: glow,
-      scale: { from: 0.85, to: 1.25 },
-      alpha: { from: 0.25, to: 0.6 },
+      scale: { from: 0.85, to: 1.3 },
+      alpha: { from: 0.3, to: 0.7 },
       duration: 800,
       yoyo: true,
       repeat: -1,
@@ -906,19 +935,21 @@ export class PlatformManager {
 
     const lockIcon = this.scene.add
       .text(0, doorTopY + doorH * 0.52, '🔒', {
-        fontSize: '20px',
+        fontSize: '24px',
       })
       .setResolution(TEXT_RES)
       .setOrigin(0.5, 0.5);
 
-    container.add([doorFrame, doorLeft, doorRight, glow, lockIcon]);
+    container.add([doorFrame, doorInterior, lightRays, doorLeft, doorRight, glow, lockIcon]);
 
     return {
       checkpointNumber,
       container,
       doorFrame,
+      doorInterior,
       doorLeft,
       doorRight,
+      lightRays,
       lockIcon,
       glow,
       isUnlocked: false,
@@ -1012,38 +1043,53 @@ export class PlatformManager {
 
       // Swap lock icon to unlock and burst bright gold
       door.lockIcon.setText('🔓');
-      door.glow.setFillStyle(0xfef08a, 0.9);
+      door.glow.setFillStyle(0xfef08a, 0.95);
 
       this.scene.tweens.add({
         targets: door.glow,
-        scale: 2.2,
+        scale: 2.8,
         alpha: 0,
-        duration: 500,
+        duration: 650,
         ease: 'Quad.easeOut',
       });
 
-      // Swing left and right door leaves open outward
+      // Reveal brilliant volumetric portal light pouring through
+      this.scene.tweens.add({
+        targets: door.lightRays,
+        alpha: 0.85,
+        duration: 400,
+        yoyo: true,
+        repeat: 1,
+        ease: 'Sine.easeInOut',
+      });
+
+      // Swing left door leaf wide open (sliding & swinging outward)
       this.scene.tweens.add({
         targets: door.doorLeft,
-        scaleX: 0.1,
-        alpha: 0.6,
-        duration: 450,
-        ease: 'Back.easeIn',
+        scaleX: 0.08,
+        x: -28,
+        alpha: 0.45,
+        duration: 600,
+        ease: 'Cubic.easeInOut',
       });
 
+      // Swing right door leaf wide open (sliding & swinging outward)
       this.scene.tweens.add({
         targets: door.doorRight,
-        scaleX: 0.1,
-        alpha: 0.6,
-        duration: 450,
-        ease: 'Back.easeIn',
+        scaleX: 0.08,
+        x: 28,
+        alpha: 0.45,
+        duration: 600,
+        ease: 'Cubic.easeInOut',
       });
 
+      // Floating unlocked badge rise and fade
       this.scene.tweens.add({
         targets: door.lockIcon,
-        y: door.lockIcon.y - 20,
+        y: door.lockIcon.y - 32,
+        scale: 1.4,
         alpha: 0,
-        duration: 500,
+        duration: 650,
         ease: 'Cubic.easeOut',
       });
     }
@@ -1076,10 +1122,11 @@ export class PlatformManager {
     this.checkpointDoors.forEach((door) => {
       door.isUnlocked = false;
       door.lockIcon.setText('🔒');
-      door.lockIcon.setAlpha(1);
-      door.doorLeft.setScale(1, 1).setAlpha(1);
-      door.doorRight.setScale(1, 1).setAlpha(1);
-      door.glow.setScale(1).setAlpha(0.4).setFillStyle(0xee7b3c, 0.4);
+      door.lockIcon.setAlpha(1).setScale(1);
+      door.doorLeft.setScale(1, 1).setAlpha(1).setX(0);
+      door.doorRight.setScale(1, 1).setAlpha(1).setX(0);
+      door.lightRays.setAlpha(0);
+      door.glow.setScale(1).setAlpha(0.45).setFillStyle(0xee7b3c, 0.45);
     });
 
     const barrierY = this.getBarrierYForSection(1);
