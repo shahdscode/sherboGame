@@ -62,6 +62,7 @@ export const TowerGame: React.FC = () => {
           pixelArt: false,
           roundPixels: false,
           powerPreference: 'high-performance',
+          preserveDrawingBuffer: true,
         },
         fps: {
           target: 60,
