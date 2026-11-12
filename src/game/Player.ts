@@ -33,11 +33,12 @@ export class Player {
   private baseScale: number = 0.29;
   private jumpBufferTimer: number = 0;
   private coyoteTimer: number = 0;
+  private landLockTimer: number = 0;
   private wasAirborne: boolean = false;
   private facing: 'left' | 'right' = 'right';
 
   public static preloadAssets(scene: Phaser.Scene): void {
-    // 1. Extracted 2x HD character sheet animation frames (all 7 movement rows)
+    // 1. Extracted 2x HD character sheet animation frames
     for (let i = 0; i < 8; i++) {
       scene.load.image(`char-idle-${i}`, `/stickers/character/idle_${i}.png`);
       scene.load.image(
@@ -57,8 +58,10 @@ export class Player {
         `/stickers/character/jump_left_${i}.png`
       );
       scene.load.image(`char-jump-${i}`, `/stickers/character/jump_${i}.png`);
-      scene.load.image(`char-fall-${i}`, `/stickers/character/fall_${i}.png`);
       scene.load.image(`char-land-${i}`, `/stickers/character/land_${i}.png`);
+    }
+    for (let i = 0; i < 5; i++) {
+      scene.load.image(`char-fall-${i}`, `/stickers/character/fall_${i}.png`);
     }
 
     // 2. High-DPI (1024x1024) checkpoint & feedback stickers
@@ -91,61 +94,89 @@ export class Player {
   }
 
   private createAnimations(): void {
-    const animDefs = [
-      { key: 'anim-idle', prefix: 'char-idle-', count: 8, rate: 8, repeat: -1 },
+    const animDefs: Array<{
+      key: string;
+      frames: Array<{ key: string }>;
+      rate: number;
+      repeat: number;
+    }> = [
+      {
+        key: 'anim-idle',
+        frames: Array.from({ length: 8 }, (_, i) => ({ key: `char-idle-${i}` })),
+        rate: 9,
+        repeat: -1,
+      },
       {
         key: 'anim-run-right',
-        prefix: 'char-run-right-',
-        count: 8,
-        rate: 14,
+        frames: Array.from({ length: 8 }, (_, i) => ({
+          key: `char-run-right-${i}`,
+        })),
+        rate: 15,
         repeat: -1,
       },
       {
         key: 'anim-run-left',
-        prefix: 'char-run-left-',
-        count: 8,
-        rate: 14,
+        frames: Array.from({ length: 8 }, (_, i) => ({
+          key: `char-run-left-${i}`,
+        })),
+        rate: 15,
         repeat: -1,
       },
       {
         key: 'anim-jump-right',
-        prefix: 'char-jump-right-',
-        count: 8,
-        rate: 12,
+        // Frames 0..6 are airborne; frame 7 is ground landing squat
+        frames: Array.from({ length: 7 }, (_, i) => ({
+          key: `char-jump-right-${i}`,
+        })),
+        rate: 14,
         repeat: 0,
       },
       {
         key: 'anim-jump-left',
-        prefix: 'char-jump-left-',
-        count: 8,
-        rate: 12,
+        // Frames 0..6 are airborne; frame 7 is ground landing squat
+        frames: Array.from({ length: 7 }, (_, i) => ({
+          key: `char-jump-left-${i}`,
+        })),
+        rate: 14,
         repeat: 0,
       },
       {
         key: 'anim-jump',
-        prefix: 'char-jump-',
-        count: 8,
-        rate: 12,
+        frames: Array.from({ length: 7 }, (_, i) => ({ key: `char-jump-${i}` })),
+        rate: 14,
         repeat: 0,
       },
       {
         key: 'anim-fall',
-        prefix: 'char-fall-',
-        count: 8,
-        rate: 10,
+        // Smooth airborne falling oscillation using airborne frames 0..3
+        frames: [
+          { key: 'char-fall-0' },
+          { key: 'char-fall-1' },
+          { key: 'char-fall-2' },
+          { key: 'char-fall-3' },
+          { key: 'char-fall-2' },
+          { key: 'char-fall-1' },
+        ],
+        rate: 12,
         repeat: -1,
       },
-      { key: 'anim-land', prefix: 'char-land-', count: 8, rate: 16, repeat: 0 },
+      {
+        key: 'anim-land',
+        // Impact crouch (fall-4) into 8-frame recovery to upright standing
+        frames: [
+          { key: 'char-fall-4' },
+          ...Array.from({ length: 8 }, (_, i) => ({ key: `char-land-${i}` })),
+        ],
+        rate: 18,
+        repeat: 0,
+      },
     ];
 
     for (const def of animDefs) {
       if (!this.scene.anims.exists(def.key)) {
-        const frames = Array.from({ length: def.count }, (_, i) => ({
-          key: `${def.prefix}${i}`,
-        }));
         this.scene.anims.create({
           key: def.key,
-          frames,
+          frames: def.frames,
           frameRate: def.rate,
           repeat: def.repeat,
         });
@@ -273,6 +304,7 @@ export class Player {
     this.sprite.setAcceleration(0, 0);
     this.jumpBufferTimer = 0;
     this.coyoteTimer = 0;
+    this.landLockTimer = 0;
     this.facing = 'right';
     this.setPose('climbing');
     this.touchInput = { left: false, right: false, jump: false };
@@ -293,6 +325,10 @@ export class Player {
     if (!body || !body.enable) {
       this.syncVisualPosition();
       return;
+    }
+
+    if (this.landLockTimer > 0) {
+      this.landLockTimer = Math.max(0, this.landLockTimer - delta);
     }
 
     const moveLeft =
@@ -361,12 +397,13 @@ export class Player {
       this.sprite.setVelocityY(this.config.player.jumpVelocity);
       this.jumpBufferTimer = 0;
       this.coyoteTimer = 0;
+      this.landLockTimer = 0;
       this.spawnDustPuff(6);
       sfx.jump();
       if (this.currentPose === 'climbing') {
         const jumpAnim =
           this.facing === 'left' ? 'anim-jump-left' : 'anim-jump-right';
-        this.visualSprite.play(jumpAnim, true);
+        this.visualSprite.play(jumpAnim, false);
       }
     }
 
@@ -374,8 +411,9 @@ export class Player {
     if (onFloor && this.wasAirborne) {
       this.spawnDustPuff(4);
       sfx.land();
+      this.landLockTimer = 130;
       if (this.currentPose === 'climbing') {
-        this.visualSprite.play('anim-land', true);
+        this.visualSprite.play('anim-land', false);
       }
     }
     this.wasAirborne = !onFloor;
@@ -383,10 +421,18 @@ export class Player {
     if (this.currentPose === 'climbing') {
       if (onFloor) {
         if (Math.abs(body.velocity.x) > 15) {
-          if (body.velocity.x > 0) {
-            this.visualSprite.play('anim-run-right', true);
-          } else {
-            this.visualSprite.play('anim-run-left', true);
+          // Allow brief landing impact squash before blending into run cycle
+          const currentKey = this.visualSprite.anims.currentAnim?.key;
+          if (
+            currentKey !== 'anim-land' ||
+            this.landLockTimer <= 0 ||
+            !this.visualSprite.anims.isPlaying
+          ) {
+            if (body.velocity.x > 0) {
+              this.visualSprite.play('anim-run-right', true);
+            } else {
+              this.visualSprite.play('anim-run-left', true);
+            }
           }
         } else {
           const currentAnim = this.visualSprite.anims.currentAnim;
@@ -399,14 +445,29 @@ export class Player {
           }
         }
       } else {
-        if (body.velocity.y < -30) {
+        if (body.velocity.y <= 20) {
           const jumpAnim =
             body.velocity.x < -15 ||
             (body.velocity.x <= 15 && this.facing === 'left')
               ? 'anim-jump-left'
               : 'anim-jump-right';
-          this.visualSprite.play(jumpAnim, true);
-        } else if (body.velocity.y > 30) {
+          const currentKey = this.visualSprite.anims.currentAnim?.key;
+          if (
+            currentKey !== 'anim-jump-left' &&
+            currentKey !== 'anim-jump-right'
+          ) {
+            this.visualSprite.play(jumpAnim, false);
+          } else if (currentKey !== jumpAnim) {
+            const frameIdx = Math.max(
+              0,
+              (this.visualSprite.anims.currentFrame?.index ?? 1) - 1
+            );
+            this.visualSprite.play(
+              { key: jumpAnim, startFrame: frameIdx },
+              false
+            );
+          }
+        } else {
           this.visualSprite.play('anim-fall', true);
         }
       }
