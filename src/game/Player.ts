@@ -421,18 +421,11 @@ export class Player {
     if (this.currentPose === 'climbing') {
       if (onFloor) {
         if (Math.abs(body.velocity.x) > 15) {
-          // Allow brief landing impact squash before blending into run cycle
-          const currentKey = this.visualSprite.anims.currentAnim?.key;
-          if (
-            currentKey !== 'anim-land' ||
-            this.landLockTimer <= 0 ||
-            !this.visualSprite.anims.isPlaying
-          ) {
-            if (body.velocity.x > 0) {
-              this.visualSprite.play('anim-run-right', true);
-            } else {
-              this.visualSprite.play('anim-run-left', true);
-            }
+          // If moving horizontally, immediately break out of land squat into running
+          if (body.velocity.x > 0) {
+            this.visualSprite.play('anim-run-right', true);
+          } else {
+            this.visualSprite.play('anim-run-left', true);
           }
         } else {
           const currentAnim = this.visualSprite.anims.currentAnim;
@@ -447,10 +440,7 @@ export class Player {
       } else {
         if (body.velocity.y <= 20) {
           const jumpAnim =
-            body.velocity.x < -15 ||
-            (body.velocity.x <= 15 && this.facing === 'left')
-              ? 'anim-jump-left'
-              : 'anim-jump-right';
+            this.facing === 'left' ? 'anim-jump-left' : 'anim-jump-right';
           const currentKey = this.visualSprite.anims.currentAnim?.key;
           if (
             currentKey !== 'anim-jump-left' &&

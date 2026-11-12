@@ -30,14 +30,24 @@ interface BackgroundCloud {
   width: number;
 }
 
+interface CheckpointDoor {
+  checkpointNumber: number;
+  container: Phaser.GameObjects.Container;
+  doorFrame: Phaser.GameObjects.Graphics;
+  doorLeft: Phaser.GameObjects.Graphics;
+  doorRight: Phaser.GameObjects.Graphics;
+  lockIcon: Phaser.GameObjects.Text;
+  glow: Phaser.GameObjects.Arc;
+  isUnlocked: boolean;
+}
+
 export class PlatformManager {
   private scene: Phaser.Scene;
   private config: TowerConfigRuntime;
   private staticGroup: Phaser.Physics.Arcade.StaticGroup;
   private platforms: Map<number, PlatformData> = new Map();
+  private checkpointDoors: Map<number, CheckpointDoor> = new Map();
   private ceilingBarrier!: Phaser.Physics.Arcade.Sprite;
-  private ceilingGlow!: Phaser.GameObjects.Rectangle;
-  private ceilingLabel!: Phaser.GameObjects.Text;
   private unlockedSection: number = 1;
   private wavingFlags: WavingFlag[] = [];
   private clouds: BackgroundCloud[] = [];
@@ -591,7 +601,7 @@ export class PlatformManager {
     ground.refreshBody();
 
     this.scene.add
-      .text(centerX, groundY + 13, '🏰 TOWER BASE — START CLIMBING!', {
+      .text(centerX, groundY + 13, "🏰 START CLIMBING SHERBO'S TOWER", {
         fontFamily: '"Fredoka", sans-serif',
         fontSize: '15px',
         color: '#ffffff',
@@ -668,6 +678,18 @@ export class PlatformManager {
 
       const decorations: Phaser.GameObjects.GameObject[] = [];
 
+      const gateNames: Record<number, string> = {
+        1: 'GATE ONE',
+        2: 'GATE TWO',
+        3: 'GATE THREE',
+        4: 'GATE FOUR',
+        5: 'GATE FIVE',
+      };
+      const gateTitle =
+        checkpointNumber !== null
+          ? gateNames[checkpointNumber] || `GATE ${checkpointNumber}`
+          : '';
+
       const stepBadge = this.scene.add
         .text(
           isCheckpoint || isSummit ? this.config.wallThickness + 58 : x,
@@ -675,7 +697,7 @@ export class PlatformManager {
           isSummit
             ? '🏁 STEP 30 — SUMMIT CROWN 🏁'
             : isCheckpoint
-              ? `⚡ RUNE GATE ${checkpointNumber} • STEP ${step}`
+              ? `⚡ ${gateTitle}`
               : `${step}`,
           {
             fontFamily: '"Fredoka", sans-serif',
@@ -696,6 +718,11 @@ export class PlatformManager {
       decorations.push(stepBadge);
 
       if (isCheckpoint && checkpointNumber !== null) {
+        // Create an architectural locked Gate Door positioned directly on the checkpoint platform
+        const door = this.createCheckpointDoor(checkpointNumber, centerX, y);
+        this.checkpointDoors.set(checkpointNumber, door);
+        decorations.push(door.container);
+
         const flagX = this.config.towerWidth - this.config.wallThickness - 68;
         const pole = this.scene.add
           .rectangle(flagX, y - 34, 5, 52, 0x1b2a53)
@@ -723,7 +750,7 @@ export class PlatformManager {
         this.wavingFlags.push(flag);
 
         const cpSign = this.scene.add
-          .text(flagX - 8, y - 46, `🔑 GATE ${checkpointNumber}`, {
+          .text(flagX - 8, y - 46, `🔑 ${gateTitle}`, {
             fontFamily: '"Fredoka", sans-serif',
             fontSize: '14px',
             color: '#ffffff',
@@ -820,52 +847,97 @@ export class PlatformManager {
     }
   }
 
+  private createCheckpointDoor(
+    checkpointNumber: number,
+    platformCenterX: number,
+    platformY: number
+  ): CheckpointDoor {
+    const doorW = 56;
+    const doorH = 68;
+    const footY = platformY - 6; // Rests squarely on the checkpoint platform
+    const doorTopY = footY - doorH;
+
+    const container = this.scene.add.container(platformCenterX, 0);
+    container.setDepth(6);
+
+    // 1. Outer Heavy Stone Arch Frame (Deep Navy with Sherbeni Orange border)
+    const doorFrame = this.scene.add.graphics();
+    // Dark deep navy arch
+    doorFrame.fillStyle(0x0f1830, 0.95);
+    doorFrame.fillRoundedRect(-doorW / 2 - 6, doorTopY - 6, doorW + 12, doorH + 6, 8);
+    doorFrame.fillStyle(0x1b2a53, 1);
+    doorFrame.fillRoundedRect(-doorW / 2 - 3, doorTopY - 3, doorW + 6, doorH + 3, 6);
+    // Orange inner border
+    doorFrame.lineStyle(2, 0xee7b3c, 0.9);
+    doorFrame.strokeRoundedRect(-doorW / 2 - 1, doorTopY - 1, doorW + 2, doorH + 1, 5);
+
+    // 2. Door Leaves (Left & Right halves for opening swing animation)
+    const halfW = doorW / 2;
+    const doorLeft = this.scene.add.graphics();
+    doorLeft.fillStyle(0x1b2a53, 1);
+    doorLeft.fillRoundedRect(-halfW, doorTopY, halfW - 1, doorH, { tl: 5, bl: 0, tr: 0, br: 0 });
+    // Wood / Iron planking grooves
+    doorLeft.lineStyle(1.5, 0x0f1830, 0.8);
+    doorLeft.strokeRect(-halfW + 3, doorTopY + 5, halfW - 7, doorH - 10);
+    doorLeft.fillStyle(0xee7b3c, 1);
+    doorLeft.fillCircle(-halfW + 6, doorTopY + 12, 1.8);
+    doorLeft.fillCircle(-halfW + 6, footY - 12, 1.8);
+
+    const doorRight = this.scene.add.graphics();
+    doorRight.fillStyle(0x1b2a53, 1);
+    doorRight.fillRoundedRect(1, doorTopY, halfW - 1, doorH, { tr: 5, br: 0, tl: 0, bl: 0 });
+    doorRight.lineStyle(1.5, 0x0f1830, 0.8);
+    doorRight.strokeRect(4, doorTopY + 5, halfW - 7, doorH - 10);
+    doorRight.fillStyle(0xee7b3c, 1);
+    doorRight.fillCircle(halfW - 6, doorTopY + 12, 1.8);
+    doorRight.fillCircle(halfW - 6, footY - 12, 1.8);
+
+    // 3. Central Pulsing Lock Core
+    const glow = this.scene.add.circle(0, doorTopY + doorH * 0.52, 16, 0xee7b3c, 0.4);
+    this.scene.tweens.add({
+      targets: glow,
+      scale: { from: 0.85, to: 1.25 },
+      alpha: { from: 0.25, to: 0.6 },
+      duration: 800,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
+
+    const lockIcon = this.scene.add
+      .text(0, doorTopY + doorH * 0.52, '🔒', {
+        fontSize: '20px',
+      })
+      .setResolution(TEXT_RES)
+      .setOrigin(0.5, 0.5);
+
+    container.add([doorFrame, doorLeft, doorRight, glow, lockIcon]);
+
+    return {
+      checkpointNumber,
+      container,
+      doorFrame,
+      doorLeft,
+      doorRight,
+      lockIcon,
+      glow,
+      isUnlocked: false,
+    };
+  }
+
   private createSectionBarrier(): void {
     const centerX = this.config.towerWidth / 2;
     const barrierY = this.getBarrierYForSection(1);
 
+    // Keep an invisible physics collider high above so players cant jump over before opening
     this.ceilingBarrier = this.scene.physics.add.staticSprite(
       centerX,
       barrierY,
       'tex-barrier'
     );
     this.ceilingBarrier.setScale(1 / TEX_SCALE);
-    this.ceilingBarrier.setDepth(10);
+    this.ceilingBarrier.setAlpha(0); // Invisible ceiling physics
     this.ceilingBarrier.refreshBody();
-
-    this.ceilingGlow = this.scene.add
-      .rectangle(
-        centerX,
-        barrierY,
-        this.config.checkpointPlatformWidth,
-        8,
-        0xee7b3c,
-        0.85
-      )
-      .setDepth(11);
-
-    this.scene.tweens.add({
-      targets: this.ceilingGlow,
-      alpha: { from: 0.45, to: 0.95 },
-      scaleY: { from: 0.85, to: 1.35 },
-      duration: 900,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut',
-    });
-
-    this.ceilingLabel = this.scene.add
-      .text(centerX, barrierY - 18, '🔒 LAND ON GATE 1 PLATFORM BELOW TO UNLOCK', {
-        fontFamily: '"Fredoka", sans-serif',
-        fontSize: '14px',
-        color: '#ffffff',
-        backgroundColor: '#1b2a53',
-        padding: { x: 12, y: 4 },
-        fontStyle: 'bold',
-      })
-      .setResolution(TEXT_RES)
-      .setOrigin(0.5, 0.5)
-      .setDepth(12);
   }
 
   private getBarrierYForSection(sectionIndex: number): number {
@@ -932,6 +1004,51 @@ export class PlatformManager {
     if (sectionIndex <= this.unlockedSection) return;
     this.unlockedSection = sectionIndex;
 
+    // 1. Animate unlocking the door on the checkpoint platform (checkpointNumber = sectionIndex - 1)
+    const prevCheckpointNum = sectionIndex - 1;
+    const door = this.checkpointDoors.get(prevCheckpointNum);
+    if (door && !door.isUnlocked) {
+      door.isUnlocked = true;
+
+      // Swap lock icon to unlock and burst bright gold
+      door.lockIcon.setText('🔓');
+      door.glow.setFillStyle(0xfef08a, 0.9);
+
+      this.scene.tweens.add({
+        targets: door.glow,
+        scale: 2.2,
+        alpha: 0,
+        duration: 500,
+        ease: 'Quad.easeOut',
+      });
+
+      // Swing left and right door leaves open outward
+      this.scene.tweens.add({
+        targets: door.doorLeft,
+        scaleX: 0.1,
+        alpha: 0.6,
+        duration: 450,
+        ease: 'Back.easeIn',
+      });
+
+      this.scene.tweens.add({
+        targets: door.doorRight,
+        scaleX: 0.1,
+        alpha: 0.6,
+        duration: 450,
+        ease: 'Back.easeIn',
+      });
+
+      this.scene.tweens.add({
+        targets: door.lockIcon,
+        y: door.lockIcon.y - 20,
+        alpha: 0,
+        duration: 500,
+        ease: 'Cubic.easeOut',
+      });
+    }
+
+    // 2. Reveal the new section steps with staggered bounce animation
     this.platforms.forEach((platform) => {
       if (platform.sectionIndex === sectionIndex) {
         this.applyPlatformLockState(platform, true, true);
@@ -945,19 +1062,6 @@ export class PlatformManager {
       const newBarrierY = this.getBarrierYForSection(sectionIndex);
       this.ceilingBarrier.setY(newBarrierY);
       this.ceilingBarrier.refreshBody();
-      this.ceilingGlow.setY(newBarrierY);
-      this.ceilingLabel.setY(newBarrierY - 16);
-
-      if (sectionIndex <= this.config.numberOfCheckpoints) {
-        this.ceilingLabel.setText(
-          `🔒 LAND ON GATE ${sectionIndex} PLATFORM BELOW TO UNLOCK`
-        );
-      } else {
-        this.ceilingGlow.setFillStyle(0xee7b3c, 0.7);
-        this.ceilingLabel.setBackgroundColor('#1b2a53');
-        this.ceilingLabel.setColor('#ffffff');
-        this.ceilingLabel.setText('🏁 REACH STEP 30 FOR SUMMIT VICTORY!');
-      }
     }
   }
 
@@ -968,15 +1072,19 @@ export class PlatformManager {
       this.applyPlatformLockState(platform, unlocked, false);
     });
 
+    // Reset all doors back to locked state
+    this.checkpointDoors.forEach((door) => {
+      door.isUnlocked = false;
+      door.lockIcon.setText('🔒');
+      door.lockIcon.setAlpha(1);
+      door.doorLeft.setScale(1, 1).setAlpha(1);
+      door.doorRight.setScale(1, 1).setAlpha(1);
+      door.glow.setScale(1).setAlpha(0.4).setFillStyle(0xee7b3c, 0.4);
+    });
+
     const barrierY = this.getBarrierYForSection(1);
     this.ceilingBarrier.setY(barrierY);
     this.ceilingBarrier.refreshBody();
-    this.ceilingGlow.setY(barrierY);
-    this.ceilingGlow.setFillStyle(0xee7b3c, 0.85);
-    this.ceilingLabel.setY(barrierY - 16);
-    this.ceilingLabel.setBackgroundColor('#1b2a53');
-    this.ceilingLabel.setColor('#ffffff');
-    this.ceilingLabel.setText('🔒 LAND ON GATE 1 PLATFORM BELOW TO UNLOCK');
   }
 
   public update(time: number, delta: number): void {
