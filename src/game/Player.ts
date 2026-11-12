@@ -170,8 +170,8 @@ export class Player {
           footX + Phaser.Math.Between(-8, 8),
           footY,
           Phaser.Math.Between(3, 6),
-          0xe2e8f0,
-          0.65
+          0xedcca8,
+          0.7
         )
         .setDepth(21);
 

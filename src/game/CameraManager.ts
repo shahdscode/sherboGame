@@ -18,7 +18,7 @@ export class CameraManager {
   }
 
   public setup(target: Phaser.GameObjects.GameObject): void {
-    this.camera.setBackgroundColor('#070b18');
+    this.camera.setBackgroundColor('#f8e7d6');
     this.camera.roundPixels = false;
     this.updateZoom();
     this.camera.startFollow(target, false, 0.12, 0.14, 0, 55);

@@ -68,52 +68,52 @@ export class PlatformManager {
   private createTextures(): void {
     const s = TEX_SCALE;
 
-    // 1. Regular platform texture (2x super-sampled with bevel + glowing crystal top)
+    // 1. Regular platform texture (2x super-sampled with white stone body + Sherbeni Orange top runner)
     if (!this.scene.textures.exists('tex-regular-platform')) {
       const w = this.config.regularPlatformWidth * s;
       const h = this.config.platformHeight * s;
       const g = this.scene.make.graphics({ x: 0, y: 0 }, false);
 
-      // Deep shadow base
-      g.fillStyle(0x0f172a, 0.95);
+      // Deep Navy shadow base
+      g.fillStyle(0x141f3e, 0.95);
       g.fillRoundedRect(0, 4 * s, w, h - 4 * s, 9 * s);
 
-      // Stone body
-      g.fillStyle(0x334155, 1);
+      // Crisp White stone body (matching slide cards)
+      g.fillStyle(0xffffff, 1);
       g.fillRoundedRect(1 * s, 3 * s, w - 2 * s, h - 5 * s, 8 * s);
 
-      // Inner lighter stone bevel
-      g.fillStyle(0x475569, 1);
+      // Inner warm cream bevel
+      g.fillStyle(0xfcf6ee, 1);
       g.fillRoundedRect(3 * s, 4 * s, w - 6 * s, h - 9 * s, 6 * s);
 
-      // Glowing cyan top energy strip
-      g.fillStyle(0x0ea5e9, 1);
+      // Vibrant Sherbeni Orange top energy strip
+      g.fillStyle(0xd96828, 1);
       g.fillRoundedRect(0, 0, w, 10 * s, 6 * s);
 
-      g.fillStyle(0x38bdf8, 1);
+      g.fillStyle(0xee7b3c, 1);
       g.fillRoundedRect(2 * s, 1 * s, w - 4 * s, 7 * s, 5 * s);
 
       // Specular highlight
-      g.fillStyle(0xe0f2fe, 0.95);
+      g.fillStyle(0xffedd5, 0.95);
       g.fillRoundedRect(10 * s, 2 * s, w - 20 * s, 2.5 * s, 1.5 * s);
 
       g.generateTexture('tex-regular-platform', w, h);
       g.destroy();
     }
 
-    // 2. Checkpoint platform texture (Steps 5, 10, 15, 20, 25 — golden rune gate floor)
+    // 2. Checkpoint platform texture (Steps 5, 10, 15, 20, 25 — Deep Navy & Sherbeni Orange rune gate)
     if (!this.scene.textures.exists('tex-checkpoint-platform')) {
       const w = this.config.checkpointPlatformWidth * s;
       const h = (this.config.platformHeight + 4) * s;
       const g = this.scene.make.graphics({ x: 0, y: 0 }, false);
 
-      g.fillStyle(0x451a03, 1);
+      g.fillStyle(0x0f1830, 1);
       g.fillRoundedRect(0, 5 * s, w, h - 5 * s, 7 * s);
 
-      g.fillStyle(0xb45309, 1);
+      g.fillStyle(0x1b2a53, 1);
       g.fillRoundedRect(2 * s, 4 * s, w - 4 * s, h - 7 * s, 6 * s);
 
-      g.fillStyle(0xf59e0b, 1);
+      g.fillStyle(0xee7b3c, 1);
       g.fillRoundedRect(0, 0, w, 11 * s, 5 * s);
 
       g.fillStyle(0xfef08a, 0.95);
@@ -125,24 +125,24 @@ export class PlatformManager {
       g.destroy();
     }
 
-    // 3. Finish Line platform texture (Step 30) with crisp checkered racing trim
+    // 3. Finish Line platform texture (Step 30) with Deep Navy and White checkered trim
     if (!this.scene.textures.exists('tex-summit-platform')) {
       const w = this.config.checkpointPlatformWidth * s;
       const h = (this.config.platformHeight + 8) * s;
       const g = this.scene.make.graphics({ x: 0, y: 0 }, false);
 
-      g.fillStyle(0x064e3b, 1);
+      g.fillStyle(0x0f1830, 1);
       g.fillRoundedRect(0, 6 * s, w, h - 6 * s, 8 * s);
 
-      g.fillStyle(0x10b981, 1);
+      g.fillStyle(0x1b2a53, 1);
       g.fillRoundedRect(2 * s, 4 * s, w - 4 * s, h - 8 * s, 6 * s);
 
       const squareW = 16 * s;
       for (let x = 0; x < w; x += squareW) {
         const isWhite = Math.floor(x / squareW) % 2 === 0;
-        g.fillStyle(isWhite ? 0xffffff : 0x0f172a, 1);
+        g.fillStyle(isWhite ? 0xffffff : 0x1b2a53, 1);
         g.fillRect(x, 0, squareW, 6 * s);
-        g.fillStyle(isWhite ? 0x0f172a : 0xffffff, 1);
+        g.fillStyle(isWhite ? 0x1b2a53 : 0xffffff, 1);
         g.fillRect(x, 6 * s, squareW, 6 * s);
       }
 
@@ -150,36 +150,36 @@ export class PlatformManager {
       g.destroy();
     }
 
-    // 4. Ground base texture
+    // 4. Ground base texture (Deep Navy with Sherbeni Orange top runner)
     if (!this.scene.textures.exists('tex-ground-platform')) {
       const w = this.config.checkpointPlatformWidth * s;
       const h = 44 * s;
       const g = this.scene.make.graphics({ x: 0, y: 0 }, false);
 
-      g.fillStyle(0x1e293b, 1);
+      g.fillStyle(0x0f1830, 1);
       g.fillRect(0, 8 * s, w, h - 8 * s);
 
-      g.fillStyle(0x334155, 1);
+      g.fillStyle(0x1b2a53, 1);
       for (let x = 8 * s; x < w - 40 * s; x += 56 * s) {
         g.fillRoundedRect(x, 14 * s, 48 * s, 22 * s, 5 * s);
       }
 
-      g.fillStyle(0x10b981, 1);
+      g.fillStyle(0xee7b3c, 1);
       g.fillRect(0, 0, w, 10 * s);
 
-      g.fillStyle(0x6ee7b7, 1);
+      g.fillStyle(0xfbd5b5, 1);
       g.fillRect(0, 2 * s, w, 3 * s);
 
       g.generateTexture('tex-ground-platform', w, h);
       g.destroy();
     }
 
-    // 5. Laser barrier texture
+    // 5. Laser barrier texture (Sherbeni Orange energy)
     if (!this.scene.textures.exists('tex-barrier')) {
       const w = this.config.checkpointPlatformWidth * s;
       const h = 16 * s;
       const g = this.scene.make.graphics({ x: 0, y: 0 }, false);
-      g.fillStyle(0xf43f5e, 0.35);
+      g.fillStyle(0xee7b3c, 0.4);
       g.fillRect(0, 0, w, h);
       g.generateTexture('tex-barrier', w, h);
       g.destroy();
@@ -189,7 +189,7 @@ export class PlatformManager {
     if (!this.scene.textures.exists('tex-particle-dot')) {
       const r = 12 * s;
       const g = this.scene.make.graphics({ x: 0, y: 0 }, false);
-      g.fillStyle(0xffffff, 1);
+      g.fillStyle(0xfff5ea, 1);
       g.fillCircle(r, r, r);
       g.generateTexture('tex-particle-dot', r * 2, r * 2);
       g.destroy();
@@ -199,60 +199,60 @@ export class PlatformManager {
   private createTowerBackgroundAndWalls(): void {
     const { towerWidth, worldHeight, wallThickness, groundY } = this.config;
 
-    // Outer ambient night sky for wide desktop viewports
+    // Outer ambient warm cream sky (matching slide background)
     const outerBg = this.scene.add.graphics();
-    outerBg.fillGradientStyle(0x050814, 0x050814, 0x0f172a, 0x1e1b4b, 1);
+    outerBg.fillGradientStyle(0xf8e7d6, 0xf8e7d6, 0xf3decb, 0xfaecd9, 1);
     outerBg.fillRect(-900, 0, towerWidth + 1800, worldHeight);
     outerBg.setDepth(-25);
 
-    // Inner tower gradient backdrop
+    // Inner tower backdrop with soft peach tint
     const bg = this.scene.add.graphics();
-    bg.fillGradientStyle(0x0b132b, 0x0b132b, 0x1e1b4b, 0x312e81, 1);
+    bg.fillGradientStyle(0xfdf7f0, 0xfdf7f0, 0xf8e7d6, 0xf2dec9, 1);
     bg.fillRect(0, 0, towerWidth, worldHeight);
     bg.setDepth(-20);
 
-    // Subtle vertical light shafts inside tower
+    // Subtle vertical guide lines
     const deco = this.scene.add.graphics();
     deco.setDepth(-15);
-    deco.fillStyle(0x38bdf8, 0.025);
+    deco.fillStyle(0xee7b3c, 0.04);
     deco.fillRect(towerWidth * 0.25, 0, 70, worldHeight);
     deco.fillRect(towerWidth * 0.62, 0, 50, worldHeight);
 
     for (let y = groundY; y > 150; y -= 180) {
-      // Carved stone bricks
-      deco.fillStyle(0xffffff, 0.035);
+      // Carved stone bricks in subtle warm navy
+      deco.fillStyle(0x1b2a53, 0.04);
       deco.fillRoundedRect(wallThickness + 45, y - 100, 92, 40, 6);
       deco.fillRoundedRect(towerWidth - wallThickness - 137, y - 30, 92, 40, 6);
 
-      // Arched castle windows with twinkling stars
+      // Arched castle windows with deep navy interior
       if (Math.abs(groundY - y) % 540 === 0 && y < groundY - 100) {
         const winX = towerWidth / 2;
-        deco.fillStyle(0x020617, 0.72);
+        deco.fillStyle(0x1b2a53, 0.88);
         deco.fillRoundedRect(winX - 40, y - 84, 80, 118, 40);
-        deco.lineStyle(3, 0x64748b, 0.55);
+        deco.lineStyle(3, 0xee7b3c, 0.65);
         deco.strokeRoundedRect(winX - 40, y - 84, 80, 118, 40);
 
         // Window crossbars
-        deco.lineStyle(2, 0x334155, 0.5);
+        deco.lineStyle(2, 0x3b4d7c, 0.6);
         deco.lineBetween(winX, y - 82, winX, y + 32);
         deco.lineBetween(winX - 38, y - 24, winX + 38, y - 24);
 
         // Stars inside window
-        deco.fillStyle(0xfef08a, 0.75);
+        deco.fillStyle(0xfde047, 0.85);
         deco.fillCircle(winX - 15, y - 48, 2.5);
         deco.fillCircle(winX + 16, y - 40, 2);
-        deco.fillStyle(0x7dd3fc, 0.7);
+        deco.fillStyle(0xee7b3c, 0.8);
         deco.fillCircle(winX + 12, y - 6, 2.2);
       }
 
-      // Glowing wall crystal sconces every 360px
+      // Glowing Sherbeni Orange wall sconces every 360px
       if (Math.abs(groundY - y) % 360 === 0) {
         const leftSconceX = wallThickness + 16;
         const rightSconceX = towerWidth - wallThickness - 16;
-        deco.fillStyle(0xf59e0b, 0.14);
+        deco.fillStyle(0xee7b3c, 0.18);
         deco.fillCircle(leftSconceX, y - 60, 22);
         deco.fillCircle(rightSconceX, y - 60, 22);
-        deco.fillStyle(0xfde047, 0.75);
+        deco.fillStyle(0xee7b3c, 0.9);
         deco.fillCircle(leftSconceX, y - 60, 4.5);
         deco.fillCircle(rightSconceX, y - 60, 4.5);
       }
@@ -261,25 +261,25 @@ export class PlatformManager {
     const wallGraphics = this.scene.add.graphics();
     wallGraphics.setDepth(15);
 
-    // Left Wall
-    wallGraphics.fillStyle(0x0f172a, 1);
+    // Left Wall in Deep Navy with Orange inner edge
+    wallGraphics.fillStyle(0x0f1830, 1);
     wallGraphics.fillRect(-4, 0, wallThickness + 4, worldHeight);
-    wallGraphics.fillStyle(0x1e293b, 1);
+    wallGraphics.fillStyle(0x1b2a53, 1);
     wallGraphics.fillRect(0, 0, wallThickness, worldHeight);
-    wallGraphics.fillStyle(0x334155, 1);
+    wallGraphics.fillStyle(0x273b70, 1);
     for (let y = 0; y < worldHeight; y += 48) {
       wallGraphics.fillRoundedRect(4, y + 4, wallThickness - 10, 40, 5);
     }
-    wallGraphics.fillStyle(0x64748b, 1);
+    wallGraphics.fillStyle(0xee7b3c, 1);
     wallGraphics.fillRect(wallThickness - 4, 0, 4, worldHeight);
 
-    // Right Wall
+    // Right Wall in Deep Navy with Orange inner edge
     const rightX = towerWidth - wallThickness;
-    wallGraphics.fillStyle(0x0f172a, 1);
+    wallGraphics.fillStyle(0x0f1830, 1);
     wallGraphics.fillRect(rightX, 0, wallThickness + 4, worldHeight);
-    wallGraphics.fillStyle(0x1e293b, 1);
+    wallGraphics.fillStyle(0x1b2a53, 1);
     wallGraphics.fillRect(rightX, 0, wallThickness, worldHeight);
-    wallGraphics.fillStyle(0x334155, 1);
+    wallGraphics.fillStyle(0x273b70, 1);
     for (let y = 0; y < worldHeight; y += 48) {
       wallGraphics.fillRoundedRect(
         rightX + 6,
@@ -289,7 +289,7 @@ export class PlatformManager {
         5
       );
     }
-    wallGraphics.fillStyle(0x64748b, 1);
+    wallGraphics.fillStyle(0xee7b3c, 1);
     wallGraphics.fillRect(rightX, 0, 4, worldHeight);
   }
 
@@ -310,7 +310,7 @@ export class PlatformManager {
       .text(centerX, groundY + 13, '🏰 TOWER BASE — START CLIMBING!', {
         fontFamily: '"Fredoka", sans-serif',
         fontSize: '15px',
-        color: '#e2e8f0',
+        color: '#ffffff',
         fontStyle: 'bold',
       })
       .setResolution(TEXT_RES)
@@ -396,12 +396,12 @@ export class PlatformManager {
           {
             fontFamily: '"Fredoka", sans-serif',
             fontSize: isCheckpoint || isSummit ? '14px' : '13px',
-            color: isSummit ? '#064e3b' : isCheckpoint ? '#451a03' : '#0f172a',
+            color: isSummit ? '#ffffff' : isCheckpoint ? '#ffffff' : '#1b2a53',
             backgroundColor: isSummit
-              ? '#6ee7b7'
+              ? '#1b2a53'
               : isCheckpoint
-                ? '#fde047'
-                : '#bae6fd',
+                ? '#ee7b3c'
+                : '#ffffff',
             padding: { x: 8, y: 2 },
             fontStyle: 'bold',
           }
@@ -414,18 +414,18 @@ export class PlatformManager {
       if (isCheckpoint && checkpointNumber !== null) {
         const flagX = this.config.towerWidth - this.config.wallThickness - 68;
         const pole = this.scene.add
-          .rectangle(flagX, y - 34, 5, 52, 0xe2e8f0)
+          .rectangle(flagX, y - 34, 5, 52, 0x1b2a53)
           .setDepth(4);
         const pennant = this.scene.add
-          .polygon(flagX + 22, y - 46, [0, 0, 40, 11, 0, 22], 0xf59e0b, 1)
+          .polygon(flagX + 22, y - 46, [0, 0, 40, 11, 0, 22], 0xee7b3c, 1)
           .setDepth(4);
 
         const cpSign = this.scene.add
           .text(flagX - 8, y - 46, `🔑 GATE ${checkpointNumber}`, {
             fontFamily: '"Fredoka", sans-serif',
             fontSize: '14px',
-            color: '#fef08a',
-            backgroundColor: '#1e293b',
+            color: '#ffffff',
+            backgroundColor: '#1b2a53',
             padding: { x: 8, y: 3 },
             fontStyle: 'bold',
           })
@@ -439,18 +439,18 @@ export class PlatformManager {
       if (isSummit) {
         const flagX = this.config.towerWidth - this.config.wallThickness - 68;
         const pole = this.scene.add
-          .rectangle(flagX, y - 34, 5, 52, 0xe2e8f0)
+          .rectangle(flagX, y - 34, 5, 52, 0x1b2a53)
           .setDepth(4);
         const pennant = this.scene.add
-          .polygon(flagX + 22, y - 46, [0, 0, 40, 11, 0, 22], 0x10b981, 1)
+          .polygon(flagX + 22, y - 46, [0, 0, 40, 11, 0, 22], 0xee7b3c, 1)
           .setDepth(4);
 
         const finishSign = this.scene.add
           .text(flagX - 8, y - 46, '🏁 FINISH LINE', {
             fontFamily: '"Fredoka", sans-serif',
             fontSize: '14px',
-            color: '#6ee7b7',
-            backgroundColor: '#064e3b',
+            color: '#fef08a',
+            backgroundColor: '#1b2a53',
             padding: { x: 9, y: 3 },
             fontStyle: 'bold',
           })
@@ -459,7 +459,7 @@ export class PlatformManager {
           .setDepth(6);
 
         const archGlow = this.scene.add
-          .circle(centerX, y - 58, 38, 0x10b981, 0.28)
+          .circle(centerX, y - 58, 38, 0xee7b3c, 0.25)
           .setDepth(3);
         const trophyText = this.scene.add
           .text(centerX, y - 58, '🏆', {
@@ -512,8 +512,8 @@ export class PlatformManager {
         barrierY,
         this.config.checkpointPlatformWidth,
         8,
-        0xf43f5e,
-        0.8
+        0xee7b3c,
+        0.85
       )
       .setDepth(11);
 
@@ -531,8 +531,8 @@ export class PlatformManager {
       .text(centerX, barrierY - 18, '🔒 LAND ON GATE 1 PLATFORM BELOW TO UNLOCK', {
         fontFamily: '"Fredoka", sans-serif',
         fontSize: '14px',
-        color: '#fecdd3',
-        backgroundColor: '#881337',
+        color: '#ffffff',
+        backgroundColor: '#1b2a53',
         padding: { x: 12, y: 4 },
         fontStyle: 'bold',
       })
@@ -626,9 +626,9 @@ export class PlatformManager {
           `🔒 LAND ON GATE ${sectionIndex} PLATFORM BELOW TO UNLOCK`
         );
       } else {
-        this.ceilingGlow.setFillStyle(0x10b981, 0.7);
-        this.ceilingLabel.setBackgroundColor('#064e3b');
-        this.ceilingLabel.setColor('#6ee7b7');
+        this.ceilingGlow.setFillStyle(0xee7b3c, 0.7);
+        this.ceilingLabel.setBackgroundColor('#1b2a53');
+        this.ceilingLabel.setColor('#ffffff');
         this.ceilingLabel.setText('🏁 REACH STEP 30 FOR SUMMIT VICTORY!');
       }
     }
@@ -645,10 +645,10 @@ export class PlatformManager {
     this.ceilingBarrier.setY(barrierY);
     this.ceilingBarrier.refreshBody();
     this.ceilingGlow.setY(barrierY);
-    this.ceilingGlow.setFillStyle(0xf43f5e, 0.8);
+    this.ceilingGlow.setFillStyle(0xee7b3c, 0.85);
     this.ceilingLabel.setY(barrierY - 16);
-    this.ceilingLabel.setBackgroundColor('#881337');
-    this.ceilingLabel.setColor('#fecdd3');
+    this.ceilingLabel.setBackgroundColor('#1b2a53');
+    this.ceilingLabel.setColor('#ffffff');
     this.ceilingLabel.setText('🔒 LAND ON GATE 1 PLATFORM BELOW TO UNLOCK');
   }
 }

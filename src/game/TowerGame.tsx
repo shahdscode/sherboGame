@@ -52,7 +52,7 @@ export const TowerGame: React.FC = () => {
         parent: container,
         width: Math.round(w * dpr),
         height: Math.round(h * dpr),
-        backgroundColor: '#070b18',
+        backgroundColor: '#f8e7d6',
         scale: {
           mode: Phaser.Scale.NONE,
           zoom: 1 / dpr,
