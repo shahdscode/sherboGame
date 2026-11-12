@@ -75,15 +75,15 @@ export class PlatformManager {
       const g = this.scene.make.graphics({ x: 0, y: 0 }, false);
 
       // Deep Navy shadow base
-      g.fillStyle(0x141f3e, 0.95);
+      g.fillStyle(0x0f1830, 1);
       g.fillRoundedRect(0, 4 * s, w, h - 4 * s, 9 * s);
 
-      // Crisp White stone body (matching slide cards)
-      g.fillStyle(0xffffff, 1);
+      // Deep Navy stone body (matching slide navy brand color)
+      g.fillStyle(0x1b2a53, 1);
       g.fillRoundedRect(1 * s, 3 * s, w - 2 * s, h - 5 * s, 8 * s);
 
-      // Inner warm cream bevel
-      g.fillStyle(0xfcf6ee, 1);
+      // Inner lighter navy bevel for crisp 3D depth
+      g.fillStyle(0x273b70, 1);
       g.fillRoundedRect(3 * s, 4 * s, w - 6 * s, h - 9 * s, 6 * s);
 
       // Vibrant Sherbeni Orange top energy strip
@@ -396,12 +396,12 @@ export class PlatformManager {
           {
             fontFamily: '"Fredoka", sans-serif',
             fontSize: isCheckpoint || isSummit ? '14px' : '13px',
-            color: isSummit ? '#ffffff' : isCheckpoint ? '#ffffff' : '#1b2a53',
+            color: '#ffffff',
             backgroundColor: isSummit
               ? '#1b2a53'
               : isCheckpoint
                 ? '#ee7b3c'
-                : '#ffffff',
+                : '#1b2a53',
             padding: { x: 8, y: 2 },
             fontStyle: 'bold',
           }
