@@ -13,6 +13,7 @@ export interface CheckpointQuestion {
   checkpointNumber: number;
   title: string;
   prompt: string;
+  sequence?: string[];
   options: [string, string, string, string];
   correctAnswer: number;
   hint: string;

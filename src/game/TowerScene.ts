@@ -5,6 +5,7 @@ import { Player } from './Player';
 import { CameraManager } from './CameraManager';
 import { CheckpointManager } from './CheckpointManager';
 import { gameEvents } from './EventBus';
+import { sfx } from './sfx';
 
 export class TowerScene extends Phaser.Scene {
   private config: TowerConfigRuntime = towerConfig;
@@ -221,6 +222,7 @@ export class TowerScene extends Phaser.Scene {
     // Switch character in the tower to question.png when reaching a checkpoint
     this.player.setPose('question');
     this.physics.world.pause();
+    sfx.checkpoint();
 
     const platform = this.platformManager.getPlatform(stepNumber);
     if (platform) {
@@ -247,6 +249,7 @@ export class TowerScene extends Phaser.Scene {
 
     const nextSectionIndex = checkpointNumber + 1;
     this.platformManager.unlockSection(nextSectionIndex);
+    sfx.unlockGate();
 
     const unlockedUpToStep =
       nextSectionIndex * this.config.stepsPerCheckpoint;
@@ -269,6 +272,7 @@ export class TowerScene extends Phaser.Scene {
     this.player.freeze();
     this.player.setPose('goodjob');
     this.physics.world.pause();
+    sfx.victory();
 
     const summitPlatform = this.platformManager.getPlatform(
       this.config.totalSteps

@@ -7,6 +7,7 @@ import {
 } from '../data/towerConfig';
 import { checkpointQuestions } from '../data/sampleQuestions';
 import { gameEvents, TouchInputState } from '../game/EventBus';
+import { sfx } from '../game/sfx';
 
 export interface CheckpointStateItem {
   checkpointNumber: number;
@@ -20,6 +21,8 @@ export interface CheckpointStateItem {
 export interface QuestionAttemptFeedback {
   status: 'idle' | 'incorrect' | 'correct';
   selectedOptionIndex: number | null;
+  wrongOptionIndices: number[];
+  earnedXp: number | null;
   hint: string | null;
   explanation: string | null;
   attemptsForCurrentQuestion: number;
@@ -63,6 +66,8 @@ export function useTowerGame(
   const [feedback, setFeedback] = useState<QuestionAttemptFeedback>({
     status: 'idle',
     selectedOptionIndex: null,
+    wrongOptionIndices: [],
+    earnedXp: null,
     hint: null,
     explanation: null,
     attemptsForCurrentQuestion: 0,
@@ -93,6 +98,8 @@ export function useTowerGame(
         setFeedback({
           status: 'idle',
           selectedOptionIndex: null,
+          wrongOptionIndices: [],
+          earnedXp: null,
           hint: null,
           explanation: null,
           attemptsForCurrentQuestion: 0,
@@ -128,18 +135,10 @@ export function useTowerGame(
   }, []);
 
   const startGame = useCallback(() => {
+    sfx.unlock();
+    sfx.click();
     setGameState('PLAYING');
     gameEvents.emit('cmd:start-game', undefined);
-  }, []);
-
-  const selectOption = useCallback((optionIndex: number) => {
-    setFeedback((prev) => {
-      if (prev.status === 'correct') return prev;
-      return {
-        ...prev,
-        selectedOptionIndex: optionIndex,
-      };
-    });
   }, []);
 
   const activeQuestion: CheckpointQuestion | null =
@@ -149,85 +148,115 @@ export function useTowerGame(
         null
       : null;
 
-  const submitAnswer = useCallback(() => {
-    if (
-      isSubmittingRef.current ||
-      !activeQuestion ||
-      activeCheckpointNumber === null ||
-      feedback.selectedOptionIndex === null ||
-      feedback.status === 'correct'
-    ) {
-      return;
-    }
-
-    const chosen = feedback.selectedOptionIndex;
-    const isCorrect = chosen === activeQuestion.correctAnswer;
-    const newAttemptNum = feedback.attemptsForCurrentQuestion + 1;
-
-    setTotalAttempts((prev) => prev + 1);
-
-    if (isCorrect) {
-      isSubmittingRef.current = true;
-      const isFirstTry = newAttemptNum === 1;
-      if (isFirstTry) {
-        setFirstTryCount((prev) => prev + 1);
+  const evaluateChoice = useCallback(
+    (chosen: number) => {
+      if (
+        isSubmittingRef.current ||
+        !activeQuestion ||
+        activeCheckpointNumber === null ||
+        feedback.status === 'correct'
+      ) {
+        return;
       }
 
-      const earnedXp =
-        towerConfig.rewards.xpPerCheckpoint +
-        (isFirstTry ? towerConfig.rewards.firstTryBonusXp : 0);
+      // Avoid penalizing twice if the same wrong block is re-clicked
+      if (feedback.wrongOptionIndices.includes(chosen)) {
+        return;
+      }
 
-      setXpPoints((prev) => prev + earnedXp);
+      const isCorrect = chosen === activeQuestion.correctAnswer;
+      const newAttemptNum = feedback.attemptsForCurrentQuestion + 1;
 
-      // Update character in Phaser to goodjob.png!
-      gameEvents.emit('cmd:set-character-pose', { pose: 'goodjob' });
+      setTotalAttempts((prev) => prev + 1);
 
-      setFeedback({
-        status: 'correct',
-        selectedOptionIndex: chosen,
-        hint: null,
-        explanation: activeQuestion.explanation,
-        attemptsForCurrentQuestion: newAttemptNum,
-      });
+      if (isCorrect) {
+        isSubmittingRef.current = true;
+        sfx.correct();
 
-      setCheckpoints((prev) =>
-        prev.map((cp) => {
-          if (cp.checkpointNumber === activeCheckpointNumber) {
-            return {
-              ...cp,
-              status: 'passed',
-              attempts: newAttemptNum,
-              solvedOnFirstTry: isFirstTry,
-            };
-          }
-          if (cp.checkpointNumber === activeCheckpointNumber + 1) {
-            return {
-              ...cp,
-              status: 'active',
-            };
-          }
-          return cp;
-        })
-      );
-    } else {
-      // Update character in Phaser to retry.png!
-      gameEvents.emit('cmd:set-character-pose', { pose: 'retry' });
+        const isFirstTry = newAttemptNum === 1;
+        if (isFirstTry) {
+          setFirstTryCount((prev) => prev + 1);
+        }
 
-      setFeedback({
-        status: 'incorrect',
-        selectedOptionIndex: chosen,
-        hint: activeQuestion.hint,
-        explanation: null,
-        attemptsForCurrentQuestion: newAttemptNum,
-      });
-    }
-  }, [activeCheckpointNumber, activeQuestion, feedback]);
+        const earnedXp =
+          towerConfig.rewards.xpPerCheckpoint +
+          (isFirstTry ? towerConfig.rewards.firstTryBonusXp : 0);
+
+        setXpPoints((prev) => prev + earnedXp);
+
+        // Update character in Phaser to goodjob.png!
+        gameEvents.emit('cmd:set-character-pose', { pose: 'goodjob' });
+
+        setFeedback((prev) => ({
+          status: 'correct',
+          selectedOptionIndex: chosen,
+          wrongOptionIndices: prev.wrongOptionIndices,
+          earnedXp,
+          hint: null,
+          explanation: activeQuestion.explanation,
+          attemptsForCurrentQuestion: newAttemptNum,
+        }));
+
+        setCheckpoints((prev) =>
+          prev.map((cp) => {
+            if (cp.checkpointNumber === activeCheckpointNumber) {
+              return {
+                ...cp,
+                status: 'passed',
+                attempts: newAttemptNum,
+                solvedOnFirstTry: isFirstTry,
+              };
+            }
+            if (cp.checkpointNumber === activeCheckpointNumber + 1) {
+              return {
+                ...cp,
+                status: 'active',
+              };
+            }
+            return cp;
+          })
+        );
+      } else {
+        sfx.wrong();
+
+        // Update character in Phaser to retry.png!
+        gameEvents.emit('cmd:set-character-pose', { pose: 'retry' });
+
+        setFeedback((prev) => ({
+          status: 'incorrect',
+          selectedOptionIndex: chosen,
+          wrongOptionIndices: prev.wrongOptionIndices.includes(chosen)
+            ? prev.wrongOptionIndices
+            : [...prev.wrongOptionIndices, chosen],
+          earnedXp: null,
+          hint: activeQuestion.hint,
+          explanation: null,
+          attemptsForCurrentQuestion: newAttemptNum,
+        }));
+      }
+    },
+    [activeCheckpointNumber, activeQuestion, feedback]
+  );
+
+  // Instant 1-tap arcade block selection + evaluation
+  const selectOption = useCallback(
+    (optionIndex: number) => {
+      evaluateChoice(optionIndex);
+    },
+    [evaluateChoice]
+  );
+
+  const submitAnswer = useCallback(() => {
+    if (feedback.selectedOptionIndex === null) return;
+    evaluateChoice(feedback.selectedOptionIndex);
+  }, [evaluateChoice, feedback.selectedOptionIndex]);
 
   const continueAfterCorrectAnswer = useCallback(() => {
     if (activeCheckpointNumber === null || feedback.status !== 'correct') {
       return;
     }
 
+    sfx.click();
     const cpNum = activeCheckpointNumber;
     setActiveCheckpointNumber(null);
     setGameState('UNLOCK_NEXT_SECTION');
@@ -235,6 +264,7 @@ export function useTowerGame(
   }, [activeCheckpointNumber, feedback.status]);
 
   const restartGame = useCallback(() => {
+    sfx.click();
     isSubmittingRef.current = false;
     setCurrentStep(0);
     setHighestStep(0);
@@ -247,6 +277,8 @@ export function useTowerGame(
     setFeedback({
       status: 'idle',
       selectedOptionIndex: null,
+      wrongOptionIndices: [],
+      earnedXp: null,
       hint: null,
       explanation: null,
       attemptsForCurrentQuestion: 0,

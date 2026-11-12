@@ -1,6 +1,11 @@
 import Phaser from 'phaser';
 import { TowerConfigRuntime } from '../data/towerConfig';
 
+/** Target vertical world span visible on screen (~5.5 steps, zoomed-in arcade feel). */
+const VISIBLE_WORLD_HEIGHT = 620;
+/** Minimum horizontal world span on portrait phones so adjacent platforms stay in view. */
+const MIN_VISIBLE_WORLD_WIDTH = 390;
+
 export class CameraManager {
   private scene: Phaser.Scene;
   private config: TowerConfigRuntime;
@@ -13,20 +18,29 @@ export class CameraManager {
   }
 
   public setup(target: Phaser.GameObjects.GameObject): void {
-    const { towerWidth, worldHeight } = this.config;
-    this.camera.setBounds(0, 0, towerWidth, worldHeight);
+    this.camera.setBackgroundColor('#070b18');
+    this.camera.roundPixels = false;
     this.updateZoom();
-    // Follow target smoothly on both X and Y so platforms and character stay centered
-    this.camera.startFollow(target, true, 0.12, 0.14, 0, 40);
+    this.camera.startFollow(target, false, 0.12, 0.14, 0, 55);
   }
 
   public updateZoom(): void {
-    // Zoom in so the visible vertical range is always ~620-660px (approx 5 platforms),
-    // matching the zoomed-in laptop experience on any mobile phone.
-    // Platforms high above stay hidden until the player climbs up to reach them.
-    const desiredVisibleHeight = 640;
-    const computedZoom = Math.max(1.18, this.camera.height / desiredVisibleHeight);
-    this.camera.setZoom(computedZoom);
+    const { towerWidth, worldHeight } = this.config;
+    const zoomByHeight = this.camera.height / VISIBLE_WORLD_HEIGHT;
+    const zoomByWidth = this.camera.width / MIN_VISIBLE_WORLD_WIDTH;
+    const zoom = Math.max(0.5, Math.min(zoomByHeight, zoomByWidth));
+    this.camera.setZoom(zoom);
+
+    // If the viewport is wider than the 720px tower (e.g. desktop landscape),
+    // pad horizontal camera bounds symmetrically so the tower stays dead-center.
+    const visibleWorldW = this.camera.width / zoom;
+    const extraX = Math.max(0, (visibleWorldW - towerWidth) / 2);
+    this.camera.setBounds(
+      -extraX,
+      0,
+      towerWidth + extraX * 2,
+      worldHeight
+    );
   }
 
   public resetToBottom(): void {
@@ -34,7 +48,7 @@ export class CameraManager {
     const visibleH = this.camera.height / this.camera.zoom;
     this.camera.centerOn(
       this.config.towerWidth / 2,
-      this.config.groundY - visibleH * 0.35
+      this.config.groundY - visibleH * 0.3
     );
   }
 }

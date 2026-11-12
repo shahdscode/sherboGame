@@ -29,9 +29,9 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
   useEffect(() => {
     try {
       confetti({
-        particleCount: 90,
-        spread: 75,
-        origin: { y: 0.6 },
+        particleCount: 100,
+        spread: 80,
+        origin: { y: 0.58 },
       });
     } catch {
       // Ignore confetti errors in headless test environments
@@ -47,19 +47,26 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
     >
       <div className="modal-card completion-modal-card">
         <div className="trophy-showcase">
-          <div className="trophy-circle">
-            <Trophy size={46} className="trophy-icon" />
+          <div className="completion-hero-row">
+            <img
+              src="/stickers/goodjob.png"
+              alt="Sherbo Victory"
+              className="completion-sticker"
+            />
+            <div className="trophy-circle">
+              <Trophy size={42} className="trophy-icon" />
+            </div>
           </div>
           <div className="completion-badge-ribbon">
             <Award size={15} />
-            <span>SUMMIT MASTER BADGE UNLOCKED</span>
+            <span>SUMMIT MASTER CROWN UNLOCKED</span>
           </div>
         </div>
 
-        <h1 className="completion-title">Summit Reached!</h1>
+        <h1 className="completion-title">Summit Conquered!</h1>
         <p className="completion-subtitle">
-          Congratulations! You conquered all {towerConfig.totalSteps} steps of
-          the Knowledge Tower and mastered every checkpoint challenge.
+          Amazing climb! You scaled all {towerConfig.totalSteps} steps and
+          shattered every Rune Gate in the Knowledge Tower!
         </p>
 
         <div className="stats-summary-grid">
@@ -68,7 +75,7 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
             <div className="stat-box-val">
               {towerConfig.totalSteps} / {towerConfig.totalSteps}
             </div>
-            <div className="stat-box-label">Steps Completed</div>
+            <div className="stat-box-label">Steps Climbed</div>
           </div>
 
           <div className="stat-box" data-testid="stat-checkpoints-passed">
@@ -76,13 +83,13 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
             <div className="stat-box-val">
               {completedCheckpointsCount} / {towerConfig.numberOfCheckpoints}
             </div>
-            <div className="stat-box-label">Checkpoints Passed</div>
+            <div className="stat-box-label">Gates Unlocked</div>
           </div>
 
           <div className="stat-box" data-testid="stat-total-attempts">
             <Target size={20} className="icon-gold" />
             <div className="stat-box-val">{totalAttempts}</div>
-            <div className="stat-box-label">Total Question Attempts</div>
+            <div className="stat-box-label">Stone Tries</div>
           </div>
 
           <div className="stat-box" data-testid="stat-first-try">
@@ -90,14 +97,14 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
             <div className="stat-box-val">
               {firstTryCount} / {towerConfig.numberOfCheckpoints}
             </div>
-            <div className="stat-box-label">First-Try Correct</div>
+            <div className="stat-box-label">1st-Try Combos</div>
           </div>
         </div>
 
         <div className="xp-reward-banner" data-testid="stat-total-xp">
-          <Zap size={22} className="icon-amber" />
+          <Zap size={24} className="icon-amber" />
           <div>
-            <div className="xp-banner-title">Total Knowledge XP Earned</div>
+            <div className="xp-banner-title">Total Arcade Score</div>
             <div className="xp-banner-score">{xpPoints} XP</div>
           </div>
         </div>
@@ -109,7 +116,7 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
           data-testid="play-again-btn"
         >
           <RotateCcw size={19} />
-          <span>Play Again</span>
+          <span>Climb Again</span>
         </button>
       </div>
     </div>

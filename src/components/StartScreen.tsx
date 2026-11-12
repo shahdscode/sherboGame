@@ -6,7 +6,8 @@ import {
   ArrowUp,
   Flag,
   Sparkles,
-  ShieldCheck,
+  Gamepad2,
+  Zap,
 } from 'lucide-react';
 import { towerConfig } from '../data/towerConfig';
 
@@ -18,34 +19,58 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart }) => {
   return (
     <div className="overlay-backdrop" role="dialog" aria-modal="true">
       <div className="modal-card start-modal-card">
-        <div className="badge-pill">
-          <Sparkles size={15} />
-          <span>INTERACTIVE EDUCATIONAL ARCADE</span>
+        <div className="start-hero-banner">
+          <div className="start-hero-sticker-wrap">
+            <img
+              src="/stickers/climbing figure.png"
+              alt="Sherbo Climber"
+              className="start-hero-sticker"
+            />
+          </div>
+          <div className="start-hero-text">
+            <div className="badge-pill">
+              <Sparkles size={14} />
+              <span>SHERBO ARCADE TOWER</span>
+            </div>
+            <h1 className="game-title">Knowledge Tower</h1>
+            <p className="game-subtitle">
+              Leap across {towerConfig.totalSteps} stones, crack{' '}
+              {towerConfig.numberOfCheckpoints} Rune Gates, and claim the Summit
+              Crown!
+            </p>
+          </div>
         </div>
 
-        <h1 className="game-title">Knowledge Tower</h1>
-        <p className="game-subtitle">
-          Climb the tower. Solve challenges. Reach the summit.
-        </p>
+        <div className="start-feature-chips">
+          <span className="feature-chip chip-cyan">
+            <Flag size={14} /> {towerConfig.totalSteps} Tower Steps
+          </span>
+          <span className="feature-chip chip-gold">
+            <Sparkles size={14} /> {towerConfig.numberOfCheckpoints} Rune Gates
+          </span>
+          <span className="feature-chip chip-emerald">
+            <Zap size={14} /> +{towerConfig.rewards.firstTryBonusXp} XP 1st-Try
+            Bonus
+          </span>
+        </div>
 
         <div className="info-grid">
           <div className="info-box">
             <div className="info-box-header">
               <Flag size={18} className="icon-gold" />
-              <h3>How the Tower Works</h3>
+              <h3>Quest Rules</h3>
             </div>
             <p>
-              Ascend <strong>{towerConfig.totalSteps} steps</strong> to the
-              summit! Every{' '}
-              <strong>{towerConfig.stepsPerCheckpoint} steps</strong>, you will
-              reach a mandatory checkpoint gate where you must answer a
-              challenge question to unlock the next section.
+              Every <strong>{towerConfig.stepsPerCheckpoint} steps</strong>, a
+              magic Rune Gate blocks the tower. Tap the right{' '}
+              <strong>Power Stone</strong> to shatter the barrier and keep
+              climbing!
             </p>
           </div>
 
           <div className="info-box">
             <div className="info-box-header">
-              <ShieldCheck size={18} className="icon-cyan" />
+              <Gamepad2 size={18} className="icon-cyan" />
               <h3>Controls</h3>
             </div>
             <div className="controls-list">
@@ -60,7 +85,7 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart }) => {
                   </kbd>
                   <kbd>D</kbd>
                 </span>
-                <span>Move Left / Right</span>
+                <span>Run Left / Right</span>
               </div>
               <div className="control-row">
                 <span className="key-group">
@@ -70,11 +95,11 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart }) => {
                   </kbd>
                   <kbd>W</kbd>
                 </span>
-                <span>Jump to Next Platform</span>
+                <span>Jump Up</span>
               </div>
               <div className="control-row">
-                <span className="mobile-tag">Mobile / Tablet</span>
-                <span>Use on-screen hold &amp; jump buttons</span>
+                <span className="mobile-tag">Phone / Tablet</span>
+                <span>On-screen arcade buttons</span>
               </div>
             </div>
           </div>
@@ -87,7 +112,7 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart }) => {
           data-testid="start-climbing-btn"
         >
           <Play size={20} fill="currentColor" />
-          <span>Start Climbing</span>
+          <span>Start Climbing!</span>
         </button>
       </div>
     </div>
