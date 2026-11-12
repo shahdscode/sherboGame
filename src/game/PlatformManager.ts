@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { TowerConfigRuntime } from '../data/towerConfig';
+import { WavingFlag } from './WavingFlag';
 
 /** Super-sampling factor for procedural textures so platforms stay razor-sharp when zoomed in. */
 const TEX_SCALE = 2;
@@ -30,6 +31,7 @@ export class PlatformManager {
   private ceilingGlow!: Phaser.GameObjects.Rectangle;
   private ceilingLabel!: Phaser.GameObjects.Text;
   private unlockedSection: number = 1;
+  private wavingFlags: WavingFlag[] = [];
 
   constructor(scene: Phaser.Scene, config: TowerConfigRuntime) {
     this.scene = scene;
@@ -58,6 +60,8 @@ export class PlatformManager {
   }
 
   public buildTower(): void {
+    this.wavingFlags.forEach((flag) => flag.destroy());
+    this.wavingFlags = [];
     this.createTextures();
     this.createTowerBackgroundAndWalls();
     this.createGroundPlatform();
@@ -421,42 +425,22 @@ export class PlatformManager {
           .circle(flagX, y - 60, 4, 0xee7b3c)
           .setDepth(5);
 
-        // Animated fluttering pennant flag pinned to the pole
-        const pennant = this.scene.add
-          .polygon(flagX + 2, y - 46, [0, 0, 42, 11, 0, 22], 0xee7b3c, 1)
-          .setOrigin(0, 0.5)
-          .setDepth(4);
-
-        // Secondary ripple layer for natural moving cloth depth
-        const ripple = this.scene.add
-          .polygon(flagX + 2, y - 46, [0, 2, 28, 9, 0, 16], 0xf59e5b, 0.85)
-          .setOrigin(0, 0.5)
-          .setDepth(5);
-
-        // Wind flap waving animation tween (slightly varied frequency per gate)
-        const windSpeed = 290 + (checkpointNumber % 3) * 45;
-        this.scene.tweens.add({
-          targets: pennant,
-          scaleX: { from: 1.0, to: 0.74 },
-          scaleY: { from: 0.92, to: 1.12 },
-          angle: { from: -6, to: 8 },
-          duration: windSpeed,
-          yoyo: true,
-          repeat: -1,
-          ease: 'Sine.easeInOut',
+        // Physically-simulated waving cloth pennant flag
+        const flag = new WavingFlag({
+          scene: this.scene,
+          x: flagX + 2.5,
+          y: y - 46,
+          width: 44,
+          height: 24,
+          tipHeight: 5,
+          baseColor: 0xee7b3c, // Sherbeni flame orange
+          stripeColor: 0xffffff, // Crisp white center ribbon
+          windSpeed: 1.0 + (checkpointNumber % 3) * 0.12,
+          phaseOffset: checkpointNumber * 1.35,
+          depth: 5,
+          isSummit: false,
         });
-
-        this.scene.tweens.add({
-          targets: ripple,
-          scaleX: { from: 0.95, to: 0.62 },
-          scaleY: { from: 1.1, to: 0.88 },
-          angle: { from: -8, to: 6 },
-          duration: windSpeed,
-          yoyo: true,
-          repeat: -1,
-          ease: 'Sine.easeInOut',
-          delay: 45,
-        });
+        this.wavingFlags.push(flag);
 
         const cpSign = this.scene.add
           .text(flagX - 8, y - 46, `🔑 GATE ${checkpointNumber}`, {
@@ -471,7 +455,7 @@ export class PlatformManager {
           .setOrigin(1, 0.5)
           .setDepth(6);
 
-        decorations.push(pole, finial, pennant, ripple, cpSign);
+        decorations.push(pole, finial, flag.getGameObject(), cpSign);
       }
 
       if (isSummit) {
@@ -484,38 +468,22 @@ export class PlatformManager {
           .circle(flagX, y - 60, 4.5, 0xee7b3c)
           .setDepth(5);
 
-        const pennant = this.scene.add
-          .polygon(flagX + 2, y - 46, [0, 0, 46, 12, 0, 24], 0xee7b3c, 1)
-          .setOrigin(0, 0.5)
-          .setDepth(4);
-
-        const ripple = this.scene.add
-          .polygon(flagX + 2, y - 46, [0, 2, 30, 10, 0, 18], 0xfef08a, 0.85)
-          .setOrigin(0, 0.5)
-          .setDepth(5);
-
-        this.scene.tweens.add({
-          targets: pennant,
-          scaleX: { from: 1.0, to: 0.72 },
-          scaleY: { from: 0.92, to: 1.12 },
-          angle: { from: -6, to: 8 },
-          duration: 310,
-          yoyo: true,
-          repeat: -1,
-          ease: 'Sine.easeInOut',
+        // Physically-simulated summit waving banner
+        const summitFlag = new WavingFlag({
+          scene: this.scene,
+          x: flagX + 2.5,
+          y: y - 46,
+          width: 50,
+          height: 28,
+          tipHeight: 18,
+          baseColor: 0xee7b3c, // Sherbeni flame
+          stripeColor: 0xfef08a, // Warm gold victory ribbon
+          windSpeed: 1.25,
+          phaseOffset: 2.1,
+          depth: 5,
+          isSummit: true,
         });
-
-        this.scene.tweens.add({
-          targets: ripple,
-          scaleX: { from: 0.95, to: 0.6 },
-          scaleY: { from: 1.1, to: 0.88 },
-          angle: { from: -8, to: 6 },
-          duration: 310,
-          yoyo: true,
-          repeat: -1,
-          ease: 'Sine.easeInOut',
-          delay: 45,
-        });
+        this.wavingFlags.push(summitFlag);
 
         const finishSign = this.scene.add
           .text(flagX - 8, y - 46, '🏁 FINISH LINE', {
@@ -541,7 +509,14 @@ export class PlatformManager {
           .setOrigin(0.5, 0.5)
           .setDepth(6);
 
-        decorations.push(pole, finial, pennant, ripple, finishSign, archGlow, trophyText);
+        decorations.push(
+          pole,
+          finial,
+          summitFlag.getGameObject(),
+          finishSign,
+          archGlow,
+          trophyText
+        );
       }
 
       const isInitiallyUnlocked = sectionIndex === 1;
@@ -722,5 +697,11 @@ export class PlatformManager {
     this.ceilingLabel.setBackgroundColor('#1b2a53');
     this.ceilingLabel.setColor('#ffffff');
     this.ceilingLabel.setText('🔒 LAND ON GATE 1 PLATFORM BELOW TO UNLOCK');
+  }
+
+  public update(time: number, _delta: number): void {
+    for (let i = 0; i < this.wavingFlags.length; i++) {
+      this.wavingFlags[i].update(time);
+    }
   }
 }

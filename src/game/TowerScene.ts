@@ -302,9 +302,10 @@ export class TowerScene extends Phaser.Scene {
     this.physics.world.resume();
   }
 
-  public update(_time: number, delta: number): void {
+  public update(time: number, delta: number): void {
     const canControl =
       this.isPlaying && !this.isPausedAtCheckpoint && !this.isCompleted;
     this.player.update(delta, canControl);
+    this.platformManager.update(time, delta);
   }
 }
