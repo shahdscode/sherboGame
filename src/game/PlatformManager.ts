@@ -416,9 +416,47 @@ export class PlatformManager {
         const pole = this.scene.add
           .rectangle(flagX, y - 34, 5, 52, 0x1b2a53)
           .setDepth(4);
+
+        const finial = this.scene.add
+          .circle(flagX, y - 60, 4, 0xee7b3c)
+          .setDepth(5);
+
+        // Animated fluttering pennant flag pinned to the pole
         const pennant = this.scene.add
-          .polygon(flagX + 22, y - 46, [0, 0, 40, 11, 0, 22], 0xee7b3c, 1)
+          .polygon(flagX + 2, y - 46, [0, 0, 42, 11, 0, 22], 0xee7b3c, 1)
+          .setOrigin(0, 0.5)
           .setDepth(4);
+
+        // Secondary ripple layer for natural moving cloth depth
+        const ripple = this.scene.add
+          .polygon(flagX + 2, y - 46, [0, 2, 28, 9, 0, 16], 0xf59e5b, 0.85)
+          .setOrigin(0, 0.5)
+          .setDepth(5);
+
+        // Wind flap waving animation tween (slightly varied frequency per gate)
+        const windSpeed = 290 + (checkpointNumber % 3) * 45;
+        this.scene.tweens.add({
+          targets: pennant,
+          scaleX: { from: 1.0, to: 0.74 },
+          scaleY: { from: 0.92, to: 1.12 },
+          angle: { from: -6, to: 8 },
+          duration: windSpeed,
+          yoyo: true,
+          repeat: -1,
+          ease: 'Sine.easeInOut',
+        });
+
+        this.scene.tweens.add({
+          targets: ripple,
+          scaleX: { from: 0.95, to: 0.62 },
+          scaleY: { from: 1.1, to: 0.88 },
+          angle: { from: -8, to: 6 },
+          duration: windSpeed,
+          yoyo: true,
+          repeat: -1,
+          ease: 'Sine.easeInOut',
+          delay: 45,
+        });
 
         const cpSign = this.scene.add
           .text(flagX - 8, y - 46, `🔑 GATE ${checkpointNumber}`, {
@@ -433,7 +471,7 @@ export class PlatformManager {
           .setOrigin(1, 0.5)
           .setDepth(6);
 
-        decorations.push(pole, pennant, cpSign);
+        decorations.push(pole, finial, pennant, ripple, cpSign);
       }
 
       if (isSummit) {
@@ -441,9 +479,43 @@ export class PlatformManager {
         const pole = this.scene.add
           .rectangle(flagX, y - 34, 5, 52, 0x1b2a53)
           .setDepth(4);
+
+        const finial = this.scene.add
+          .circle(flagX, y - 60, 4.5, 0xee7b3c)
+          .setDepth(5);
+
         const pennant = this.scene.add
-          .polygon(flagX + 22, y - 46, [0, 0, 40, 11, 0, 22], 0xee7b3c, 1)
+          .polygon(flagX + 2, y - 46, [0, 0, 46, 12, 0, 24], 0xee7b3c, 1)
+          .setOrigin(0, 0.5)
           .setDepth(4);
+
+        const ripple = this.scene.add
+          .polygon(flagX + 2, y - 46, [0, 2, 30, 10, 0, 18], 0xfef08a, 0.85)
+          .setOrigin(0, 0.5)
+          .setDepth(5);
+
+        this.scene.tweens.add({
+          targets: pennant,
+          scaleX: { from: 1.0, to: 0.72 },
+          scaleY: { from: 0.92, to: 1.12 },
+          angle: { from: -6, to: 8 },
+          duration: 310,
+          yoyo: true,
+          repeat: -1,
+          ease: 'Sine.easeInOut',
+        });
+
+        this.scene.tweens.add({
+          targets: ripple,
+          scaleX: { from: 0.95, to: 0.6 },
+          scaleY: { from: 1.1, to: 0.88 },
+          angle: { from: -8, to: 6 },
+          duration: 310,
+          yoyo: true,
+          repeat: -1,
+          ease: 'Sine.easeInOut',
+          delay: 45,
+        });
 
         const finishSign = this.scene.add
           .text(flagX - 8, y - 46, '🏁 FINISH LINE', {
@@ -469,7 +541,7 @@ export class PlatformManager {
           .setOrigin(0.5, 0.5)
           .setDepth(6);
 
-        decorations.push(pole, pennant, finishSign, archGlow, trophyText);
+        decorations.push(pole, finial, pennant, ripple, finishSign, archGlow, trophyText);
       }
 
       const isInitiallyUnlocked = sectionIndex === 1;
