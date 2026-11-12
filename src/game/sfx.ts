@@ -64,7 +64,43 @@ export const sfx = {
     tone(380, 0.16, 'square', 0.035, 760);
   },
   land(): void {
-    tone(150, 0.09, 'sine', 0.1, 70);
+    if (muted) return;
+    const ac = audio();
+    if (!ac) return;
+
+    const start = ac.currentTime;
+
+    // Cute squishy cartoon / arcade bounce landing:
+    // 1. Soft bouncy "bloop" body (sine wave pitch-drop)
+    const osc1 = ac.createOscillator();
+    const gain1 = ac.createGain();
+    osc1.type = 'sine';
+    osc1.frequency.setValueAtTime(360, start);
+    osc1.frequency.exponentialRampToValueAtTime(170, start + 0.08);
+
+    gain1.gain.setValueAtTime(0.0001, start);
+    gain1.gain.exponentialRampToValueAtTime(0.12, start + 0.01);
+    gain1.gain.exponentialRampToValueAtTime(0.0001, start + 0.08);
+
+    osc1.connect(gain1).connect(ac.destination);
+    osc1.start(start);
+    osc1.stop(start + 0.09);
+
+    // 2. Playful springy chirp harmonic (tiny cute pop/bounce)
+    const start2 = start + 0.02;
+    const osc2 = ac.createOscillator();
+    const gain2 = ac.createGain();
+    osc2.type = 'triangle';
+    osc2.frequency.setValueAtTime(540, start2);
+    osc2.frequency.exponentialRampToValueAtTime(270, start2 + 0.06);
+
+    gain2.gain.setValueAtTime(0.0001, start2);
+    gain2.gain.exponentialRampToValueAtTime(0.06, start2 + 0.008);
+    gain2.gain.exponentialRampToValueAtTime(0.0001, start2 + 0.06);
+
+    osc2.connect(gain2).connect(ac.destination);
+    osc2.start(start2);
+    osc2.stop(start2 + 0.07);
   },
   click(): void {
     tone(720, 0.05, 'triangle', 0.07);
