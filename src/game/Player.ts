@@ -164,24 +164,24 @@ export class Player {
     const footX = this.sprite.x;
     for (let i = 0; i < count; i++) {
       const dir = i % 2 === 0 ? -1 : 1;
-      const spreadX = dir * Phaser.Math.Between(8, 26);
+      const spreadX = dir * Phaser.Math.Between(8, 28);
       const puff = this.scene.add
         .circle(
           footX + Phaser.Math.Between(-8, 8),
           footY,
-          Phaser.Math.Between(3, 6),
-          0xedcca8,
-          0.7
+          Phaser.Math.Between(4, 7),
+          0x1b2a53, // Dark Deep Navy smoke for clear visibility against light background
+          0.78
         )
         .setDepth(21);
 
       this.scene.tweens.add({
         targets: puff,
         x: puff.x + spreadX,
-        y: footY - Phaser.Math.Between(4, 14),
+        y: footY - Phaser.Math.Between(4, 16),
         scale: 0.2,
         alpha: 0,
-        duration: 260,
+        duration: 280,
         ease: 'Quad.easeOut',
         onComplete: () => puff.destroy(),
       });
