@@ -155,22 +155,23 @@ export const sfx = {
   },
   /**
    * Mistake voice lines:
-   * - 1st mistake: plays "ehheeeee.mp3"
-   * - 2nd & 3rd mistakes: plays a random sound from:
-   *   "enta ghaby.mp3", "matgawdshhhh.mp3", "msh hashaga3ak.mp3", "wana bahes enk aabet.mp3"
+   * - 1st mistake: random pick from ["ehheeeee.mp3", "msh hashaga3ak.mp3"]
+   * - 2nd mistake: "matgawdshhhh.mp3"
+   * - 3rd mistake: random pick from ["enta ghaby.mp3", "wana bahes enk aabet.mp3"]
    */
   wrong(mistakeNumber: number = 1): void {
     if (mistakeNumber <= 1) {
-      playAudioFile('/sounds/ehheeeee.mp3', 0.95);
+      const sounds1 = ['/sounds/ehheeeee.mp3', '/sounds/msh hashaga3ak.mp3'];
+      const picked = sounds1[Math.floor(Math.random() * sounds1.length)];
+      playAudioFile(picked, 0.95);
+    } else if (mistakeNumber === 2) {
+      playAudioFile('/sounds/matgawdshhhh.mp3', 0.95);
     } else {
-      const followUpSounds = [
+      const sounds3 = [
         '/sounds/enta ghaby.mp3',
-        '/sounds/matgawdshhhh.mp3',
-        '/sounds/msh hashaga3ak.mp3',
         '/sounds/wana bahes enk aabet.mp3',
       ];
-      const picked =
-        followUpSounds[Math.floor(Math.random() * followUpSounds.length)];
+      const picked = sounds3[Math.floor(Math.random() * sounds3.length)];
       playAudioFile(picked, 0.95);
     }
   },
