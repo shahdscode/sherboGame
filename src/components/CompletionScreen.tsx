@@ -40,38 +40,32 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
 
   return (
     <div
-      className="overlay-backdrop completion-backdrop"
+      className="completion-side-wrapper"
       role="dialog"
       aria-modal="true"
       data-testid="completion-screen"
     >
-      <div className="modal-card completion-modal-card">
+      <div className="modal-card completion-side-card">
         <div className="trophy-showcase">
           <div className="completion-hero-row">
-            <img
-              src="/stickers/goodjob.png"
-              alt="Sherbo Victory"
-              className="completion-sticker"
-            />
             <div className="trophy-circle">
-              <Trophy size={42} className="trophy-icon" />
+              <Trophy size={36} className="trophy-icon" />
             </div>
-          </div>
-          <div className="completion-badge-ribbon">
-            <Award size={15} />
-            <span>SUMMIT MASTER CROWN UNLOCKED</span>
+            <div className="completion-badge-ribbon">
+              <Award size={15} />
+              <span>SUMMIT MASTER CROWN</span>
+            </div>
           </div>
         </div>
 
         <h1 className="completion-title">Summit Conquered!</h1>
         <p className="completion-subtitle">
-          Amazing climb! You scaled all {towerConfig.totalSteps} steps and
-          shattered every Rune Gate in the Knowledge Tower!
+          Amazing climb! You scaled all {towerConfig.totalSteps} steps!
         </p>
 
         <div className="stats-summary-grid">
           <div className="stat-box" data-testid="stat-steps-completed">
-            <Sparkles size={20} className="icon-cyan" />
+            <Sparkles size={18} className="icon-cyan" />
             <div className="stat-box-val">
               {towerConfig.totalSteps} / {towerConfig.totalSteps}
             </div>
@@ -79,7 +73,7 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
           </div>
 
           <div className="stat-box" data-testid="stat-checkpoints-passed">
-            <CheckCircle size={20} className="icon-emerald" />
+            <CheckCircle size={18} className="icon-emerald" />
             <div className="stat-box-val">
               {completedCheckpointsCount} / {towerConfig.numberOfCheckpoints}
             </div>
@@ -87,13 +81,13 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
           </div>
 
           <div className="stat-box" data-testid="stat-total-attempts">
-            <Target size={20} className="icon-gold" />
+            <Target size={18} className="icon-gold" />
             <div className="stat-box-val">{totalAttempts}</div>
             <div className="stat-box-label">Stone Tries</div>
           </div>
 
           <div className="stat-box" data-testid="stat-first-try">
-            <Award size={20} className="icon-purple" />
+            <Award size={18} className="icon-purple" />
             <div className="stat-box-val">
               {firstTryCount} / {towerConfig.numberOfCheckpoints}
             </div>
@@ -102,7 +96,7 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
         </div>
 
         <div className="xp-reward-banner" data-testid="stat-total-xp">
-          <Zap size={24} className="icon-amber" />
+          <Zap size={22} className="icon-amber" />
           <div>
             <div className="xp-banner-title">Final Score</div>
             <div className="xp-banner-score">
@@ -117,7 +111,7 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
           onClick={onPlayAgain}
           data-testid="play-again-btn"
         >
-          <RotateCcw size={19} />
+          <RotateCcw size={18} />
           <span>Climb Again</span>
         </button>
       </div>

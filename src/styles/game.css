@@ -1104,100 +1104,169 @@ kbd {
   box-shadow: 0 5px 0 #b85720, 0 8px 22px rgba(238, 123, 60, 0.35);
 }
 
-/* Completion Screen */
+/* Side Completion Card (Docked beside character at summit without hiding game) */
+.completion-side-wrapper {
+  position: fixed;
+  top: max(72px, env(safe-area-inset-top, 72px));
+  right: max(16px, env(safe-area-inset-right, 16px));
+  z-index: 45;
+  pointer-events: none;
+  animation: slideInFromRight 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.completion-side-card {
+  pointer-events: auto;
+  width: min(390px, calc(100vw - 32px));
+  max-height: calc(100dvh - 90px);
+  padding: 16px 18px;
+  gap: 9px;
+  background: rgba(255, 255, 255, 0.96);
+  border: 2px solid #1b2a53;
+  border-radius: 20px;
+  box-shadow: 0 6px 0 #1b2a53, 0 16px 40px rgba(27, 42, 83, 0.28);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+@keyframes slideInFromRight {
+  from {
+    opacity: 0;
+    transform: translateX(36px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
 .trophy-showcase {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .completion-hero-row {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 14px;
-}
-
-.completion-sticker {
-  width: 96px;
-  height: 96px;
-  object-fit: contain;
-  filter: drop-shadow(0 8px 16px rgba(27, 42, 83, 0.25));
+  gap: 10px;
 }
 
 .trophy-circle {
-  width: 78px;
-  height: 78px;
+  width: 54px;
+  height: 54px;
   border-radius: 50%;
   background: radial-gradient(circle, rgba(238, 123, 60, 0.25), rgba(248, 231, 214, 0.4));
-  border: 2.5px solid #ee7b3c;
+  border: 2px solid #ee7b3c;
   display: flex;
   align-items: center;
   justify-content: center;
   color: #ee7b3c;
-  box-shadow: 0 0 28px rgba(238, 123, 60, 0.28);
+  box-shadow: 0 0 20px rgba(238, 123, 60, 0.28);
 }
 
 .completion-badge-ribbon {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   background: rgba(63, 159, 155, 0.16);
   border: 1.5px solid #3f9f9b;
   color: #277a76;
-  font-size: 0.8rem;
+  font-size: 0.74rem;
   font-weight: 800;
-  padding: 5px 14px;
+  padding: 4px 12px;
   border-radius: 999px;
 }
 
 .completion-title {
   font-family: var(--font-display);
-  font-size: 2.2rem;
+  font-size: 1.55rem;
   text-align: center;
   color: #1b2a53;
+  margin: 0;
 }
 
 .completion-subtitle {
   text-align: center;
-  font-size: 0.98rem;
+  font-size: 0.86rem;
   color: #576582;
-  line-height: 1.45;
+  line-height: 1.35;
+  margin: 0;
 }
 
 .stats-summary-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
+  gap: 8px;
 }
 
 .stat-box {
   background: #fdf8f2;
-  border: 1.5px solid rgba(27, 42, 83, 0.2);
-  border-radius: 14px;
-  padding: 11px 14px;
+  border: 1.5px solid rgba(27, 42, 83, 0.18);
+  border-radius: 12px;
+  padding: 8px 10px;
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
-  gap: 3px;
+  gap: 2px;
 }
 
 .stat-box-val {
   font-family: var(--font-display);
-  font-size: 1.35rem;
+  font-size: 1.15rem;
   font-weight: 700;
   color: #1b2a53;
 }
 
 .stat-box-label {
-  font-size: 0.82rem;
+  font-size: 0.74rem;
   color: #576582;
 }
 
 .xp-reward-banner {
   display: flex;
+  align-items: center;
+  gap: 10px;
+  background: linear-gradient(135deg, rgba(238, 123, 60, 0.14) 0%, rgba(248, 231, 214, 0.5) 100%);
+  border: 1.5px solid #ee7b3c;
+  border-radius: 12px;
+  padding: 8px 12px;
+  color: #1b2a53;
+}
+
+.xp-banner-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #b85720;
+}
+
+.xp-banner-score {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #ee7b3c;
+}
+
+@media (max-width: 600px) {
+  .completion-side-wrapper {
+    top: auto;
+    bottom: 16px;
+    right: 12px;
+    left: 12px;
+  }
+  .completion-side-card {
+    width: 100%;
+    max-height: 48dvh;
+    padding: 12px 14px;
+    gap: 7px;
+  }
+  .completion-title {
+    font-size: 1.35rem;
+  }
+}
   align-items: center;
   justify-content: center;
   gap: 12px;
