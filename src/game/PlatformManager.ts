@@ -343,94 +343,177 @@ export class PlatformManager {
       innerBg.fillRoundedRect(towerWidth / 2 - 44, y - 140, 88, 36, 5);
     }
 
-    // 5. Grand Cathedral Windows (Option 2) with Stained Glass & Diagonal Sunbeams
+    // 5. Grand Academy Squared Windows (Staggered Left & Right, Away from Steps)
     const winGraphics = this.scene.add.graphics();
     winGraphics.setDepth(-20);
 
-    const windowYPositions = [3320, 2780, 2240, 1700, 1160, 620];
+    interface SquareWindowDef {
+      x: number;
+      y: number;
+      size: number;
+      side: 'left' | 'right';
+      gridSize?: number;
+      sunbeam?: boolean;
+    }
+
+    const squareWindows: SquareWindowDef[] = [
+      // Section 1 (Dawn Warm Cream)
+      { x: 596, y: 3480, size: 72, side: 'right', sunbeam: true },
+      { x: 124, y: 3280, size: 72, side: 'left', sunbeam: true },
+      // Section 2 (Morning Warmth)
+      { x: 124, y: 2970, size: 72, side: 'left', sunbeam: true },
+      { x: 596, y: 2750, size: 72, side: 'right', sunbeam: true },
+      // Section 3 (Golden Hour Amber)
+      { x: 596, y: 2360, size: 72, side: 'right', sunbeam: true },
+      { x: 124, y: 2110, size: 72, side: 'left', sunbeam: true },
+      // Section 4 (Twilight Crimson / Dusk)
+      { x: 124, y: 1890, size: 72, side: 'left', sunbeam: false },
+      { x: 596, y: 1570, size: 72, side: 'right', sunbeam: false },
+      // Section 5 (Night Sky Indigo)
+      { x: 596, y: 1350, size: 72, side: 'right', sunbeam: false },
+      { x: 124, y: 1130, size: 72, side: 'left', sunbeam: false },
+      // Section 6 (Midnight Obsidian)
+      { x: 124, y: 810, size: 72, side: 'left', sunbeam: false },
+      { x: 596, y: 600, size: 72, side: 'right', sunbeam: false },
+      // Summit Sky Gallery (Twin squared observatory windows flanking summit arch)
+      { x: 130, y: 220, size: 82, side: 'left', gridSize: 3, sunbeam: false },
+      { x: 590, y: 220, size: 82, side: 'right', gridSize: 3, sunbeam: false },
+    ];
+
     const stainedPanes = [0x3f9f9b, 0xd8356c, 0xee7b3c, 0x7e57d8]; // Teal, Rose, Orange, Violet
 
-    for (let i = 0; i < windowYPositions.length; i++) {
-      const wy = windowYPositions[i];
-      // Slightly alternate window center position for dynamic visual rhythm
-      const wx = towerWidth / 2 + (i % 2 === 0 ? -24 : 24);
-      const ww = 88;
-      const wh = 136;
-      const archR = 44;
-
-      // Outer Deep Navy stone frame
-      winGraphics.fillStyle(0x1b2a53, 0.95);
-      winGraphics.fillCircle(wx, wy - wh / 2 + archR, archR + 6);
-      winGraphics.fillRect(wx - ww / 2 - 6, wy - wh / 2 + archR, ww + 12, wh - archR + 6);
-
-      // Sherbeni Orange decorative window casing
-      winGraphics.lineStyle(3, 0xee7b3c, 0.85);
-      winGraphics.strokeCircle(wx, wy - wh / 2 + archR, archR + 6);
-      winGraphics.strokeRect(wx - ww / 2 - 6, wy - wh / 2 + archR, ww + 12, wh - archR + 6);
-
-      // Window Interior Cutout (Sky shows through)
+    for (let i = 0; i < squareWindows.length; i++) {
+      const win = squareWindows[i];
+      const wx = win.x;
+      const wy = win.y;
+      const size = win.size;
       const isNightWindow = wy <= 1500;
-      winGraphics.fillStyle(isNightWindow ? 0x0c1529 : 0xf8e7d6, 0.92);
-      winGraphics.fillCircle(wx, wy - wh / 2 + archR, archR);
-      winGraphics.fillRect(wx - ww / 2, wy - wh / 2 + archR, ww, wh - archR);
+      const grid = win.gridSize || 2;
+      const framePad = 8;
+      const frameSize = size + framePad * 2;
 
-      // 4 Stained Glass Accent Corner Panes (Sherbeni Slide Colors)
-      const paneW = 16;
-      const paneH = 22;
-      winGraphics.fillStyle(stainedPanes[0], 0.85);
-      winGraphics.fillRect(wx - ww / 2 + 4, wy - wh / 2 + archR + 4, paneW, paneH);
-      winGraphics.fillStyle(stainedPanes[1], 0.85);
-      winGraphics.fillRect(wx + ww / 2 - paneW - 4, wy - wh / 2 + archR + 4, paneW, paneH);
-      winGraphics.fillStyle(stainedPanes[2], 0.85);
-      winGraphics.fillRect(wx - ww / 2 + 4, wy + wh / 2 - paneH - 4, paneW, paneH);
-      winGraphics.fillStyle(stainedPanes[3], 0.85);
-      winGraphics.fillRect(wx + ww / 2 - paneW - 4, wy + wh / 2 - paneH - 4, paneW, paneH);
+      // 1. Outer Deep Navy Stone Frame (Crisply Squared)
+      winGraphics.fillStyle(0x0f1830, 0.98);
+      winGraphics.fillRect(wx - frameSize / 2, wy - frameSize / 2, frameSize, frameSize);
+      winGraphics.fillStyle(0x1b2a53, 1);
+      winGraphics.fillRect(wx - frameSize / 2 + 2, wy - frameSize / 2 + 2, frameSize - 4, frameSize - 4);
 
-      // Gothic stone tracery crossbars
-      winGraphics.lineStyle(2, 0x1b2a53, 0.85);
-      winGraphics.lineBetween(wx, wy - wh / 2, wx, wy + wh / 2);
-      winGraphics.lineBetween(wx - ww / 2, wy + 8, wx + ww / 2, wy + 8);
-      winGraphics.lineBetween(wx - ww / 2 + 6, wy - 18, wx + ww / 2 - 6, wy - 18);
+      // 2. Sherbeni Flame Orange Inner Casing Line
+      winGraphics.lineStyle(2.5, 0xee7b3c, 0.9);
+      winGraphics.strokeRect(wx - size / 2 - 1, wy - size / 2 - 1, size + 2, size + 2);
 
-      if (isNightWindow) {
-        // Glowing stars visible inside night window
-        winGraphics.fillStyle(0xfef08a, 0.95);
-        winGraphics.fillCircle(wx - 16, wy - 20, 2.5);
-        winGraphics.fillCircle(wx + 18, wy - 12, 2.0);
-        winGraphics.fillCircle(wx - 10, wy + 26, 1.8);
-        winGraphics.fillStyle(0xee7b3c, 0.9);
-        winGraphics.fillCircle(wx + 14, wy + 24, 2.2);
+      // 3. Projecting Architectural Stone Windowsill Underneath
+      const sillW = frameSize + 14;
+      const sillH = 6;
+      winGraphics.fillStyle(0x0f1830, 1);
+      winGraphics.fillRect(wx - sillW / 2, wy + frameSize / 2, sillW, sillH);
+      winGraphics.fillStyle(0x162244, 1);
+      winGraphics.fillRect(wx - sillW / 2 + 1, wy + frameSize / 2, sillW - 2, sillH - 2);
+      winGraphics.fillStyle(0xee7b3c, 0.85);
+      winGraphics.fillRect(wx - sillW / 2 + 2, wy + frameSize / 2, sillW - 4, 1.5);
+
+      // 4. Window Interior Cutout (Sky shows through)
+      const skyBg = isNightWindow
+        ? 0x091124
+        : wy > 2800
+          ? 0xf8e7d6
+          : wy > 2000
+            ? 0xf5cca5
+            : 0xd97757;
+      winGraphics.fillStyle(skyBg, 0.94);
+      winGraphics.fillRect(wx - size / 2, wy - size / 2, size, size);
+
+      // 5. Stained Glass Accent Corner Panes (Sherbeni Slide Colors)
+      const cornerSize = Math.max(8, Math.floor(size * 0.16));
+      // Top-Left (Teal)
+      winGraphics.fillStyle(stainedPanes[0], 0.88);
+      winGraphics.fillRect(wx - size / 2 + 3, wy - size / 2 + 3, cornerSize, cornerSize);
+      // Top-Right (Rose)
+      winGraphics.fillStyle(stainedPanes[1], 0.88);
+      winGraphics.fillRect(wx + size / 2 - cornerSize - 3, wy - size / 2 + 3, cornerSize, cornerSize);
+      // Bottom-Left (Flame Orange)
+      winGraphics.fillStyle(stainedPanes[2], 0.88);
+      winGraphics.fillRect(wx - size / 2 + 3, wy + size / 2 - cornerSize - 3, cornerSize, cornerSize);
+      // Bottom-Right (Violet)
+      winGraphics.fillStyle(stainedPanes[3], 0.88);
+      winGraphics.fillRect(wx + size / 2 - cornerSize - 3, wy + size / 2 - cornerSize - 3, cornerSize, cornerSize);
+
+      // 6. Squared Mullions (Crossbars)
+      if (grid === 2) {
+        // 2x2 Clean Square Panes
+        winGraphics.fillStyle(0x1b2a53, 0.95);
+        winGraphics.fillRect(wx - size / 2, wy - 1.5, size, 3);
+        winGraphics.fillRect(wx - 1.5, wy - size / 2, 3, size);
+        // Subtle orange edge trim on mullions
+        winGraphics.lineStyle(1, 0xee7b3c, 0.5);
+        winGraphics.lineBetween(wx - size / 2, wy, wx + size / 2, wy);
+        winGraphics.lineBetween(wx, wy - size / 2, wx, wy + size / 2);
+        // Brass center rosette
+        winGraphics.fillStyle(0xfef08a, 1);
+        winGraphics.fillRect(wx - 2.5, wy - 2.5, 5, 5);
       } else {
-        // Warm Diagonal Sunbeam streaming into the tower from daylight/golden windows
-        winGraphics.fillStyle(0xee7b3c, 0.12);
+        // 3x3 Grand Observatory Grid for Summit Gallery
+        const colW = size / 3;
+        winGraphics.fillStyle(0x1b2a53, 0.95);
+        winGraphics.fillRect(wx - size / 2 + colW - 1, wy - size / 2, 2.5, size);
+        winGraphics.fillRect(wx - size / 2 + colW * 2 - 1, wy - size / 2, 2.5, size);
+        winGraphics.fillRect(wx - size / 2, wy - size / 2 + colW - 1, size, 2.5);
+        winGraphics.fillRect(wx - size / 2, wy - size / 2 + colW * 2 - 1, size, 2.5);
+        // Center jewel
+        winGraphics.fillStyle(0xfef08a, 1);
+        winGraphics.fillRect(wx - 3, wy - 3, 6, 6);
+      }
+
+      // 7. Glass Sheen / Translucent Reflection across upper pane
+      winGraphics.fillStyle(0xffffff, 0.1);
+      winGraphics.fillPoints(
+        [
+          { x: wx - size / 2 + 4, y: wy - size / 2 + 4 },
+          { x: wx - size / 2 + size * 0.45, y: wy - size / 2 + 4 },
+          { x: wx - size / 2 + 4, y: wy - size / 2 + size * 0.45 },
+        ],
+        true
+      );
+
+      // 8. Night Sky Stars vs Daytime Sunbeams
+      if (isNightWindow) {
+        // Glowing stars visible inside night window opening
+        winGraphics.fillStyle(0xfef08a, 0.95);
+        winGraphics.fillCircle(wx - size * 0.22, wy - size * 0.2, 2.2);
+        winGraphics.fillCircle(wx + size * 0.24, wy - size * 0.12, 1.8);
+        winGraphics.fillCircle(wx - size * 0.14, wy + size * 0.22, 1.8);
+        winGraphics.fillStyle(0xee7b3c, 0.9);
+        winGraphics.fillCircle(wx + size * 0.18, wy + size * 0.24, 2.0);
+      } else if (win.sunbeam) {
+        // Soft diagonal sunbeam pouring inwards into the room
+        const beamW = 120;
+        const beamH = 110;
+        const dir = win.side === 'left' ? 1 : -1;
+        const startX = win.side === 'left' ? wx + size / 2 : wx - size / 2;
+
+        winGraphics.fillStyle(0xee7b3c, 0.09);
         winGraphics.fillPoints(
           [
-            { x: wx - ww / 2, y: wy - 10 },
-            { x: wx + ww / 2, y: wy + 20 },
-            { x: wx + ww / 2 + 180, y: wy + 260 },
-            { x: wx - ww / 2 + 80, y: wy + 260 },
+            { x: startX, y: wy - size * 0.25 },
+            { x: startX, y: wy + size * 0.45 },
+            { x: startX + dir * beamW, y: wy + size * 0.45 + beamH },
+            { x: startX + dir * (beamW * 0.45), y: wy + size * 0.45 + beamH },
+          ],
+          true
+        );
+
+        winGraphics.fillStyle(0xfef08a, 0.05);
+        winGraphics.fillPoints(
+          [
+            { x: startX, y: wy },
+            { x: startX, y: wy + size * 0.35 },
+            { x: startX + dir * (beamW * 0.75), y: wy + size * 0.35 + beamH * 0.8 },
+            { x: startX + dir * (beamW * 0.35), y: wy + size * 0.35 + beamH * 0.8 },
           ],
           true
         );
       }
     }
-
-    // Grand Rose Window at Summit (y = 220)
-    const roseX = towerWidth / 2;
-    const roseY = 220;
-    winGraphics.fillStyle(0x1b2a53, 0.95);
-    winGraphics.fillCircle(roseX, roseY, 44);
-    winGraphics.lineStyle(3, 0xee7b3c, 0.9);
-    winGraphics.strokeCircle(roseX, roseY, 44);
-    winGraphics.fillStyle(0x0c1529, 0.95);
-    winGraphics.fillCircle(roseX, roseY, 38);
-    // Radial spokes
-    winGraphics.lineStyle(1.5, 0xee7b3c, 0.7);
-    for (let a = 0; a < Math.PI * 2; a += Math.PI / 4) {
-      winGraphics.lineBetween(roseX, roseY, roseX + Math.cos(a) * 38, roseY + Math.sin(a) * 38);
-    }
-    winGraphics.fillStyle(0xfef08a, 0.95);
-    winGraphics.fillCircle(roseX, roseY, 8);
 
     // 6. Glowing Sherbeni Orange Wall Sconces & Torches (NO bookshelves)
     const sconceG = this.scene.add.graphics();
