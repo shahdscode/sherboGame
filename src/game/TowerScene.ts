@@ -17,6 +17,7 @@ export class TowerScene extends Phaser.Scene {
   private isPlaying: boolean = false;
   private isPausedAtCheckpoint: boolean = false;
   private isCompleted: boolean = false;
+  private isLandingSequence: boolean = false;
   private lastReportedStep: number = 0;
   private unsubscribeFns: Array<() => void> = [];
 
@@ -193,9 +194,16 @@ export class TowerScene extends Phaser.Scene {
       });
     }
 
-    // Step 30 is the Finish Line! Reaching it completes the game immediately
+    // Step 30 is the Finish Line! Let the character land visually before celebrating victory
     if (matchedPlatform.isSummit) {
-      this.handleSummitCompletion();
+      if (this.isCompleted || this.isLandingSequence) return;
+      this.isLandingSequence = true;
+
+      // Allow 850ms so player sees the character land, dust puffs rise, and land animation complete
+      this.time.delayedCall(850, () => {
+        this.handleSummitCompletion();
+        this.isLandingSequence = false;
+      });
       return;
     }
 
@@ -206,10 +214,17 @@ export class TowerScene extends Phaser.Scene {
       cpResult.shouldTriggerCheckpoint &&
       cpResult.checkpointNumber !== null
     ) {
-      this.triggerCheckpointPause(
-        cpResult.checkpointNumber,
-        matchedPlatform.stepNumber
-      );
+      if (this.isPausedAtCheckpoint || this.isLandingSequence) return;
+      this.isLandingSequence = true;
+
+      // Allow 800ms so the user clearly sees the character touch down, land, and settle into idle
+      this.time.delayedCall(800, () => {
+        this.triggerCheckpointPause(
+          cpResult.checkpointNumber!,
+          matchedPlatform.stepNumber
+        );
+        this.isLandingSequence = false;
+      });
     }
   }
 
@@ -219,8 +234,6 @@ export class TowerScene extends Phaser.Scene {
   ): void {
     this.isPausedAtCheckpoint = true;
     this.player.freeze();
-    // Switch character in the tower to question.png when reaching a checkpoint
-    this.player.setPose('question');
     this.physics.world.pause();
     sfx.checkpoint();
 
@@ -270,7 +283,6 @@ export class TowerScene extends Phaser.Scene {
     this.isPausedAtCheckpoint = false;
     this.isCompleted = true;
     this.player.freeze();
-    this.player.setPose('goodjob');
     this.physics.world.pause();
     sfx.victory();
 
@@ -278,12 +290,15 @@ export class TowerScene extends Phaser.Scene {
       this.config.totalSteps
     );
     if (summitPlatform) {
+      const ring = this.add
+        .circle(this.player.sprite.x, summitPlatform.y, 24, 0xfde047, 0.85)
+        .setDepth(25);
       this.tweens.add({
-        targets: this.player.sprite,
-        x: this.config.towerWidth / 2,
-        y: summitPlatform.y - this.config.player.height / 2,
-        duration: 300,
-        ease: 'Back.easeOut',
+        targets: ring,
+        scale: 4.5,
+        alpha: 0,
+        duration: 550,
+        onComplete: () => ring.destroy(),
       });
     }
 
@@ -298,13 +313,17 @@ export class TowerScene extends Phaser.Scene {
     this.lastReportedStep = 0;
     this.isPausedAtCheckpoint = false;
     this.isCompleted = false;
+    this.isLandingSequence = false;
     this.isPlaying = true;
     this.physics.world.resume();
   }
 
   public update(time: number, delta: number): void {
     const canControl =
-      this.isPlaying && !this.isPausedAtCheckpoint && !this.isCompleted;
+      this.isPlaying &&
+      !this.isPausedAtCheckpoint &&
+      !this.isCompleted &&
+      !this.isLandingSequence;
     this.player.update(delta, canControl);
     this.platformManager.update(time, delta);
   }

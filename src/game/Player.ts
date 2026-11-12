@@ -295,31 +295,25 @@ export class Player {
       return;
     }
 
-    if (!canControl) {
-      this.sprite.setVelocityX(0);
-      if (this.currentPose === 'climbing') {
-        this.visualSprite.play('anim-idle', true);
-      }
-      this.syncVisualPosition();
-      return;
-    }
-
     const moveLeft =
-      Boolean(this.cursors?.left?.isDown) ||
-      Boolean(this.wasd?.A?.isDown) ||
-      this.touchInput.left;
+      canControl &&
+      (Boolean(this.cursors?.left?.isDown) ||
+        Boolean(this.wasd?.A?.isDown) ||
+        this.touchInput.left);
 
     const moveRight =
-      Boolean(this.cursors?.right?.isDown) ||
-      Boolean(this.wasd?.D?.isDown) ||
-      this.touchInput.right;
+      canControl &&
+      (Boolean(this.cursors?.right?.isDown) ||
+        Boolean(this.wasd?.D?.isDown) ||
+        this.touchInput.right);
 
     const jumpPressed =
-      Boolean(this.cursors?.up?.isDown) ||
-      Boolean(this.cursors?.space?.isDown) ||
-      Boolean(this.wasd?.W?.isDown) ||
-      Boolean(this.wasd?.SPACE?.isDown) ||
-      this.touchInput.jump;
+      canControl &&
+      (Boolean(this.cursors?.up?.isDown) ||
+        Boolean(this.cursors?.space?.isDown) ||
+        Boolean(this.wasd?.W?.isDown) ||
+        Boolean(this.wasd?.SPACE?.isDown) ||
+        this.touchInput.jump);
 
     const onFloor = body.blocked.down || body.touching.down;
 
@@ -327,6 +321,10 @@ export class Player {
       this.jumpBufferTimer = 180;
     } else if (this.jumpBufferTimer > 0) {
       this.jumpBufferTimer -= delta;
+    }
+
+    if (!canControl) {
+      this.jumpBufferTimer = 0;
     }
 
     if (onFloor) {
