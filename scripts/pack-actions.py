@@ -80,10 +80,15 @@ out_atlas = os.path.join(root, 'public/stickers/actions-atlas.webp')
 atlas.save(out_atlas, 'WEBP', quality=90, method=6)
 print(f'Saved actions-atlas.webp: size={atlas.size}, file={os.path.getsize(out_atlas)//1024} KB')
 
-# Now save animated WebP files for each animation (duration ~75ms per frame = 13.3 fps)
+# Save animated WebP files for each animation (dance/celebrations ~135ms = 7.4 fps, flip ~90ms = 11.1 fps)
+anim_durations = {
+    'flip': 90,
+}
+
 for anim_name, frames in anim_frame_dict.items():
+    dur = anim_durations.get(anim_name, 135)
     out_anim = os.path.join(root, f'public/stickers/{anim_name}.webp')
-    frames[0].save(out_anim, format='WEBP', save_all=True, append_images=frames[1:], duration=75, loop=0)
-    print(f'Saved {anim_name}.webp: {os.path.getsize(out_anim)//1024} KB')
+    frames[0].save(out_anim, format='WEBP', save_all=True, append_images=frames[1:], duration=dur, loop=0)
+    print(f'Saved {anim_name}.webp (duration={dur}ms): {os.path.getsize(out_anim)//1024} KB')
 
 print('All actions atlas and animated WebPs generated!')
