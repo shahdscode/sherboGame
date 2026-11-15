@@ -149,20 +149,21 @@ export const QuestionModal: React.FC<QuestionModalProps> = ({
       ? 'Retry Character'
       : 'Question Character';
 
+  const mistakeCount = feedback.wrongOptionIndices.length;
   const characterMoodTag = isCorrect
     ? 'GATE UNLOCKED!'
-    : feedback.wrongOptionIndices.length === 1
-      ? `TRY ANOTHER STONE! (-${towerConfig.rewards.penalty1stMistake} XP)`
-      : feedback.wrongOptionIndices.length === 2
-        ? `KEEP TRYING! (-${towerConfig.rewards.penalty2ndMistake} XP)`
-        : feedback.wrongOptionIndices.length >= 3
-          ? `LAST CHANCE! (-${towerConfig.rewards.penalty3rdMistake} XP)`
+    : mistakeCount === 1
+      ? 'TRY ANOTHER STONE! (400 XP Bounty)'
+      : mistakeCount === 2
+        ? 'KEEP TRYING! (300 XP Bounty)'
+        : mistakeCount >= 3
+          ? 'CRACK THE CODE! (250 XP Floor)'
           : 'CRACK THE CODE!';
 
   const currentPotentialXp =
     feedback.status === 'correct'
-      ? feedback.earnedXp ?? towerConfig.rewards.xpPerCheckpoint
-      : feedback.potentialXp ?? towerConfig.rewards.xpPerCheckpoint;
+      ? feedback.earnedXp ?? 500
+      : feedback.potentialXp ?? 500;
 
   const solvedAnswerText = question.options[question.correctAnswer];
 
@@ -227,11 +228,6 @@ export const QuestionModal: React.FC<QuestionModalProps> = ({
                 ? `+${currentPotentialXp} XP EARNED!`
                 : `+${currentPotentialXp} XP BOUNTY`}
             </span>
-            {isIncorrect && feedback.currentLoss && (
-              <span className="live-penalty-pill">
-                -{feedback.currentLoss} XP
-              </span>
-            )}
           </div>
         </div>
 
@@ -375,9 +371,9 @@ export const QuestionModal: React.FC<QuestionModalProps> = ({
                     <span className="option-text">
                       {renderFormattedMathText(optionText)}
                     </span>
-                    {optionPenalty && (
+                    {isWrongTried && (
                       <span className="option-penalty-badge">
-                        -{optionPenalty} XP
+                        Incorrect
                       </span>
                     )}
                   </button>
@@ -396,13 +392,13 @@ export const QuestionModal: React.FC<QuestionModalProps> = ({
                   <ShieldAlert size={18} />
                   <span>
                     {feedback.wrongOptionIndices.length === 1 && (
-                      <>1st Mistake: <strong>-{towerConfig.rewards.penalty1stMistake} XP</strong> deducted! Pick another glowing stone.</>
+                      <>1st Try Missed! Next attempt solves for <strong>+400 XP</strong>. Pick another glowing stone.</>
                     )}
                     {feedback.wrongOptionIndices.length === 2 && (
-                      <>2nd Mistake: <strong>-{towerConfig.rewards.penalty2ndMistake} XP</strong> total penalty! Pick another glowing stone.</>
+                      <>2nd Try Missed! Next attempt solves for <strong>+300 XP</strong>. Pick another glowing stone.</>
                     )}
                     {feedback.wrongOptionIndices.length >= 3 && (
-                      <>3rd Mistake: <strong>-{towerConfig.rewards.penalty3rdMistake} XP</strong> penalty! Crack the code to pass.</>
+                      <>Keep going! Guaranteed <strong>+250 XP floor</strong> once cracked. You got this!</>
                     )}
                   </span>
                 </div>

@@ -98,14 +98,14 @@ export const towerConfig: TowerConfigRuntime = {
   rewards: {
     xpPerCheckpoint: 500,
     penalty1stMistake: 100,
-    penalty2ndMistake: 250,
-    penalty3rdMistake: 400,
-    firstTryBonusXp: 150,
-    summitBonusXp: 500,
-    maxSpeedBonus: 1500,
+    penalty2ndMistake: 200,
+    penalty3rdMistake: 250,
+    firstTryBonusXp: 0,
+    summitBonusXp: 300,
+    maxSpeedBonus: 600,
     targetTimeSeconds: 60,
-    speedBonusDecayPerSec: 5,
-    speedBonusMin: 100,
+    speedBonusDecayPerSec: 2.5,
+    speedBonusMin: 0,
   },
   // summit platform at y = 380: groundY = 380 + 75 * 108 = 8480; worldHeight = 8480 + 180 = 8660
   worldHeight: 8660,
@@ -113,20 +113,18 @@ export const towerConfig: TowerConfigRuntime = {
 };
 
 /**
- * Calculates a dynamic speed bonus based on stopwatch clear time.
- * Fast climbers who solve questions promptly earn up to +1500 bonus XP.
+ * Calculates a dynamic speed bonus based on stopwatch clear time:
+ * Speed XP = 600 * max(0, 1 - max(0, elapsedSeconds - 60) / 240)
+ *
+ * Rules:
+ * <= 60s: 600 XP | 90s: 525 XP | 120s: 450 XP | 180s: 300 XP | 240s: 150 XP | >= 300s: 0 XP
  */
 export function calculateSpeedBonus(
-  elapsedSeconds: number,
-  config: TowerConfig = towerConfig
+  elapsedSeconds: number
 ): number {
-  const { maxSpeedBonus, targetTimeSeconds, speedBonusDecayPerSec, speedBonusMin } =
-    config.rewards;
-  const overtime = Math.max(0, elapsedSeconds - targetTimeSeconds);
-  return Math.max(
-    speedBonusMin,
-    Math.round(maxSpeedBonus - overtime * speedBonusDecayPerSec)
-  );
+  const overtime = Math.max(0, elapsedSeconds - 60);
+  const factor = Math.max(0, 1 - overtime / 240);
+  return Math.round(600 * factor);
 }
 
 /**

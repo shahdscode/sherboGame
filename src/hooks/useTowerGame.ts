@@ -10,6 +10,12 @@ import {
 import { checkpointQuestions } from '../data/sampleQuestions';
 import { gameEvents, TouchInputState } from '../game/EventBus';
 import { sfx } from '../game/sfx';
+import {
+  ScoringEngine,
+  ScoringState,
+  createInitialScoringState,
+  calculateGateQuestionXp,
+} from '../game/scoring';
 
 export interface CheckpointStateItem {
   checkpointNumber: number;
@@ -35,14 +41,13 @@ export interface QuestionAttemptFeedback {
 
 export function getPenaltyForMistakes(mistakes: number): number {
   if (mistakes <= 0) return 0;
-  if (mistakes === 1) return towerConfig.rewards.penalty1stMistake;
-  if (mistakes === 2) return towerConfig.rewards.penalty2ndMistake;
-  return towerConfig.rewards.penalty3rdMistake;
+  if (mistakes === 1) return 100;
+  if (mistakes === 2) return 200;
+  return 250;
 }
 
 export function getQuestionXpForMistakes(mistakes: number): number {
-  const penalty = getPenaltyForMistakes(mistakes);
-  return Math.max(100, towerConfig.rewards.xpPerCheckpoint - penalty);
+  return calculateGateQuestionXp(mistakes + 1);
 }
 
 export function useTowerGame(
@@ -62,6 +67,14 @@ export function useTowerGame(
   const [xpPoints, setXpPoints] = useState<number>(0);
   const [elapsedTime, setElapsedTime] = useState<number>(0);
   const [speedBonus, setSpeedBonus] = useState<number>(0);
+
+  // Centralized Scoring Engine (single source of truth for scoring)
+  const scoringEngineRef = useRef<ScoringEngine>(new ScoringEngine());
+  const [scoringState, setScoringState] = useState<ScoringState>(() =>
+    scoringEngineRef.current.getState()
+  );
+  const questionStartTimeRef = useRef<number | null>(null);
+
   // The Start button stays locked until the Phaser scene has loaded its assets
   const [sceneReady, setSceneReady] = useState<boolean>(gameEvents.sceneReady);
   const [loadProgress, setLoadProgress] = useState<number>(0);
@@ -91,7 +104,7 @@ export function useTowerGame(
     wrongOptionIndices: [],
     earnedXp: null,
     currentLoss: null,
-    potentialXp: towerConfig.rewards.xpPerCheckpoint,
+    potentialXp: 500,
     wrongPenalties: {},
     hint: null,
     explanation: null,
@@ -131,6 +144,12 @@ export function useTowerGame(
         setActiveCheckpointNumber(checkpointNumber);
         setGameState('CHECKPOINT_REACHED');
         isSubmittingRef.current = false;
+        questionStartTimeRef.current = Date.now();
+
+        // Check if gate was already attempted/solved
+        const currentGateAttempts =
+          scoringEngineRef.current.getState().gateAttempts[checkpointNumber] || 0;
+        const initialPotential = calculateGateQuestionXp(currentGateAttempts + 1);
 
         setFeedback({
           status: 'idle',
@@ -138,14 +157,15 @@ export function useTowerGame(
           wrongOptionIndices: [],
           earnedXp: null,
           currentLoss: null,
-          potentialXp: towerConfig.rewards.xpPerCheckpoint,
+          potentialXp: initialPotential,
           wrongPenalties: {},
           hint: null,
           explanation: null,
-          attemptsForCurrentQuestion: 0,
+          attemptsForCurrentQuestion: currentGateAttempts,
         });
 
         setTimeout(() => {
+          questionStartTimeRef.current = Date.now();
           setGameState((prev) =>
             prev === 'CHECKPOINT_REACHED' ? 'QUESTION_ACTIVE' : prev
           );
@@ -163,11 +183,14 @@ export function useTowerGame(
 
     const unsubSummit = gameEvents.on('evt:summit-celebrated', () => {
       setElapsedTime((currentElapsed) => {
-        const bonus = calculateSpeedBonus(currentElapsed, towerConfig);
-        setSpeedBonus(bonus);
-        const summitTotal =
-          (towerConfig.rewards.summitBonusXp || 0) + bonus;
-        setXpPoints((prev) => prev + summitTotal);
+        scoringEngineRef.current.recordSummitCompletion(
+          currentElapsed,
+          towerConfig.numberOfCheckpoints
+        );
+        const updated = scoringEngineRef.current.getState();
+        setScoringState(updated);
+        setSpeedBonus(updated.speedXp);
+        setXpPoints(updated.totalXp);
         return currentElapsed;
       });
       setGameState('COMPLETED');
@@ -246,22 +269,31 @@ export function useTowerGame(
       const isCorrect = chosen === activeQuestion.correctAnswer;
       const newAttemptNum = feedback.attemptsForCurrentQuestion + 1;
 
-      setTotalAttempts((prev) => prev + 1);
-
       if (isCorrect) {
         isSubmittingRef.current = true;
         sfx.correct();
 
-        const mistakes = feedback.wrongOptionIndices.length;
-        const isFirstTry = mistakes === 0;
-        const comboBonus = isFirstTry ? towerConfig.rewards.firstTryBonusXp : 0;
-        if (isFirstTry) {
+        const solveDurationSeconds = questionStartTimeRef.current
+          ? Math.max(0.1, (Date.now() - questionStartTimeRef.current) / 1000)
+          : 10.0;
+
+        const result = scoringEngineRef.current.recordCorrectAnswer(
+          activeCheckpointNumber,
+          solveDurationSeconds
+        );
+
+        const updatedScoring = scoringEngineRef.current.getState();
+        setScoringState(updatedScoring);
+        setXpPoints(updatedScoring.totalXp);
+        setTotalAttempts(updatedScoring.totalAttempts);
+        if (result.isFirstTry) {
           setFirstTryCount((prev) => prev + 1);
         }
 
-        const earnedXp = getQuestionXpForMistakes(mistakes) + comboBonus;
-
-        setXpPoints((prev) => prev + earnedXp);
+        // Play achievement chime if any achievement unlocked
+        if (result.achievementsUnlocked.length > 0) {
+          sfx.badgeStamp();
+        }
 
         // Update character in Phaser to goodjob.png!
         gameEvents.emit('cmd:set-character-pose', { pose: 'goodjob' });
@@ -270,9 +302,9 @@ export function useTowerGame(
           status: 'correct',
           selectedOptionIndex: chosen,
           wrongOptionIndices: prev.wrongOptionIndices,
-          earnedXp,
+          earnedXp: result.questionXpEarned,
           currentLoss: null,
-          potentialXp: earnedXp,
+          potentialXp: result.questionXpEarned,
           wrongPenalties: prev.wrongPenalties,
           hint: null,
           explanation: activeQuestion.explanation,
@@ -286,7 +318,7 @@ export function useTowerGame(
                 ...cp,
                 status: 'passed',
                 attempts: newAttemptNum,
-                solvedOnFirstTry: isFirstTry,
+                solvedOnFirstTry: result.isFirstTry,
               };
             }
             if (cp.checkpointNumber === activeCheckpointNumber + 1) {
@@ -310,8 +342,12 @@ export function useTowerGame(
         // Update character in Phaser to retry.png!
         gameEvents.emit('cmd:set-character-pose', { pose: 'retry' });
 
-        const penalty = getPenaltyForMistakes(mistakeNumber);
-        const remainingXp = Math.max(0, towerConfig.rewards.xpPerCheckpoint - penalty);
+        const result = scoringEngineRef.current.recordIncorrectAttempt(
+          activeCheckpointNumber
+        );
+        const updatedScoring = scoringEngineRef.current.getState();
+        setScoringState(updatedScoring);
+        setTotalAttempts(updatedScoring.totalAttempts);
 
         setFeedback((prev) => ({
           status: 'incorrect',
@@ -319,11 +355,11 @@ export function useTowerGame(
           selectedOptionIndex: null,
           wrongOptionIndices: newWrongIndices,
           earnedXp: null,
-          currentLoss: penalty,
-          potentialXp: remainingXp,
+          currentLoss: null,
+          potentialXp: result.potentialXp,
           wrongPenalties: {
             ...prev.wrongPenalties,
-            [chosen]: penalty,
+            [chosen]: 1,
           },
           hint: activeQuestion.hint,
           explanation: null,
@@ -374,6 +410,8 @@ export function useTowerGame(
   const restartGame = useCallback(() => {
     sfx.click();
     isSubmittingRef.current = false;
+    scoringEngineRef.current.reset();
+    setScoringState(scoringEngineRef.current.getState());
     setCurrentStep(0);
     setHighestStep(0);
     setUnlockedSteps(towerConfig.checkpointSteps[0]);
@@ -390,7 +428,7 @@ export function useTowerGame(
       wrongOptionIndices: [],
       earnedXp: null,
       currentLoss: null,
-      potentialXp: towerConfig.rewards.xpPerCheckpoint,
+      potentialXp: 500,
       wrongPenalties: {},
       hint: null,
       explanation: null,
@@ -398,6 +436,13 @@ export function useTowerGame(
     });
     setGameState('PLAYING');
     gameEvents.emit('cmd:restart-game', undefined);
+  }, []);
+
+  const dismissNotification = useCallback((id: string) => {
+    setScoringState((prev) => ({
+      ...prev,
+      recentNotifications: prev.recentNotifications.filter((n) => n.id !== id),
+    }));
   }, []);
 
   const setTouchControls = useCallback((input: TouchInputState) => {
@@ -423,6 +468,8 @@ export function useTowerGame(
     xpPoints,
     elapsedTime,
     speedBonus,
+    scoringState,
+    dismissNotification,
     sceneReady,
     loadProgress,
     loadFailed,

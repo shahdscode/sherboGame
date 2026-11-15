@@ -21,6 +21,8 @@ export const App: React.FC = () => {
     xpPoints,
     elapsedTime,
     speedBonus,
+    scoringState,
+    dismissNotification,
     sceneReady,
     loadProgress,
     loadFailed,
@@ -47,6 +49,9 @@ export const App: React.FC = () => {
         checkpoints={checkpoints}
         xpPoints={xpPoints}
         elapsedTime={elapsedTime}
+        currentStreak={scoringState?.currentStreak ?? 0}
+        notifications={scoringState?.recentNotifications ?? []}
+        onDismissNotification={dismissNotification}
       />
 
       {gameState === 'INTRO' && <StartScreen
@@ -74,6 +79,7 @@ export const App: React.FC = () => {
           xpPoints={xpPoints}
           elapsedTime={elapsedTime}
           speedBonus={speedBonus}
+          scoringState={scoringState}
           onPlayAgain={restartGame}
         />
       )}
