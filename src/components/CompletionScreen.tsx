@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import confetti from 'canvas-confetti';
 import {
   Trophy,
@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { towerConfig, formatStopwatchTime } from '../data/towerConfig';
 import { captureGameFrame, getSummitViewRatios } from '../game/TowerGame';
+import { sfx } from '../game/sfx';
 
 interface CompletionScreenProps {
   completedCheckpointsCount: number;
@@ -143,60 +144,126 @@ function drawStatIcon(
   ctx.restore();
 }
 
-export interface ClimberRankInfo {
-  grade: 'S+' | 'S' | 'A' | 'B';
+export type PerformanceTier = 'legendary' | 'gold' | 'silver' | 'comeback';
+
+export interface PerformanceTierConfig {
+  tier: PerformanceTier;
   title: string;
+  badgeTag: string;
+  heroHeadline: string;
+  subtitle: string;
+  quote: string;
+  stickerSrc: string;
+  stickerAlt: string;
+  themeClass: string;
   badgeBg: string;
   badgeBorder: string;
   badgeTextColor: string;
-  quote: string;
+  accentColor: string;
+  secondaryAccent: string;
+  scoreBannerBg: string;
+  stars: number;
+  confettiColors: string[];
+  replayButtonText: string;
 }
 
-export function getClimberRankAndQuote(
+export function getPerformanceTier(
   xpPoints: number,
   firstTryCount: number,
   elapsedTime: number
-): ClimberRankInfo {
-  if (firstTryCount >= 5 && xpPoints >= 3400) {
+): PerformanceTierConfig {
+  // 1. Perfect run: 5/5 first-try combos (zero mistakes)
+  if (firstTryCount >= 5 && xpPoints >= 3200) {
     return {
-      grade: 'S+',
-      title: '👑 Summit Legend',
+      tier: 'legendary',
+      title: '👑 LEGENDARY SUMMIT',
+      badgeTag: 'RANK S+ • PERFECT RUN',
+      heroHeadline: 'Legendary Summit!',
+      subtitle: 'Flawless run! Every rune gate cracked on the 1st try!',
+      quote: 'Flawless mastery! 5 out of 5 combos without a single slip. You are a true tower legend!',
+      stickerSrc: '/stickers/victory.webp',
+      stickerAlt: 'Sherbo Legendary Victory',
+      themeClass: 'theme-legendary',
       badgeBg: '#fef3c7',
+      badgeBorder: '#facc15',
+      badgeTextColor: '#78350f',
+      accentColor: '#7e22ce',
+      secondaryAccent: '#eab308',
+      scoreBannerBg: '#fdf4ff',
+      stars: 3,
+      confettiColors: ['#a855f7', '#fbbf24', '#f43f5e', '#38bdf8', '#ffffff'],
+      replayButtonText: 'Climb Again',
+    };
+  }
+
+  // 2. Good performance: 4+ combos or fast high-score run
+  if (firstTryCount >= 4 || (xpPoints >= 2800 && elapsedTime <= 160)) {
+    return {
+      tier: 'gold',
+      title: '🥇 GOLD SUMMIT',
+      badgeTag: 'RANK S • GOLD ACHIEVEMENT',
+      heroHeadline: 'Golden Victory!',
+      subtitle: 'Blazing speed and sharp focus conquered the tower!',
+      quote: "Brilliant climbing! Incredible speed and razor-sharp thinking. You're in the elite league!",
+      stickerSrc: '/stickers/celebrate-confetti-dance.webp',
+      stickerAlt: 'Sherbo Gold Celebration',
+      themeClass: 'theme-gold',
+      badgeBg: '#fff7ed',
       badgeBorder: '#f59e0b',
       badgeTextColor: '#b45309',
-      quote: 'Flawless mastery! You crushed every gate on the 1st try like a true champion!',
+      accentColor: '#ea580c',
+      secondaryAccent: '#f59e0b',
+      scoreBannerBg: '#fffbeb',
+      stars: 3,
+      confettiColors: ['#fbbf24', '#f59e0b', '#d97706', '#fef08a'],
+      replayButtonText: 'Climb Again',
     };
   }
 
-  if (xpPoints >= 3000 || (firstTryCount >= 4 && elapsedTime <= 150)) {
+  // 3. Average performance: 2-3 combos or solid score
+  if (firstTryCount >= 2 || xpPoints >= 1900) {
     return {
-      grade: 'S',
-      title: '⚡ Speed Demon',
-      badgeBg: '#fff7ed',
-      badgeBorder: '#ea580c',
-      badgeTextColor: '#c2410c',
-      quote: 'Lightning-fast thinking! That climb was pure poetry in motion!',
-    };
-  }
-
-  if (xpPoints >= 2200 || firstTryCount >= 3) {
-    return {
-      grade: 'A',
-      title: '🧠 Math Prodigy',
+      tier: 'silver',
+      title: '🥈 SILVER SUMMIT',
+      badgeTag: 'RANK A • SILVER ACHIEVEMENT',
+      heroHeadline: 'Silver Milestone!',
+      subtitle: 'Resilient climb! You tackled the gates and conquered the tower!',
+      quote: 'Solid climbing! You pushed through tough challenges and reached the crown. Well done!',
+      stickerSrc: '/stickers/celebrate-cheer.webp',
+      stickerAlt: 'Sherbo Silver Cheer',
+      themeClass: 'theme-silver',
       badgeBg: '#f0f9ff',
       badgeBorder: '#0284c7',
       badgeTextColor: '#0369a1',
-      quote: 'Incredible knowledge and focus! You conquered the tower with style!',
+      accentColor: '#0284c7',
+      secondaryAccent: '#38bdf8',
+      scoreBannerBg: '#f0f9ff',
+      stars: 2,
+      confettiColors: ['#38bdf8', '#94a3b8', '#e2e8f0', '#ffffff'],
+      replayButtonText: 'Climb Again',
     };
   }
 
+  // 4. Needs improvement: Comeback challenger
   return {
-    grade: 'B',
-    title: '🔥 Tower Conqueror',
-    badgeBg: '#ecfdf5',
-    badgeBorder: '#10b981',
-    badgeTextColor: '#047857',
-    quote: 'Great tenacity and grit! You scaled all 30 steps to the crown!',
+    tier: 'comeback',
+    title: '🔥 COMEBACK CHALLENGER',
+    badgeTag: 'RANK B • RISING STAR',
+    heroHeadline: 'Summit Reached!',
+    subtitle: 'You conquered all 30 steps! Ready to claim the crown?',
+    quote: "Every master started with a climb! You never gave up and reached the top. One more run and you'll crush it!",
+    stickerSrc: '/stickers/celebrate-happy.webp',
+    stickerAlt: 'Sherbo Comeback Cheer',
+    themeClass: 'theme-comeback',
+    badgeBg: '#fff1f2',
+    badgeBorder: '#e11d48',
+    badgeTextColor: '#9f1239',
+    accentColor: '#e11d48',
+    secondaryAccent: '#f97316',
+    scoreBannerBg: '#fff1f2',
+    stars: 1,
+    confettiColors: ['#f43f5e', '#fb7185', '#fda4af', '#fef3c7'],
+    replayButtonText: 'Replay & Take The Crown!',
   };
 }
 
@@ -210,25 +277,122 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
   onPlayAgain,
 }) => {
   const [isExporting, setIsExporting] = useState(false);
-  const rankInfo = getClimberRankAndQuote(xpPoints, firstTryCount, elapsedTime);
-  const starCount =
-    rankInfo.grade === 'S+' || rankInfo.grade === 'S'
-      ? 3
-      : rankInfo.grade === 'A'
-        ? 2
-        : 1;
+  const tierConfig = getPerformanceTier(xpPoints, firstTryCount, elapsedTime);
+  const starCount = tierConfig.stars;
+
+  // Staged celebration choreography:
+  // 0: Initial mount + Confetti explosion
+  // 1: XP counter roll-up (0 -> xpPoints)
+  // 2: Achievement badge stamp animation
+  // 3: Performance statistics cascade in
+  // 4: Action buttons revealed
+  const [displayXp, setDisplayXp] = useState(0);
+  const [animPhase, setAnimPhase] = useState<number>(0);
+  const animTimeoutsRef = useRef<number[]>([]);
+
+  const skipAnimation = () => {
+    setDisplayXp(xpPoints);
+    setAnimPhase(4);
+    animTimeoutsRef.current.forEach((t) => window.clearTimeout(t));
+    animTimeoutsRef.current = [];
+  };
 
   useEffect(() => {
+    // 3. Confetti explodes!
     try {
-      confetti({
-        particleCount: 100,
-        spread: 80,
-        origin: { y: 0.58 },
-      });
+      if (tierConfig.tier === 'legendary') {
+        confetti({
+          particleCount: 130,
+          spread: 100,
+          origin: { y: 0.52 },
+          colors: tierConfig.confettiColors,
+        });
+        const t1 = window.setTimeout(() => {
+          confetti({
+            particleCount: 80,
+            spread: 120,
+            origin: { x: 0.2, y: 0.58 },
+            colors: tierConfig.confettiColors,
+          });
+          confetti({
+            particleCount: 80,
+            spread: 120,
+            origin: { x: 0.8, y: 0.58 },
+            colors: tierConfig.confettiColors,
+          });
+        }, 300);
+        animTimeoutsRef.current.push(t1);
+      } else {
+        confetti({
+          particleCount:
+            tierConfig.tier === 'gold'
+              ? 110
+              : tierConfig.tier === 'silver'
+                ? 85
+                : 65,
+          spread: 80,
+          origin: { y: 0.55 },
+          colors: tierConfig.confettiColors,
+        });
+      }
     } catch {
       // Ignore confetti errors in headless test environments
     }
-  }, []);
+
+    // 4. Giant XP score counts upward!
+    const duration = 1200;
+    const start = performance.now();
+    let lastTick = 0;
+    let rafId: number;
+
+    const tick = (now: number) => {
+      const elapsed = now - start;
+      const progress = Math.min(1, elapsed / duration);
+      // easeOutExpo
+      const ease = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
+      const current = Math.round(ease * xpPoints);
+      setDisplayXp(current);
+
+      if (now - lastTick > 65 && progress < 0.94) {
+        lastTick = now;
+        sfx.click();
+      }
+
+      if (progress < 1) {
+        rafId = requestAnimationFrame(tick);
+      } else {
+        setDisplayXp(xpPoints);
+        setAnimPhase(1);
+
+        // 5. Achievement badge appears with special animation & chime!
+        const tBadge = window.setTimeout(() => {
+          setAnimPhase(2);
+          sfx.badgeStamp();
+        }, 180);
+        animTimeoutsRef.current.push(tBadge);
+
+        // 6. Performance statistics reveal themselves in cascade!
+        const tStats = window.setTimeout(() => {
+          setAnimPhase(3);
+        }, 600);
+        animTimeoutsRef.current.push(tStats);
+
+        // 7. Action buttons revealed!
+        const tActions = window.setTimeout(() => {
+          setAnimPhase(4);
+        }, 980);
+        animTimeoutsRef.current.push(tActions);
+      }
+    };
+
+    rafId = requestAnimationFrame(tick);
+
+    return () => {
+      cancelAnimationFrame(rafId);
+      animTimeoutsRef.current.forEach((t) => window.clearTimeout(t));
+      animTimeoutsRef.current = [];
+    };
+  }, [xpPoints, tierConfig]);
 
   const handleSaveScore = async () => {
     if (isExporting) return;
@@ -237,7 +401,7 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
     try {
       const [frame, stickerImg] = await Promise.all([
         captureGameFrame(),
-        loadImage('/stickers/victory.webp'),
+        loadImage(tierConfig.stickerSrc),
       ]);
       const { summitRatioY, playerRatioX } = getSummitViewRatios();
 
@@ -275,7 +439,7 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
       ctx.fillRect(0, 0, outW, outH);
 
       // Celebratory background confetti & starlight dots
-      const confettiPalette = ['#ee7b3c', '#fde047', '#3f9f9b', '#d8356c', '#7e57d8'];
+      const confettiPalette = tierConfig.confettiColors;
       for (let i = 0; i < 38; i++) {
         const seed = (i * 9301 + 49297) % 233280;
         const rx = ((seed / 233280) * 1020) + 30;
@@ -298,7 +462,7 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
 
       // Outer decorative arcade frame
       ctx.save();
-      ctx.strokeStyle = 'rgba(238, 123, 60, 0.35)';
+      ctx.strokeStyle = tierConfig.accentColor;
       ctx.lineWidth = 3;
       ctx.beginPath();
       ctx.roundRect(22, 22, outW - 44, outH - 44, 38);
@@ -329,9 +493,6 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
         const fh = frame.naturalHeight || frame.height;
         const targetAspect = winW / winH; // 2.0
 
-        // Choose a crop region from the snapshot that preserves aspect ratio (zero distortion)
-        // and places the Step 30 Finish Line at ~78% down the window so the character, trophy,
-        // stained-glass window, and finish line are always framed cleanly.
         let srcW = fw;
         let srcH = fw / targetAspect;
         if (srcH > fh) {
@@ -372,29 +533,29 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
       ctx.stroke();
 
       ctx.lineWidth = 2.5;
-      ctx.strokeStyle = '#ee7b3c';
+      ctx.strokeStyle = tierConfig.secondaryAccent;
       ctx.beginPath();
       ctx.roundRect(winX - 2, winY - 2, winW + 4, winH + 4, winR + 2);
       ctx.stroke();
 
       // Top floating badge pill on the Summit Window
-      const topBadgeW = 350;
+      const topBadgeW = 380;
       const topBadgeH = 40;
       const topBadgeX = outW / 2 - topBadgeW / 2;
       const topBadgeY = winY + 16;
 
-      ctx.fillStyle = 'rgba(27, 42, 83, 0.92)';
+      ctx.fillStyle = 'rgba(27, 42, 83, 0.94)';
       ctx.beginPath();
       ctx.roundRect(topBadgeX, topBadgeY, topBadgeW, topBadgeH, 999);
       ctx.fill();
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = '#fde047';
+      ctx.lineWidth = 2.5;
+      ctx.strokeStyle = tierConfig.secondaryAccent;
       ctx.stroke();
 
-      ctx.fillStyle = '#fde047';
+      ctx.fillStyle = tierConfig.secondaryAccent;
       ctx.font = '700 16px "Fredoka", sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText(`★  SUMMIT REACHED • STEP ${towerConfig.totalSteps}  ★`, outW / 2, topBadgeY + 26);
+      ctx.fillText(`★  ${tierConfig.title} • STEP ${towerConfig.totalSteps}  ★`, outW / 2, topBadgeY + 26);
 
       // 3. Bottom Showcase: Tactile 3D Arcade Score Card
       const cardX = 48;
@@ -403,7 +564,7 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
       const cardH = 774;
       const cardR = 32;
 
-      // Card 3D solid navy bottom lip + drop shadow
+      // Card 3D solid bottom lip + drop shadow
       ctx.fillStyle = 'rgba(5, 10, 22, 0.55)';
       ctx.beginPath();
       ctx.roundRect(cardX, cardY + 18, cardW, cardH, cardR);
@@ -414,14 +575,14 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
       ctx.roundRect(cardX, cardY + 10, cardW, cardH, cardR);
       ctx.fill();
 
-      // Warm cream arcade card body (#f8e7d6) matching Start & Question cards
+      // Card body
       ctx.fillStyle = '#f8e7d6';
       ctx.beginPath();
       ctx.roundRect(cardX, cardY, cardW, cardH, cardR);
       ctx.fill();
 
       ctx.lineWidth = 4;
-      ctx.strokeStyle = '#1b2a53';
+      ctx.strokeStyle = tierConfig.accentColor;
       ctx.stroke();
 
       // Inner subtle top highlight
@@ -488,28 +649,28 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
       const rankPillH = 34;
       const rankPillW = 340;
 
-      ctx.fillStyle = rankInfo.badgeBg;
+      ctx.fillStyle = tierConfig.badgeBg;
       ctx.beginPath();
       ctx.roundRect(rankPillX, rankPillY, rankPillW, rankPillH, 999);
       ctx.fill();
       ctx.lineWidth = 2.5;
-      ctx.strokeStyle = rankInfo.badgeBorder;
+      ctx.strokeStyle = tierConfig.badgeBorder;
       ctx.stroke();
 
-      ctx.fillStyle = rankInfo.badgeTextColor;
-      ctx.font = '700 17px "Fredoka", sans-serif';
+      ctx.fillStyle = tierConfig.badgeTextColor;
+      ctx.font = '700 16px "Fredoka", sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText(
-        `RANK ${rankInfo.grade}  •  ${rankInfo.title}`,
+        tierConfig.badgeTag,
         rankPillX + rankPillW / 2,
         rankPillY + 23
       );
 
-      // Title: Sherbo's Tower
+      // Title: Hero Headline
       ctx.fillStyle = '#1b2a53';
       ctx.font = '700 44px "Fredoka", sans-serif';
       ctx.textAlign = 'left';
-      ctx.fillText("Sherbo's Tower", textStartX, cardY + 98);
+      ctx.fillText(tierConfig.heroHeadline, textStartX, cardY + 98);
 
       // Speech Bubble: Sherbo's Quote
       const bubbleX = textStartX;
@@ -546,7 +707,7 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
       ctx.fillStyle = '#1b2a53';
       ctx.font = '600 17px "Fredoka", sans-serif';
       ctx.textAlign = 'left';
-      ctx.fillText(`“${rankInfo.quote}”`, bubbleX + 16, bubbleY + 31);
+      ctx.fillText(`“${tierConfig.quote}”`, bubbleX + 16, bubbleY + 31);
       ctx.restore();
 
       // 4. Hero Final Score Banner (White 3D Arcade Box with XP & Speed Breakdown)
@@ -556,23 +717,23 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
       const bannerH = 166;
       const bannerR = 24;
 
-      // 3D orange-brown bottom lip
-      ctx.fillStyle = '#b85720';
+      // 3D colored bottom lip
+      ctx.fillStyle = tierConfig.accentColor;
       ctx.beginPath();
       ctx.roundRect(bannerX, bannerY + 7, bannerW, bannerH, bannerR);
       ctx.fill();
 
-      // Crisp white banner body
-      ctx.fillStyle = '#ffffff';
+      // Banner body
+      ctx.fillStyle = tierConfig.scoreBannerBg;
       ctx.beginPath();
       ctx.roundRect(bannerX, bannerY, bannerW, bannerH, bannerR);
       ctx.fill();
       ctx.lineWidth = 3.5;
-      ctx.strokeStyle = '#ee7b3c';
+      ctx.strokeStyle = tierConfig.accentColor;
       ctx.stroke();
 
       // Top label pill inside score banner
-      ctx.fillStyle = '#b85720';
+      ctx.fillStyle = tierConfig.accentColor;
       ctx.font = '700 18px "Fredoka", sans-serif';
       ctx.textAlign = 'left';
       ctx.fillText('⚡ FINAL SCORE', bannerX + 32, bannerY + 38);
@@ -596,7 +757,7 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
       ctx.fillText(`⏱️ ${formatStopwatchTime(elapsedTime)}`, timePillX + timePillW / 2, timePillY + 23);
 
       // Huge XP Score Value
-      ctx.fillStyle = '#ee7b3c';
+      ctx.fillStyle = tierConfig.accentColor;
       ctx.font = '700 58px "Fredoka", sans-serif';
       ctx.textAlign = 'left';
       ctx.fillText(
@@ -782,17 +943,21 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
 
   return (
     <div
-      className="completion-side-wrapper"
+      className={`completion-side-wrapper ${tierConfig.themeClass}`}
       role="dialog"
       aria-modal="true"
       data-testid="completion-screen"
+      onClick={skipAnimation}
     >
-      <div className="modal-card completion-side-card">
+      <div
+        className={`modal-card completion-side-card ${tierConfig.themeClass}`}
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="completion-hero-banner">
           <div className="completion-sticker-wrap">
             <img
-              src="/stickers/victory.webp"
-              alt="Sherbo Victory Dance"
+              src={tierConfig.stickerSrc}
+              alt={tierConfig.stickerAlt}
               className="completion-hero-sticker"
               width={256}
               height={256}
@@ -818,21 +983,19 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
                 ))}
               </div>
               <div
-                className={`climber-rank-badge rank-grade-${rankInfo.grade
-                  .toLowerCase()
-                  .replace('+', '-plus')}`}
+                className={`climber-rank-badge ${
+                  animPhase >= 2 ? 'badge-stamped' : 'badge-hidden'
+                }`}
               >
-                <span className="rank-grade-tag">RANK {rankInfo.grade}</span>
-                <span className="rank-divider">•</span>
-                <span className="rank-title-tag">{rankInfo.title}</span>
+                <span className="rank-badge-tag">{tierConfig.badgeTag}</span>
               </div>
             </div>
 
-            <h1 className="completion-title">Sherbo's Tower</h1>
+            <h1 className="completion-title">{tierConfig.heroHeadline}</h1>
 
             <div className="sherbo-speech-bubble">
               <span className="speech-quote-icon">💬</span>
-              <p className="sherbo-quote-text">"{rankInfo.quote}"</p>
+              <p className="sherbo-quote-text">"{tierConfig.quote}"</p>
             </div>
           </div>
         </div>
@@ -847,15 +1010,15 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
               ⏱️ {formatStopwatchTime(elapsedTime)}
             </span>
           </div>
-          <div className="xp-banner-score">
-            {xpPoints.toLocaleString()} XP
+          <div className={`xp-banner-score ${animPhase < 2 ? 'counter-active' : ''}`}>
+            {displayXp.toLocaleString()} XP
           </div>
           <div className="xp-banner-subtext">
             Includes +{speedBonus.toLocaleString()} XP Speed Bonus • {firstTryCount} / {towerConfig.numberOfCheckpoints} Combos
           </div>
         </div>
 
-        <div className="stats-summary-grid">
+        <div className={`stats-summary-grid ${animPhase >= 3 ? 'stats-revealed' : 'stats-hidden'}`}>
           <div
             className="stat-box stat-box-teal"
             data-testid="stat-steps-completed"
@@ -899,7 +1062,7 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
           </div>
         </div>
 
-        <div className="completion-actions-row">
+        <div className={`completion-actions-row ${animPhase >= 4 ? 'actions-revealed' : 'actions-hidden'}`}>
           <button
             type="button"
             className="primary-cta-btn save-score-btn"
@@ -918,7 +1081,7 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
             data-testid="play-again-btn"
           >
             <RotateCcw size={18} />
-            <span>Climb Again</span>
+            <span>{tierConfig.replayButtonText}</span>
           </button>
         </div>
       </div>

@@ -1258,6 +1258,350 @@ kbd {
   font-size: 0.70rem;
 }
 
+/* Staged animation phases */
+.badge-hidden {
+  opacity: 0;
+  transform: scale(2.4) rotate(-8deg);
+  pointer-events: none;
+}
+
+.badge-stamped {
+  animation: badgeStamp 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.25) forwards;
+}
+
+@keyframes badgeStamp {
+  0% {
+    opacity: 0;
+    transform: scale(2.6) rotate(-10deg);
+    filter: drop-shadow(0 0 20px rgba(250, 204, 21, 0.8));
+  }
+  65% {
+    opacity: 1;
+    transform: scale(0.92) rotate(2deg);
+  }
+  85% {
+    transform: scale(1.08) rotate(-1deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+.counter-active {
+  animation: counterPop 0.12s ease-in-out infinite alternate;
+  color: #ff9d00 !important;
+  text-shadow: 0 0 12px rgba(255, 157, 0, 0.6);
+}
+
+@keyframes counterPop {
+  0% {
+    transform: scale(1);
+  }
+  100% {
+    transform: scale(1.035);
+  }
+}
+
+.stats-hidden .stat-box {
+  opacity: 0;
+  transform: translateY(16px) scale(0.94);
+  pointer-events: none;
+}
+
+.stats-revealed .stat-box {
+  animation: statTileReveal 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.stats-revealed .stat-box:nth-child(1) {
+  animation-delay: 0.04s;
+}
+
+.stats-revealed .stat-box:nth-child(2) {
+  animation-delay: 0.12s;
+}
+
+.stats-revealed .stat-box:nth-child(3) {
+  animation-delay: 0.20s;
+}
+
+.stats-revealed .stat-box:nth-child(4) {
+  animation-delay: 0.28s;
+}
+
+@keyframes statTileReveal {
+  0% {
+    opacity: 0;
+    transform: translateY(18px) scale(0.92);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.actions-hidden {
+  opacity: 0;
+  transform: translateY(14px);
+  pointer-events: none;
+}
+
+.actions-revealed {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 0.38s ease, transform 0.38s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* 4 Performance Result Themes */
+
+/* 1. Legendary Celebration (Perfect Run) */
+.completion-side-card.theme-legendary {
+  background: linear-gradient(160deg, #1e1035 0%, #2b1055 45%, #170d2b 100%);
+  border-color: #facc15;
+  box-shadow: 0 8px 0 #0d061a, 0 20px 48px rgba(168, 85, 247, 0.5), 0 0 32px rgba(250, 204, 21, 0.3);
+}
+
+.theme-legendary .completion-hero-banner {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(8px);
+  border-color: #facc15;
+  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.35), 0 0 18px rgba(250, 204, 21, 0.35);
+}
+
+.theme-legendary .completion-title {
+  color: #ffffff;
+  text-shadow: 0 2px 12px rgba(250, 204, 21, 0.55);
+}
+
+.theme-legendary .climber-rank-badge {
+  background: linear-gradient(135deg, #fef08a 0%, #facc15 50%, #eab308 100%);
+  border-color: #fde047;
+  color: #422006;
+  box-shadow: 0 0 16px rgba(250, 204, 21, 0.65);
+}
+
+.theme-legendary .sherbo-speech-bubble {
+  background: #2d184d;
+  border-color: #facc15;
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.35);
+}
+
+.theme-legendary .sherbo-speech-bubble::before {
+  border-right-color: #facc15;
+}
+
+.theme-legendary .sherbo-speech-bubble::after {
+  border-right-color: #2d184d;
+}
+
+.theme-legendary .sherbo-quote-text {
+  color: #fef08a;
+}
+
+.theme-legendary .xp-reward-banner {
+  background: rgba(30, 16, 53, 0.95);
+  border-color: #facc15;
+  box-shadow: 0 4px 0 #0f071d, 0 0 20px rgba(250, 204, 21, 0.25);
+}
+
+.theme-legendary .xp-banner-title {
+  color: #fde047;
+}
+
+.theme-legendary .xp-banner-score {
+  color: #fde047;
+  text-shadow: 0 0 18px rgba(250, 204, 21, 0.6);
+}
+
+.theme-legendary .xp-banner-subtext {
+  color: #e2e8f0;
+}
+
+.theme-legendary .xp-banner-pct-pill {
+  background: #3b166e;
+  border-color: #fde047;
+  color: #fde047;
+}
+
+.theme-legendary .stat-box {
+  background: rgba(30, 16, 53, 0.88);
+  border-color: #8b5cf6;
+  box-shadow: 0 4px 0 #0f071d;
+}
+
+.theme-legendary .stat-box-val {
+  color: #ffffff;
+}
+
+.theme-legendary .stat-box-label {
+  color: #cbd5e1;
+}
+
+.theme-legendary .play-again-btn {
+  background: linear-gradient(180deg, #9333ea 0%, #7e22ce 100%);
+  color: #ffffff;
+  border-color: #facc15;
+  box-shadow: 0 4px 0 #581c87;
+}
+
+.theme-legendary .play-again-btn:hover {
+  background: linear-gradient(180deg, #a855f7 0%, #9333ea 100%);
+  box-shadow: 0 6px 0 #581c87, 0 0 16px rgba(168, 85, 247, 0.45);
+}
+
+/* 2. Gold Achievement (Good Performance) */
+.completion-side-card.theme-gold {
+  background: linear-gradient(160deg, #fffbeb 0%, #fef3c7 45%, #fed7aa 100%);
+  border-color: #d97706;
+  box-shadow: 0 8px 0 #92400e, 0 18px 42px rgba(217, 119, 6, 0.35);
+}
+
+.theme-gold .completion-hero-banner {
+  background: #ffffff;
+  border-color: #d97706;
+  box-shadow: 0 4px 0 rgba(146, 64, 14, 0.18);
+}
+
+.theme-gold .completion-title {
+  color: #78350f;
+}
+
+.theme-gold .climber-rank-badge {
+  background: #fff7ed;
+  border-color: #ea580c;
+  color: #c2410c;
+  box-shadow: 0 0 14px rgba(234, 88, 12, 0.35);
+}
+
+.theme-gold .xp-reward-banner {
+  background: #ffffff;
+  border-color: #d97706;
+  box-shadow: 0 4px 0 #92400e;
+}
+
+.theme-gold .xp-banner-title {
+  color: #b45309;
+}
+
+.theme-gold .xp-banner-score {
+  color: #d97706;
+}
+
+.theme-gold .play-again-btn {
+  background: #ffffff;
+  border-color: #d97706;
+  color: #92400e;
+  box-shadow: 0 4px 0 #b45309;
+}
+
+/* 3. Silver Achievement (Average Performance) */
+.completion-side-card.theme-silver {
+  background: linear-gradient(160deg, #f8fafc 0%, #f1f5f9 45%, #e2e8f0 100%);
+  border-color: #0284c7;
+  box-shadow: 0 8px 0 #0f172a, 0 16px 36px rgba(2, 132, 199, 0.25);
+}
+
+.theme-silver .completion-hero-banner {
+  background: #ffffff;
+  border-color: #0284c7;
+  box-shadow: 0 4px 0 rgba(2, 132, 199, 0.15);
+}
+
+.theme-silver .completion-title {
+  color: #0f172a;
+}
+
+.theme-silver .climber-rank-badge {
+  background: #f0f9ff;
+  border-color: #0284c7;
+  color: #0369a1;
+  box-shadow: 0 0 12px rgba(2, 132, 199, 0.3);
+}
+
+.theme-silver .xp-reward-banner {
+  background: #ffffff;
+  border-color: #0284c7;
+  box-shadow: 0 4px 0 #0369a1;
+}
+
+.theme-silver .xp-banner-title {
+  color: #0284c7;
+}
+
+.theme-silver .xp-banner-score {
+  color: #0284c7;
+}
+
+.theme-silver .play-again-btn {
+  background: #ffffff;
+  border-color: #0284c7;
+  color: #0369a1;
+  box-shadow: 0 4px 0 #0284c7;
+}
+
+/* 4. Encouraging Comeback Screen (Needs Improvement) */
+.completion-side-card.theme-comeback {
+  background: linear-gradient(160deg, #fff1f2 0%, #ffe4e6 45%, #ffedd5 100%);
+  border-color: #e11d48;
+  box-shadow: 0 8px 0 #881337, 0 18px 40px rgba(225, 29, 72, 0.32);
+}
+
+.theme-comeback .completion-hero-banner {
+  background: #ffffff;
+  border-color: #e11d48;
+  box-shadow: 0 4px 0 rgba(225, 29, 72, 0.16);
+}
+
+.theme-comeback .completion-title {
+  color: #881337;
+}
+
+.theme-comeback .climber-rank-badge {
+  background: #fff1f2;
+  border-color: #e11d48;
+  color: #be123c;
+  box-shadow: 0 0 12px rgba(225, 29, 72, 0.32);
+}
+
+.theme-comeback .xp-reward-banner {
+  background: #ffffff;
+  border-color: #e11d48;
+  box-shadow: 0 4px 0 #9f1239;
+}
+
+.theme-comeback .xp-banner-title {
+  color: #e11d48;
+}
+
+.theme-comeback .xp-banner-score {
+  color: #e11d48;
+}
+
+.theme-comeback .play-again-btn {
+  background: linear-gradient(180deg, #f43f5e 0%, #e11d48 100%);
+  color: #ffffff;
+  border-color: #9f1239;
+  box-shadow: 0 4px 0 #881337, 0 0 16px rgba(244, 63, 94, 0.4);
+  animation: comebackPulse 2.2s infinite ease-in-out;
+}
+
+.theme-comeback .play-again-btn:hover {
+  background: linear-gradient(180deg, #fb7185 0%, #f43f5e 100%);
+  box-shadow: 0 6px 0 #881337, 0 0 20px rgba(244, 63, 94, 0.55);
+}
+
+@keyframes comebackPulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 4px 0 #881337, 0 0 14px rgba(244, 63, 94, 0.35);
+  }
+  50% {
+    transform: scale(1.02);
+    box-shadow: 0 5px 0 #881337, 0 0 22px rgba(244, 63, 94, 0.55);
+  }
+}
+
+
 .sherbo-speech-bubble {
   position: relative;
   display: flex;

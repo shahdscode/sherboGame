@@ -226,6 +226,11 @@ export const sfx = {
     const notes = [523, 659, 784, 1047, 784, 1047, 1319];
     notes.forEach((f, i) => tone(f, 0.22, 'triangle', 0.22, undefined, i * 0.11));
   },
+  badgeStamp(): void {
+    tone(587.33, 0.08, 'triangle', 0.22, 880);
+    tone(880, 0.22, 'triangle', 0.26, 1174.66, 0.06);
+    tone(1174.66, 0.35, 'triangle', 0.28, undefined, 0.16);
+  },
   isMuted(): boolean {
     return muted;
   },
