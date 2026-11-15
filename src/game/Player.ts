@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { TowerConfigRuntime } from '../data/towerConfig';
+import { TowerConfigRuntime, getSectionIndexForStep } from '../data/towerConfig';
 import { TouchInputState, CharacterPose } from './EventBus';
 import { sfx } from './sfx';
 
@@ -229,43 +229,52 @@ export class Player {
     alpha: number;
     scaleMultiplier: number;
   } {
-    if (y > 3080) {
-      // Level 1: Steps 1-5 (Dawn Warm Cream)
+    const approxStep = Math.max(
+      1,
+      Math.min(
+        this.config.totalSteps,
+        Math.round((this.config.groundY - y) / this.config.platformSpacingY)
+      )
+    );
+    const section = getSectionIndexForStep(approxStep, this.config);
+
+    if (section === 1) {
+      // Level 1: Steps before Gate 1 (Dawn Warm Cream)
       return {
         colors: [0x1b2a53, 0x2c3e6b, 0xee7b3c, 0x334155],
         alpha: 0.85,
         scaleMultiplier: 1.0,
       };
-    } else if (y > 2540) {
-      // Level 2: Steps 6-10 (Golden Hour Amber)
+    } else if (section === 2) {
+      // Level 2: Section 2 (Golden Hour Amber)
       return {
         colors: [0x2e122b, 0x581c2b, 0xfde047, 0xf59e0b, 0xffedd5],
         alpha: 0.88,
         scaleMultiplier: 1.05,
       };
-    } else if (y > 2000) {
-      // Level 3: Steps 11-15 (Sunset Twilight Crimson)
+    } else if (section === 3) {
+      // Level 3: Section 3 (Sunset Twilight Crimson)
       return {
         colors: [0xfff4eb, 0xfde047, 0xffa285, 0xffffff, 0xf87171],
         alpha: 0.9,
         scaleMultiplier: 1.1,
       };
-    } else if (y > 1460) {
-      // Level 4: Steps 16-20 (Evening Indigo / Twilight Purple)
+    } else if (section === 4) {
+      // Level 4: Section 4 (Evening Indigo / Twilight Purple)
       return {
         colors: [0x5eead4, 0xa7f3d0, 0xe9d5ff, 0xffffff, 0x38bdf8],
         alpha: 0.92,
         scaleMultiplier: 1.15,
       };
-    } else if (y > 920) {
-      // Level 5: Steps 21-25 (Deep Night Sky / Midnight Blue)
+    } else if (section === 5) {
+      // Level 5: Section 5 (Deep Night Sky / Midnight Blue)
       return {
         colors: [0xfffbeb, 0xfef08a, 0x93c5fd, 0xffffff, 0x67e8f9],
         alpha: 0.92,
         scaleMultiplier: 1.2,
       };
     } else {
-      // Level 6: Steps 26-30 (Summit Crown / Starry Deep Space)
+      // Level 6: Section 6 (Summit Crown / Starry Deep Space)
       return {
         colors: [0xffffff, 0x67e8f9, 0xfde047, 0xfbcfe8, 0x38bdf8],
         alpha: 0.95,

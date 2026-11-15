@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import Phaser from 'phaser';
 import { TowerScene } from './TowerScene';
 import { gameEvents } from './EventBus';
+import { towerConfig } from '../data/towerConfig';
 
 /**
  * Rendering resolution.
@@ -40,8 +41,8 @@ export function getSummitViewRatios(): { summitRatioY: number; playerRatioX: num
     const scene = game.scene.getScene('TowerScene') as TowerScene | null;
     const cam = scene?.cameras?.main;
     if (!cam || !cam.worldView || cam.worldView.height <= 0) return fallback;
-    // Step 30 finish line is at groundY (3620) - 30 * 108 = 380
-    const summitWorldY = 380;
+    const summitWorldY =
+      towerConfig.groundY - towerConfig.totalSteps * towerConfig.platformSpacingY;
     const summitRatioY = Phaser.Math.Clamp(
       (summitWorldY - cam.worldView.y) / cam.worldView.height,
       0.18,

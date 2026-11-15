@@ -323,7 +323,7 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
       ctx.fillStyle = '#fde047';
       ctx.font = '700 16px "Fredoka", sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('★  SUMMIT REACHED • STEP 30  ★', outW / 2, topBadgeY + 26);
+      ctx.fillText(`★  SUMMIT REACHED • STEP ${towerConfig.totalSteps}  ★`, outW / 2, topBadgeY + 26);
 
       // 3. Bottom Showcase: Tactile 3D Arcade Score Card
       const cardX = 48;

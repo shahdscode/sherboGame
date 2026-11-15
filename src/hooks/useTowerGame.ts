@@ -4,6 +4,7 @@ import {
   CheckpointStatus,
   CheckpointQuestion,
   towerConfig,
+  getCheckpointStepRange,
 } from '../data/towerConfig';
 import { checkpointQuestions } from '../data/sampleQuestions';
 import { gameEvents, TouchInputState } from '../game/EventBus';
@@ -50,7 +51,7 @@ export function useTowerGame(
   const [currentStep, setCurrentStep] = useState<number>(0);
   const [highestStep, setHighestStep] = useState<number>(0);
   const [unlockedSteps, setUnlockedSteps] = useState<number>(
-    towerConfig.stepsPerCheckpoint
+    towerConfig.checkpointSteps[0]
   );
   const [activeCheckpointNumber, setActiveCheckpointNumber] = useState<
     number | null
@@ -66,8 +67,7 @@ export function useTowerGame(
   const buildInitialCheckpoints = (): CheckpointStateItem[] =>
     Array.from({ length: towerConfig.numberOfCheckpoints }, (_, idx) => {
       const cpNum = idx + 1;
-      const startStep = idx * towerConfig.stepsPerCheckpoint + 1;
-      const endStep = cpNum * towerConfig.stepsPerCheckpoint;
+      const [startStep, endStep] = getCheckpointStepRange(cpNum, towerConfig);
       return {
         checkpointNumber: cpNum,
         stepRangeLabel: `Steps ${startStep}–${endStep}`,
@@ -342,7 +342,7 @@ export function useTowerGame(
     isSubmittingRef.current = false;
     setCurrentStep(0);
     setHighestStep(0);
-    setUnlockedSteps(towerConfig.stepsPerCheckpoint);
+    setUnlockedSteps(towerConfig.checkpointSteps[0]);
     setActiveCheckpointNumber(null);
     setTotalAttempts(0);
     setFirstTryCount(0);

@@ -1,5 +1,9 @@
 import Phaser from 'phaser';
-import { TowerConfigRuntime } from '../data/towerConfig';
+import {
+  TowerConfigRuntime,
+  getStepInfo,
+  getMaxStepForSection,
+} from '../data/towerConfig';
 import { WavingFlag } from './WavingFlag';
 
 /** Super-sampling factor for procedural textures so platforms stay razor-sharp when zoomed in. */
@@ -282,21 +286,29 @@ export class PlatformManager {
     const fullW = towerWidth + 1800;
     const startX = -900;
 
-    // Band 1: Summit Starry Midnight Navy (y = 0 -> 1100, Steps 22-30)
+    const band1H = Math.round(worldHeight * 0.28);
+    const band2H = Math.round(worldHeight * 0.24);
+    const band3H = Math.round(worldHeight * 0.24);
+    const band4H = worldHeight - (band1H + band2H + band3H);
+    const band2Y = band1H;
+    const band3Y = band2Y + band2H;
+    const band4Y = band3Y + band3H;
+
+    // Band 1: Summit Starry Midnight Navy (y = 0 -> band1H)
     outerBg.fillGradientStyle(0x0a1226, 0x0a1226, 0x1b2a53, 0x1b2a53, 1);
-    outerBg.fillRect(startX, 0, fullW, 1100);
+    outerBg.fillRect(startX, 0, fullW, band1H);
 
-    // Band 2: Sunset Twilight / Crimson Amber (y = 1100 -> 1950, Steps 15-22)
+    // Band 2: Sunset Twilight / Crimson Amber
     outerBg.fillGradientStyle(0x1b2a53, 0x1b2a53, 0xb84b2c, 0xb84b2c, 1);
-    outerBg.fillRect(startX, 1100, fullW, 850);
+    outerBg.fillRect(startX, band2Y, fullW, band2H);
 
-    // Band 3: Golden Hour Amber Glow (y = 1950 -> 2800, Steps 8-15)
+    // Band 3: Golden Hour Amber Glow
     outerBg.fillGradientStyle(0xb84b2c, 0xb84b2c, 0xf5cca5, 0xf5cca5, 1);
-    outerBg.fillRect(startX, 1950, fullW, 850);
+    outerBg.fillRect(startX, band3Y, fullW, band3H);
 
-    // Band 4: Morning Dawn Base (y = 2800 -> 3800, Steps 1-8)
+    // Band 4: Morning Dawn Base
     outerBg.fillGradientStyle(0xf5cca5, 0xf5cca5, 0xf8e7d6, 0xf8e7d6, 1);
-    outerBg.fillRect(startX, 2800, fullW, worldHeight - 2800);
+    outerBg.fillRect(startX, band4Y, fullW, band4H);
 
     // 2. Celestial Layer at Summit (Stars, Constellations & Crescent Moon)
     this.bake(
@@ -312,10 +324,10 @@ export class PlatformManager {
       1
     );
 
-    // Scattered glittering stars in the summit night sky (y < 1280)
+    // Scattered glittering stars in the summit night sky
     for (let i = 0; i < 75; i++) {
       const sx = ((i * 47 + Math.sin(i * 73) * 280) % (towerWidth - 40)) + 20;
-      const sy = 40 + ((i * 21) % 1180);
+      const sy = 40 + ((i * 37) % Math.max(200, band1H - 60));
       const r = i % 4 === 0 ? 2.2 : i % 2 === 0 ? 1.4 : 1.0;
       const alpha = 0.55 + (i % 5) * 0.09;
       const star = this.scene.add
@@ -360,27 +372,32 @@ export class PlatformManager {
     this.addBaked('tex-moon', moonX - 34, moonY - 34, -28);
 
     // 3. Animated Drifting Geometric Clouds
+    // 3. Animated Drifting Geometric Clouds
     // 14 clouds positioned across various altitudes, dynamically colored & tuned to contrast with each level's sky
-    const cloudConfigs = [
+    const cloudBases = [
       // Base / Dawn clouds (warm peach-cream against light dawn sky)
-      { y: 3520, w: 140, h: 42, speed: 18, color: 0xffedd5, alpha: 0.60 },
-      { y: 3340, w: 110, h: 36, speed: 14, color: 0xfbeee0, alpha: 0.55 },
-      { y: 3120, w: 160, h: 46, speed: 20, color: 0xffedd5, alpha: 0.58 },
-      { y: 2900, w: 125, h: 38, speed: 16, color: 0xfbeee0, alpha: 0.54 },
+      { r: 0.94, w: 140, h: 42, speed: 18, color: 0xffedd5, alpha: 0.60 },
+      { r: 0.88, w: 110, h: 36, speed: 14, color: 0xfbeee0, alpha: 0.55 },
+      { r: 0.82, w: 160, h: 46, speed: 20, color: 0xffedd5, alpha: 0.58 },
+      { r: 0.75, w: 125, h: 38, speed: 16, color: 0xfbeee0, alpha: 0.54 },
       // Golden Hour clouds (warm amber & radiant golden tint)
-      { y: 2650, w: 150, h: 44, speed: 22, color: 0xfef08a, alpha: 0.52 },
-      { y: 2420, w: 120, h: 36, speed: 17, color: 0xffdfba, alpha: 0.54 },
-      { y: 2200, w: 170, h: 48, speed: 24, color: 0xfef08a, alpha: 0.50 },
-      { y: 1980, w: 130, h: 40, speed: 19, color: 0xffdfba, alpha: 0.52 },
+      { r: 0.68, w: 150, h: 44, speed: 22, color: 0xfef08a, alpha: 0.52 },
+      { r: 0.61, w: 120, h: 36, speed: 17, color: 0xffdfba, alpha: 0.54 },
+      { r: 0.54, w: 170, h: 48, speed: 24, color: 0xfef08a, alpha: 0.50 },
+      { r: 0.47, w: 130, h: 40, speed: 19, color: 0xffdfba, alpha: 0.52 },
       // Sunset / Twilight clouds (apricot coral & rose cream glow against crimson)
-      { y: 1740, w: 160, h: 44, speed: 23, color: 0xfed7aa, alpha: 0.52 },
-      { y: 1500, w: 120, h: 36, speed: 18, color: 0xfecdd3, alpha: 0.50 },
+      { r: 0.40, w: 160, h: 44, speed: 23, color: 0xfed7aa, alpha: 0.52 },
+      { r: 0.33, w: 120, h: 36, speed: 18, color: 0xfecdd3, alpha: 0.50 },
       // Night & Summit clouds (ethereal cyan, moonlit ice blue, starlight gold, pure celestial white)
-      { y: 1240, w: 150, h: 38, speed: 20, color: 0x99f6e4, alpha: 0.46 },
-      { y: 980, w: 130, h: 34, speed: 16, color: 0xe0f2fe, alpha: 0.48 },
-      { y: 720, w: 160, h: 40, speed: 22, color: 0xfef08a, alpha: 0.48 },
-      { y: 440, w: 140, h: 36, speed: 18, color: 0xffffff, alpha: 0.52 },
+      { r: 0.26, w: 150, h: 38, speed: 20, color: 0x99f6e4, alpha: 0.46 },
+      { r: 0.19, w: 130, h: 34, speed: 16, color: 0xe0f2fe, alpha: 0.48 },
+      { r: 0.13, w: 160, h: 40, speed: 22, color: 0xfef08a, alpha: 0.48 },
+      { r: 0.06, w: 140, h: 36, speed: 18, color: 0xffffff, alpha: 0.52 },
     ];
+    const cloudConfigs = cloudBases.map((cb) => ({
+      y: Math.round(cb.r * (groundY - 350) + 350),
+      ...cb,
+    }));
 
     for (let i = 0; i < cloudConfigs.length; i++) {
       const cc = cloudConfigs[i];
@@ -442,29 +459,69 @@ export class PlatformManager {
       sunbeam?: boolean;
     }
 
-    const squareWindows: SquareWindowDef[] = [
-      // Section 1 (Dawn Warm Cream)
-      { x: 596, y: 3480, size: 72, side: 'right', sunbeam: true },
-      { x: 124, y: 3280, size: 72, side: 'left', sunbeam: true },
-      // Section 2 (Morning Warmth)
-      { x: 124, y: 2970, size: 72, side: 'left', sunbeam: true },
-      { x: 596, y: 2750, size: 72, side: 'right', sunbeam: true },
-      // Section 3 (Golden Hour Amber)
-      { x: 596, y: 2360, size: 72, side: 'right', sunbeam: true },
-      { x: 124, y: 2110, size: 72, side: 'left', sunbeam: true },
-      // Section 4 (Twilight Crimson / Dusk)
-      { x: 124, y: 1890, size: 72, side: 'left', sunbeam: false },
-      { x: 596, y: 1570, size: 72, side: 'right', sunbeam: false },
-      // Section 5 (Night Sky Indigo)
-      { x: 596, y: 1350, size: 72, side: 'right', sunbeam: false },
-      { x: 124, y: 1130, size: 72, side: 'left', sunbeam: false },
-      // Section 6 (Midnight Obsidian)
-      { x: 124, y: 810, size: 72, side: 'left', sunbeam: false },
-      { x: 596, y: 600, size: 72, side: 'right', sunbeam: false },
-      // Summit Sky Gallery (Twin squared observatory windows flanking summit arch)
-      { x: 130, y: 220, size: 82, side: 'left', gridSize: 3, sunbeam: false },
-      { x: 590, y: 220, size: 82, side: 'right', gridSize: 3, sunbeam: false },
-    ];
+    const squareWindows: SquareWindowDef[] = [];
+    for (let s = 1; s <= 6; s++) {
+      const startStep = s === 1 ? 1 : this.config.checkpointSteps[s - 2] + 1;
+      const endStep =
+        s <= this.config.numberOfCheckpoints
+          ? this.config.checkpointSteps[s - 1]
+          : this.config.totalSteps;
+      const startY = this.getStepY(startStep);
+      const endY = this.getStepY(endStep);
+      const span = startY - endY;
+      const y1 = Math.round(startY - span * 0.3);
+      const y2 = Math.round(startY - span * 0.7);
+
+      const hasSunbeam = s <= 3;
+      if (s % 2 === 1) {
+        squareWindows.push({
+          x: 596,
+          y: y1,
+          size: 72,
+          side: 'right',
+          sunbeam: hasSunbeam,
+        });
+        squareWindows.push({
+          x: 124,
+          y: y2,
+          size: 72,
+          side: 'left',
+          sunbeam: hasSunbeam,
+        });
+      } else {
+        squareWindows.push({
+          x: 124,
+          y: y1,
+          size: 72,
+          side: 'left',
+          sunbeam: hasSunbeam,
+        });
+        squareWindows.push({
+          x: 596,
+          y: y2,
+          size: 72,
+          side: 'right',
+          sunbeam: hasSunbeam,
+        });
+      }
+    }
+    // Summit Sky Gallery (Twin squared observatory windows flanking summit arch)
+    squareWindows.push({
+      x: 130,
+      y: 220,
+      size: 82,
+      side: 'left',
+      gridSize: 3,
+      sunbeam: false,
+    });
+    squareWindows.push({
+      x: 590,
+      y: 220,
+      size: 82,
+      side: 'right',
+      gridSize: 3,
+      sunbeam: false,
+    });
 
     const stainedPanes = [0x3f9f9b, 0xd8356c, 0xee7b3c, 0x7e57d8]; // Teal, Rose, Orange, Violet
 
@@ -477,7 +534,7 @@ export class PlatformManager {
       const wx = win.x;
       const wy = win.y;
       const size = win.size;
-      const isNightWindow = wy <= 1500;
+      const isNightWindow = wy <= band1H;
       const grid = win.gridSize || 2;
       const framePad = 8;
       const frameSize = size + framePad * 2;
@@ -510,9 +567,9 @@ export class PlatformManager {
         // 4. Window Interior Cutout (Sky shows through)
         const skyBg = isNightWindow
           ? 0x091124
-          : wy > 2800
+          : wy > band4Y
             ? 0xf8e7d6
-            : wy > 2000
+            : wy > band3Y
               ? 0xf5cca5
               : 0xd97757;
         winGraphics.fillStyle(skyBg, 0.94);
@@ -693,7 +750,6 @@ export class PlatformManager {
   private createAllStepPlatforms(): void {
     const {
       totalSteps,
-      stepsPerCheckpoint,
       towerWidth,
       regularPlatformWidth,
       checkpointPlatformWidth,
@@ -702,21 +758,30 @@ export class PlatformManager {
 
     const centerX = towerWidth / 2;
 
-    const sectionOffsets = [
-      [-140, 20, 155, -25], // Section 1 (Steps 1-4)
-      [140, -20, -155, 25], // Section 2 (Steps 6-9)
-      [-130, 35, -110, 85], // Section 3 (Steps 11-14)
-      [130, -35, 110, -85], // Section 4 (Steps 16-19)
-      [-145, 10, 150, -15], // Section 5 (Steps 21-24)
-      [145, -10, -150, 15], // Section 6 (Steps 26-29)
+    const sectionOffsets: number[][] = [
+      // Section 1 (4 steps before Checkpoint 1)
+      [-140, 20, 155, -25],
+      // Section 2 (7 steps before Checkpoint 2)
+      [140, -15, -155, 10, 160, -30, -145],
+      // Section 3 (10 steps before Checkpoint 3)
+      [-135, 30, 150, -20, -155, 25, 145, -40, -140, 35],
+      // Section 4 (13 steps before Checkpoint 4)
+      [140, -30, -150, 20, 155, -25, -145, 35, 150, -20, -155, 30, 140],
+      // Section 5 (16 steps before Checkpoint 5)
+      [-145, 25, 150, -30, -140, 35, 155, -20, -150, 25, 145, -35, -140, 30, 155, -25],
+      // Section 6 (19 steps before Summit)
+      [145, -25, -150, 30, 140, -35, -155, 20, 150, -25, -145, 35, 140, -30, -155, 25, 150, -20, -140],
     ];
 
     for (let step = 1; step <= totalSteps; step++) {
-      const isSummit = step === totalSteps;
-      const isCheckpoint = !isSummit && step % stepsPerCheckpoint === 0;
-      const checkpointNumber = isCheckpoint ? step / stepsPerCheckpoint : null;
-      const sectionIndex = Math.ceil(step / stepsPerCheckpoint);
-      const stepInSection = (step - 1) % stepsPerCheckpoint;
+      const stepInfo = getStepInfo(step, this.config);
+      const {
+        isSummit,
+        isCheckpoint,
+        checkpointNumber,
+        sectionIndex,
+        stepInSection,
+      } = stepInfo;
 
       const y = this.getStepY(step);
       let x = centerX;
@@ -724,7 +789,7 @@ export class PlatformManager {
       if (!isCheckpoint && !isSummit) {
         const offsets =
           sectionOffsets[(sectionIndex - 1) % sectionOffsets.length];
-        x = centerX + offsets[stepInSection];
+        x = centerX + offsets[stepInSection % offsets.length];
       }
 
       const width =
@@ -1059,7 +1124,7 @@ export class PlatformManager {
   }
 
   private getBarrierYForSection(sectionIndex: number): number {
-    const maxStepInSection = sectionIndex * this.config.stepsPerCheckpoint;
+    const maxStepInSection = getMaxStepForSection(sectionIndex, this.config);
     const checkpointY = this.getStepY(maxStepInSection);
     return checkpointY - 102;
   }
@@ -1188,9 +1253,7 @@ export class PlatformManager {
       }
     });
 
-    const totalSections = Math.ceil(
-      this.config.totalSteps / this.config.stepsPerCheckpoint
-    );
+    const totalSections = this.config.numberOfCheckpoints + 1;
     if (sectionIndex <= totalSections) {
       const newBarrierY = this.getBarrierYForSection(sectionIndex);
       this.ceilingBarrier.setY(newBarrierY);
@@ -1238,9 +1301,8 @@ export class PlatformManager {
     }
 
     this.checkpointDoors.forEach((door, checkpointNumber) => {
-      const platform = this.platforms.get(
-        checkpointNumber * this.config.stepsPerCheckpoint
-      );
+      const cpStep = this.config.checkpointSteps[checkpointNumber - 1];
+      const platform = this.platforms.get(cpStep);
       door.container.setVisible(
         !!platform && platform.unlocked && platform.y > top && platform.y < bottom
       );

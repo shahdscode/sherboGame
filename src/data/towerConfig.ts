@@ -22,6 +22,11 @@ export interface CheckpointQuestion {
 
 export interface TowerConfig {
   totalSteps: number;
+  /** Steps before each checkpoint / summit: [4, 7, 10, 13, 16, 19] (+3 steps each section) */
+  sectionSteps: number[];
+  /** Exact step numbers of the question checkpoints: [5, 13, 24, 38, 55] */
+  checkpointSteps: number[];
+  /** Legacy fallback for uniform steps per checkpoint */
   stepsPerCheckpoint: number;
   numberOfCheckpoints: number;
   platformSpacingY: number;
@@ -55,10 +60,22 @@ export interface TowerConfigRuntime extends TowerConfig {
   groundY: number;
 }
 
+// Progressive step counts:
+// Section 1: 4 steps before CP 1 -> Checkpoint 1 at Step 5
+// Section 2: 7 steps before CP 2 -> Checkpoint 2 at Step 13
+// Section 3: 10 steps before CP 3 -> Checkpoint 3 at Step 24
+// Section 4: 13 steps before CP 4 -> Checkpoint 4 at Step 38
+// Section 5: 16 steps before CP 5 -> Checkpoint 5 at Step 55
+// Section 6: 19 steps before Summit -> Finish Line at Step 75
+const SECTION_STEPS = [4, 7, 10, 13, 16, 19];
+const CHECKPOINT_STEPS = [5, 13, 24, 38, 55];
+const TOTAL_STEPS = 75;
+
 export const towerConfig: TowerConfigRuntime = {
-  totalSteps: 30,
+  totalSteps: TOTAL_STEPS,
+  sectionSteps: SECTION_STEPS,
+  checkpointSteps: CHECKPOINT_STEPS,
   stepsPerCheckpoint: 5,
-  // 5 question checkpoints (Steps 5, 10, 15, 20, 25); Step 30 is the Finish Line!
   numberOfCheckpoints: 5,
   platformSpacingY: 108,
   towerWidth: 720,
@@ -84,6 +101,94 @@ export const towerConfig: TowerConfigRuntime = {
     firstTryBonusXp: 0,
     summitBonusXp: 0,
   },
-  worldHeight: 3800,
-  groundY: 3620,
+  // summit platform at y = 380: groundY = 380 + 75 * 108 = 8480; worldHeight = 8480 + 180 = 8660
+  worldHeight: 8660,
+  groundY: 8480,
 };
+
+/**
+ * Returns the section index (1-based, 1..6) that a given step belongs to.
+ */
+export function getSectionIndexForStep(
+  step: number,
+  config: TowerConfig = towerConfig
+): number {
+  let accumulated = 0;
+  for (let i = 0; i < config.sectionSteps.length; i++) {
+    // each section has sectionSteps[i] regular steps + 1 checkpoint (or summit) step
+    const sectionTotal = config.sectionSteps[i] + 1;
+    accumulated += sectionTotal;
+    if (step <= accumulated) {
+      return i + 1;
+    }
+  }
+  return config.sectionSteps.length;
+}
+
+/**
+ * Returns structural information about a specific step:
+ * - isCheckpoint: true if this step is a question checkpoint platform
+ * - checkpointNumber: 1..numberOfCheckpoints if checkpoint, else null
+ * - isSummit: true if this step is the finish line
+ * - sectionIndex: 1-based section number (1..6)
+ * - stepInSection: 0-based index of regular step within the section
+ */
+export function getStepInfo(
+  step: number,
+  config: TowerConfig = towerConfig
+): {
+  isCheckpoint: boolean;
+  checkpointNumber: number | null;
+  isSummit: boolean;
+  sectionIndex: number;
+  stepInSection: number;
+} {
+  const isSummit = step === config.totalSteps;
+  const cpIndex = config.checkpointSteps.indexOf(step);
+  const isCheckpoint = cpIndex !== -1;
+  const checkpointNumber = isCheckpoint ? cpIndex + 1 : null;
+  const sectionIndex = getSectionIndexForStep(step, config);
+
+  // Compute accumulated steps prior to this section
+  let prevAccumulated = 0;
+  for (let i = 0; i < sectionIndex - 1; i++) {
+    prevAccumulated += config.sectionSteps[i] + 1;
+  }
+  const stepInSection = Math.max(0, step - prevAccumulated - 1);
+
+  return {
+    isCheckpoint,
+    checkpointNumber,
+    isSummit,
+    sectionIndex,
+    stepInSection,
+  };
+}
+
+/**
+ * Returns the step number where a section ends (its checkpoint or summit).
+ */
+export function getMaxStepForSection(
+  sectionIndex: number,
+  config: TowerConfig = towerConfig
+): number {
+  if (sectionIndex <= config.numberOfCheckpoints) {
+    return config.checkpointSteps[sectionIndex - 1];
+  }
+  return config.totalSteps;
+}
+
+/**
+ * Returns the range of steps [startStep, endStep] for a checkpoint (1-based).
+ */
+export function getCheckpointStepRange(
+  checkpointNumber: number,
+  config: TowerConfig = towerConfig
+): [number, number] {
+  const endStep = config.checkpointSteps[checkpointNumber - 1];
+  const startStep =
+    checkpointNumber === 1
+      ? 1
+      : config.checkpointSteps[checkpointNumber - 2] + 1;
+  return [startStep, endStep];
+}

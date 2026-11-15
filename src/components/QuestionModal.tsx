@@ -253,7 +253,7 @@ export const QuestionModal: React.FC<QuestionModalProps> = ({
                   {question.title}
                 </h2>
                 <span className="step-milestone-tag">
-                  Step {question.checkpointNumber * towerConfig.stepsPerCheckpoint}
+                  Step {towerConfig.checkpointSteps[question.checkpointNumber - 1] ?? (question.checkpointNumber * 5)}
                 </span>
               </div>
 
