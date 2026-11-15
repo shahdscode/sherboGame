@@ -90,13 +90,13 @@ export class WavingFlag {
 
     if (factor >= 1) {
       // Lighten towards warm sunlight highlight
-      const t = Math.min(1, (factor - 1) * 1.25);
+      const t = Math.min(1, (factor - 1) * 1.4);
       r = Math.round(r0 + (255 - r0) * t);
-      g = Math.round(g0 + (235 - g0) * t);
-      b = Math.round(b0 + (210 - b0) * t);
+      g = Math.round(g0 + (250 - g0) * t);
+      b = Math.round(b0 + (220 - b0) * t);
     } else {
-      // Darken towards deep fabric fold shadow
-      const t = Math.max(0.48, factor);
+      // Keep shadows luminous and radiant even against dark backgrounds
+      const t = Math.max(0.78, factor);
       r = Math.round(r0 * t);
       g = Math.round(g0 * t);
       b = Math.round(b0 * t);
@@ -214,20 +214,20 @@ export class WavingFlag {
       );
     }
 
-    // 2. Hem outlines along the fluttering edges for crisp tactile definition
-    this.graphics.lineStyle(1.2, 0x1b2a53, 0.38);
+    // 2. Crisp, luminous hem outlines along fluttering edges for high visibility against dark skies
+    this.graphics.lineStyle(1.4, 0xffffff, 0.72);
     this.graphics.strokePoints(topPoints, false);
     this.graphics.strokePoints(botPoints, false);
 
     // Free fly edge (tip vertical seam)
     const lastTop = topPoints[n];
     const lastBot = botPoints[n];
-    this.graphics.lineStyle(1.2, 0x1b2a53, 0.45);
+    this.graphics.lineStyle(1.4, 0xffffff, 0.85);
     this.graphics.lineBetween(lastTop.x, lastTop.y, lastBot.x, lastBot.y);
 
     // 3. Hoist attachment rings (connects fabric to the physical flagpole)
-    this.graphics.fillStyle(0x1b2a53, 0.95);
-    this.graphics.fillCircle(this.x, topPoints[0].y, 1.8);
+    this.graphics.fillStyle(0xfef08a, 1);
+    this.graphics.fillCircle(this.x, topPoints[0].y, 2.0);
     this.graphics.fillCircle(this.x, botPoints[0].y, 1.8);
   }
 }

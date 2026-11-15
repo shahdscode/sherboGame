@@ -411,11 +411,10 @@ export class PlatformManager {
       const bakeW = cc.w + padX * 2;
       const bakeH = padTop + padBottom;
 
-      // Stylized fluffy multi-billow cartoon cloud shape with depth shading & sunlit highlights
+      // Single signature fluffy multi-billow cartoon cloud shape used uniformly across all clouds
       this.bake(key, localX, localY, bakeW, bakeH, (g) => {
         const w = cc.w;
         const h = cc.h;
-        const variant = i % 3;
 
         // 1. Soft Ambient Underbelly Shadow (gives volumetric 3D presence)
         g.fillStyle(0x1b2a53, cc.alpha * 0.14);
@@ -423,50 +422,19 @@ export class PlatformManager {
 
         // 2. Main Fluffy Cloud Body
         g.fillStyle(cc.color, cc.alpha);
+        g.fillRoundedRect(-w * 0.44, -h * 0.12, w * 0.88, h * 0.44, h * 0.22);
+        g.fillCircle(-w * 0.36, h * 0.04, h * 0.26);
+        g.fillCircle(w * 0.36, h * 0.04, h * 0.26);
+        g.fillCircle(-w * 0.24, -h * 0.22, h * 0.40);
+        g.fillCircle(-w * 0.02, -h * 0.42, h * 0.54);
+        g.fillCircle(w * 0.22, -h * 0.26, h * 0.44);
+        g.fillCircle(w * 0.38, -h * 0.08, h * 0.30);
 
-        if (variant === 0) {
-          // Variant 0: Majestic Cumulus with towering central crown dome
-          g.fillRoundedRect(-w * 0.44, -h * 0.12, w * 0.88, h * 0.44, h * 0.22);
-          g.fillCircle(-w * 0.36, h * 0.04, h * 0.26);
-          g.fillCircle(w * 0.36, h * 0.04, h * 0.26);
-          g.fillCircle(-w * 0.24, -h * 0.22, h * 0.40);
-          g.fillCircle(-w * 0.02, -h * 0.42, h * 0.54);
-          g.fillCircle(w * 0.22, -h * 0.26, h * 0.44);
-          g.fillCircle(w * 0.38, -h * 0.08, h * 0.30);
-
-          // 3. Sunlit Highlights on upper crests
-          g.fillStyle(0xffffff, cc.alpha * 0.45);
-          g.fillCircle(-w * 0.26, -h * 0.28, h * 0.28);
-          g.fillCircle(-w * 0.04, -h * 0.50, h * 0.38);
-          g.fillCircle(w * 0.20, -h * 0.32, h * 0.30);
-        } else if (variant === 1) {
-          // Variant 1: Twin-Peak billowing cloud
-          g.fillRoundedRect(-w * 0.46, -h * 0.12, w * 0.92, h * 0.44, h * 0.22);
-          g.fillCircle(-w * 0.36, -h * 0.08, h * 0.28);
-          g.fillCircle(-w * 0.16, -h * 0.38, h * 0.48);
-          g.fillCircle(w * 0.14, -h * 0.40, h * 0.46);
-          g.fillCircle(w * 0.36, -h * 0.14, h * 0.32);
-
-          // 3. Sunlit Highlights
-          g.fillStyle(0xffffff, cc.alpha * 0.45);
-          g.fillCircle(-w * 0.18, -h * 0.46, h * 0.32);
-          g.fillCircle(w * 0.12, -h * 0.48, h * 0.32);
-          g.fillCircle(-w * 0.36, -h * 0.14, h * 0.18);
-        } else {
-          // Variant 2: Wide cascading cumulus with soft side fluffs
-          g.fillRoundedRect(-w * 0.48, -h * 0.12, w * 0.96, h * 0.44, h * 0.22);
-          g.fillCircle(-w * 0.44, h * 0.04, h * 0.22);
-          g.fillCircle(w * 0.44, h * 0.04, h * 0.22);
-          g.fillCircle(-w * 0.30, -h * 0.20, h * 0.36);
-          g.fillCircle(-w * 0.08, -h * 0.34, h * 0.44);
-          g.fillCircle(w * 0.14, -h * 0.34, h * 0.46);
-          g.fillCircle(w * 0.32, -h * 0.18, h * 0.34);
-
-          // 3. Sunlit Highlights
-          g.fillStyle(0xffffff, cc.alpha * 0.45);
-          g.fillCircle(-w * 0.10, -h * 0.42, h * 0.30);
-          g.fillCircle(w * 0.12, -h * 0.42, h * 0.32);
-        }
+        // 3. Sunlit Highlights on upper crests
+        g.fillStyle(0xffffff, cc.alpha * 0.45);
+        g.fillCircle(-w * 0.26, -h * 0.28, h * 0.28);
+        g.fillCircle(-w * 0.04, -h * 0.50, h * 0.38);
+        g.fillCircle(w * 0.20, -h * 0.32, h * 0.30);
       });
       const cloud = this.addBaked(key, startCloudX + localX, cc.y + localY, -25);
 
@@ -715,25 +683,62 @@ export class PlatformManager {
       }
     }
 
-    // 6. Glowing Sherbeni Orange Wall Sconces & Torches — one shared texture
-    this.bake('tex-sconce', -26, -76, 52, 52, (g) => {
-      // Soft ambient light aura
-      g.fillStyle(0xee7b3c, 0.16);
-      g.fillCircle(0, -50, 24);
-      // Deep Navy bracket
-      g.fillStyle(0x1b2a53, 1);
+    // 6. Glowing Wall Sconces & Torches (Standard + Super-Radiant for Dark Background Levels)
+    this.bake('tex-sconce', -32, -82, 64, 64, (g) => {
+      // Warm ambient light aura
+      g.fillStyle(0xee7b3c, 0.25);
+      g.fillCircle(0, -50, 30);
+      g.fillStyle(0xfef08a, 0.35);
+      g.fillCircle(0, -50, 18);
+      // Brass bracket
+      g.fillStyle(0xd97706, 1);
       g.fillRect(-4, -48, 8, 14);
-      // Torch flame core
-      g.fillStyle(0xee7b3c, 0.95);
-      g.fillCircle(0, -54, 4.5);
       g.fillStyle(0xfef08a, 1);
-      g.fillCircle(0, -54, 2);
+      g.fillRect(-3, -48, 6, 2);
+      // Flame core
+      g.fillStyle(0xee7b3c, 0.95);
+      g.fillCircle(0, -54, 6);
+      g.fillStyle(0xfef08a, 1);
+      g.fillCircle(0, -54, 3.5);
+      g.fillStyle(0xffffff, 1);
+      g.fillCircle(0, -54, 1.8);
     });
+
+    // Super-Radiant Lantern for Darker Background Levels (High Contrast & Ambient Bloom)
+    this.bake('tex-sconce-radiant', -52, -102, 104, 104, (g) => {
+      // Wide ambient golden bloom
+      g.fillStyle(0xf59e0b, 0.32);
+      g.fillCircle(0, -50, 50);
+      // Mid luminous aura
+      g.fillStyle(0xfef08a, 0.52);
+      g.fillCircle(0, -50, 32);
+      // Inner incandescent warmth
+      g.fillStyle(0xffedd5, 0.75);
+      g.fillCircle(0, -50, 18);
+      // Polished brass ornate bracket
+      g.fillStyle(0xd97706, 1);
+      g.fillRect(-5, -48, 10, 15);
+      g.fillStyle(0xfef08a, 1);
+      g.fillRect(-4, -48, 8, 2.5);
+      g.fillCircle(0, -32, 2.5);
+      // Brilliant incandescent flame/bulb core
+      g.fillStyle(0xee7b3c, 1);
+      g.fillCircle(0, -53, 9);
+      g.fillStyle(0xfef08a, 1);
+      g.fillCircle(0, -53, 6);
+      g.fillStyle(0xffffff, 1);
+      g.fillCircle(0, -53, 3.5);
+    });
+
     for (let y = groundY; y > 150; y -= 320) {
       const leftX = wallThickness + 16;
       const rightX = towerWidth - wallThickness - 16;
-      this.addBaked('tex-sconce', leftX - 26, y - 76, -15);
-      this.addBaked('tex-sconce', rightX - 26, y - 76, -15);
+      const isDarkAltitude = y < groundY * 0.58;
+      const key = isDarkAltitude ? 'tex-sconce-radiant' : 'tex-sconce';
+      const offX = isDarkAltitude ? 52 : 32;
+      const offY = isDarkAltitude ? 102 : 82;
+      this.addBaked(key, leftX - offX, y - offY, -15);
+      this.addBaked(key, rightX - offX, y - offY, -15);
     }
 
     // 7. Tower walls — the brick pattern repeats every 48px, so one short segment
@@ -941,13 +946,26 @@ export class PlatformManager {
         decorations.push(door.container);
 
         const flagX = this.config.towerWidth - this.config.wallThickness - 68;
+
+        // Warm luminous backlight halo so the flag is prominently visible against dark navy skies
+        const flagAura = this.scene.add
+          .circle(flagX + 20, y - 46, 32, 0xfef08a, 0.24)
+          .setDepth(3);
+
+        // Gleaming metallic flagpole with golden highlight (doesn't blend into dark navy)
         const pole = this.scene.add
-          .rectangle(flagX, y - 34, 5, 52, 0x1b2a53)
+          .rectangle(flagX, y - 34, 5, 52, 0xf8fafc)
+          .setDepth(4);
+        const poleShine = this.scene.add
+          .rectangle(flagX + 1, y - 34, 2, 52, 0xfef08a)
           .setDepth(4);
 
         const finial = this.scene.add
-          .circle(flagX, y - 60, 4, 0xee7b3c)
+          .circle(flagX, y - 60, 5, 0xfbbf24)
           .setDepth(5);
+        const finialSparkle = this.scene.add
+          .circle(flagX - 1, y - 61, 2, 0xffffff)
+          .setDepth(6);
 
         // Physically-simulated waving cloth pennant flag
         const flag = new WavingFlag({
@@ -972,7 +990,9 @@ export class PlatformManager {
             fontFamily: '"Fredoka", sans-serif',
             fontSize: '14px',
             color: '#ffffff',
-            backgroundColor: '#1b2a53',
+            backgroundColor: '#0a1020',
+            stroke: '#ee7b3c',
+            strokeThickness: 2.5,
             padding: { x: 8, y: 3 },
             fontStyle: 'bold',
           })
@@ -980,18 +1000,29 @@ export class PlatformManager {
           .setOrigin(1, 0.5)
           .setDepth(6);
 
-        decorations.push(pole, finial, flag.getGameObject(), cpSign);
+        decorations.push(flagAura, pole, poleShine, finial, finialSparkle, flag.getGameObject(), cpSign);
       }
 
       if (isSummit) {
         const flagX = this.config.towerWidth - this.config.wallThickness - 68;
+
+        const summitAura = this.scene.add
+          .circle(flagX + 24, y - 46, 38, 0xfef08a, 0.30)
+          .setDepth(3);
+
         const pole = this.scene.add
-          .rectangle(flagX, y - 34, 5, 52, 0x1b2a53)
+          .rectangle(flagX, y - 34, 5, 52, 0xf8fafc)
+          .setDepth(4);
+        const poleShine = this.scene.add
+          .rectangle(flagX + 1, y - 34, 2, 52, 0xfef08a)
           .setDepth(4);
 
         const finial = this.scene.add
-          .circle(flagX, y - 60, 4.5, 0xee7b3c)
+          .circle(flagX, y - 60, 5.5, 0xfbbf24)
           .setDepth(5);
+        const finialSparkle = this.scene.add
+          .circle(flagX - 1, y - 61, 2, 0xffffff)
+          .setDepth(6);
 
         // Physically-simulated summit waving banner
         const summitFlag = new WavingFlag({
@@ -1016,7 +1047,9 @@ export class PlatformManager {
             fontFamily: '"Fredoka", sans-serif',
             fontSize: '14px',
             color: '#fef08a',
-            backgroundColor: '#1b2a53',
+            backgroundColor: '#0a1020',
+            stroke: '#ee7b3c',
+            strokeThickness: 2.5,
             padding: { x: 9, y: 3 },
             fontStyle: 'bold',
           })
@@ -1036,8 +1069,11 @@ export class PlatformManager {
           .setDepth(6);
 
         decorations.push(
+          summitAura,
           pole,
+          poleShine,
           finial,
+          finialSparkle,
           summitFlag.getGameObject(),
           finishSign,
           archGlow,
@@ -1097,14 +1133,75 @@ export class PlatformManager {
     doorFrame.fillStyle(0xfef08a, 1);
     doorFrame.fillRect(-2, doorTopY - 5, 4, 3);
 
-    // 2. Interior Portal Room / Sky Cutout (revealed brilliantly when doors swing open)
+    const doorThemes: Record<
+      number,
+      {
+        top: number;
+        bottom: number;
+        rays: number;
+        glow: number;
+        stars?: boolean;
+      }
+    > = {
+      // Gate 1 (Dawn): Warm peach cream to soft amber
+      1: {
+        top: 0xf8e7d6,
+        bottom: 0xee7b3c,
+        rays: 0xfef08a,
+        glow: 0xee7b3c,
+      },
+      // Gate 2 (Golden Hour): Radiant warm gold into amber
+      2: {
+        top: 0xfef08a,
+        bottom: 0xd97706,
+        rays: 0xfde047,
+        glow: 0xf59e0b,
+      },
+      // Gate 3 (Sunset / Twilight): Deep twilight crimson into warm dark amber
+      3: {
+        top: 0xb84b2c,
+        bottom: 0x3b1111,
+        rays: 0xfba680,
+        glow: 0xe11d48,
+      },
+      // Gate 4 (Twilight Indigo): Deep indigo into dark twilight navy
+      4: {
+        top: 0x312e81,
+        bottom: 0x0f172a,
+        rays: 0xc7d2fe,
+        glow: 0x818cf8,
+        stars: true,
+      },
+      // Gate 5 (Cosmic Midnight): Deep cosmic midnight space navy matching the sky
+      5: {
+        top: 0x1b2a53,
+        bottom: 0x070c1a,
+        rays: 0x7dd3fc,
+        glow: 0x38bdf8,
+        stars: true,
+      },
+    };
+
+    const theme = doorThemes[checkpointNumber] || doorThemes[1];
+
+    // 2. Interior Portal Room / Sky Cutout matching current level background
     const doorInterior = this.scene.add.graphics();
-    doorInterior.fillGradientStyle(0xf8e7d6, 0xf8e7d6, 0xee7b3c, 0xee7b3c, 1);
+    doorInterior.fillGradientStyle(theme.top, theme.top, theme.bottom, theme.bottom, 1);
     doorInterior.fillRoundedRect(-doorW / 2 + 2, doorTopY + 2, doorW - 4, doorH - 4, 4);
+
+    if (theme.stars) {
+      doorInterior.fillStyle(0xffffff, 0.9);
+      doorInterior.fillCircle(-doorW * 0.22, doorTopY + doorH * 0.28, 1.4);
+      doorInterior.fillCircle(doorW * 0.24, doorTopY + doorH * 0.22, 1.2);
+      doorInterior.fillCircle(-doorW * 0.08, doorTopY + doorH * 0.55, 1.5);
+      doorInterior.fillCircle(doorW * 0.18, doorTopY + doorH * 0.65, 1.3);
+      doorInterior.fillStyle(theme.rays, 0.85);
+      doorInterior.fillCircle(doorW * 0.05, doorTopY + doorH * 0.35, 1.6);
+    }
 
     // 3. Volumetric Light Rays pouring outward when opened
     const lightRays = this.scene.add.graphics();
-    lightRays.fillStyle(0xfef08a, 0.28);
+    lightRays.fillStyle(theme.rays, 0.28);
     lightRays.fillTriangle(-15, footY - 10, -55, footY + 12, 10, footY + 12);
     lightRays.fillTriangle(15, footY - 10, -10, footY + 12, 55, footY + 12);
     lightRays.fillTriangle(0, doorTopY + 20, -45, footY + 15, 45, footY + 15);
@@ -1259,9 +1356,17 @@ export class PlatformManager {
     if (door && !door.isUnlocked) {
       door.isUnlocked = true;
 
-      // Swap lock icon to unlock and burst bright gold
+      // Swap lock icon to unlock and burst bright portal glow matching level atmosphere
       door.lockIcon.setText('🔓');
-      door.glow.setFillStyle(0xfef08a, 0.95);
+      const burstColors: Record<number, number> = {
+        1: 0xfef08a,
+        2: 0xfde047,
+        3: 0xfba680,
+        4: 0xc7d2fe,
+        5: 0x7dd3fc,
+      };
+      const burstColor = burstColors[prevCheckpointNum] || 0xfef08a;
+      door.glow.setFillStyle(burstColor, 0.95);
 
       this.scene.tweens.add({
         targets: door.glow,
