@@ -995,11 +995,7 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
                   </span>
                 ))}
               </div>
-              <div
-                className={`climber-rank-badge ${
-                  animPhase >= 2 ? 'badge-stamped' : 'badge-hidden'
-                }`}
-              >
+              <div className="climber-rank-badge badge-stamped">
                 <span className="rank-badge-tag">{tierConfig.badgeTag}</span>
               </div>
             </div>
@@ -1031,7 +1027,7 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
           </div>
         </div>
 
-        <div className={`stats-summary-grid ${animPhase >= 3 ? 'stats-revealed' : 'stats-hidden'}`}>
+        <div className="stats-summary-grid">
           <div
             className="stat-box stat-box-teal"
             data-testid="stat-steps-completed"
@@ -1075,7 +1071,7 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
           </div>
         </div>
 
-        <div className={`completion-actions-row ${animPhase >= 4 ? 'actions-revealed' : 'actions-hidden'}`}>
+        <div className="completion-actions-row">
           <button
             type="button"
             className="primary-cta-btn save-score-btn"
@@ -1094,7 +1090,7 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
             data-testid="play-again-btn"
           >
             <RotateCcw size={18} />
-            <span>{tierConfig.replayButtonText}</span>
+            <span>Climb Again</span>
           </button>
         </div>
       </div>
