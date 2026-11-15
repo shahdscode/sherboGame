@@ -5,6 +5,9 @@ import { sfx } from './sfx';
 
 /** Single sprite sheet holding every character animation frame (see scripts/pack-sprites.py). */
 const CHAR_ATLAS_KEY = 'char-atlas';
+/** Second sprite sheet holding flip, victory, and celebration animations (see scripts/pack-actions.py). */
+const CHAR_ACTIONS_KEY = 'char-actions';
+
 /** Row order of the animations inside the sprite sheet (8 frames per row). */
 const CHAR_ATLAS_ROWS = [
   'idle',
@@ -17,6 +20,18 @@ const CHAR_ATLAS_ROWS = [
   'fall',
 ] as const;
 
+/** Row order of the actions inside the actions sprite sheet (12 frames per row). */
+const CHAR_ACTIONS_ROWS = [
+  'flip',
+  'victory',
+  'celebrate-clap',
+  'celebrate-confetti',
+  'celebrate-happy',
+  'celebrate-cheer',
+  'celebrate-clap-cheer',
+  'celebrate-confetti-dance',
+] as const;
+
 function charFrame(
   anim: (typeof CHAR_ATLAS_ROWS)[number],
   index: number
@@ -24,11 +39,28 @@ function charFrame(
   return { key: CHAR_ATLAS_KEY, frame: CHAR_ATLAS_ROWS.indexOf(anim) * 8 + index };
 }
 
+function actionFrame(
+  anim: (typeof CHAR_ACTIONS_ROWS)[number],
+  index: number
+): { key: string; frame: number } {
+  return { key: CHAR_ACTIONS_KEY, frame: CHAR_ACTIONS_ROWS.indexOf(anim) * 12 + index };
+}
+
+export const CELEBRATION_ANIMS = [
+  'anim-celebrate-clap',
+  'anim-celebrate-confetti',
+  'anim-celebrate-happy',
+  'anim-celebrate-cheer',
+  'anim-celebrate-clap-cheer',
+  'anim-celebrate-confetti-dance',
+] as const;
+
 const POSE_TEXTURE_MAP: Record<CharacterPose, string> = {
   climbing: CHAR_ATLAS_KEY,
   question: 'char-question',
   retry: 'char-retry',
   goodjob: 'char-goodjob',
+  victory: 'char-victory',
 };
 
 export class Player {
@@ -73,7 +105,14 @@ export class Player {
       spacing: 4,
     });
 
-    // 2. Checkpoint & feedback stickers (512x512 WebP)
+    // 2. Flip, victory, and celebration animations (12 columns x 8 rows WebP)
+    scene.load.spritesheet(CHAR_ACTIONS_KEY, '/stickers/actions-atlas.webp', {
+      frameWidth: 240,
+      frameHeight: 360,
+      spacing: 4,
+    });
+
+    // 3. Checkpoint & feedback stickers (512x512 WebP)
     scene.load.image('char-question', '/stickers/question.webp');
     scene.load.image('char-retry', '/stickers/retry.webp');
     scene.load.image('char-goodjob', '/stickers/goodjob.webp');
@@ -169,6 +208,54 @@ export class Player {
         ],
         rate: 18,
         repeat: 0,
+      },
+      {
+        key: 'anim-flip',
+        frames: Array.from({ length: 12 }, (_, i) => actionFrame('flip', i)),
+        rate: 16,
+        repeat: 0,
+      },
+      {
+        key: 'anim-victory',
+        frames: Array.from({ length: 12 }, (_, i) => actionFrame('victory', i)),
+        rate: 13,
+        repeat: -1,
+      },
+      {
+        key: 'anim-celebrate-clap',
+        frames: Array.from({ length: 12 }, (_, i) => actionFrame('celebrate-clap', i)),
+        rate: 13,
+        repeat: -1,
+      },
+      {
+        key: 'anim-celebrate-confetti',
+        frames: Array.from({ length: 12 }, (_, i) => actionFrame('celebrate-confetti', i)),
+        rate: 13,
+        repeat: -1,
+      },
+      {
+        key: 'anim-celebrate-happy',
+        frames: Array.from({ length: 12 }, (_, i) => actionFrame('celebrate-happy', i)),
+        rate: 13,
+        repeat: -1,
+      },
+      {
+        key: 'anim-celebrate-cheer',
+        frames: Array.from({ length: 12 }, (_, i) => actionFrame('celebrate-cheer', i)),
+        rate: 13,
+        repeat: -1,
+      },
+      {
+        key: 'anim-celebrate-clap-cheer',
+        frames: Array.from({ length: 12 }, (_, i) => actionFrame('celebrate-clap-cheer', i)),
+        rate: 13,
+        repeat: -1,
+      },
+      {
+        key: 'anim-celebrate-confetti-dance',
+        frames: Array.from({ length: 12 }, (_, i) => actionFrame('celebrate-confetti-dance', i)),
+        rate: 13,
+        repeat: -1,
       },
     ];
 
@@ -369,7 +456,26 @@ export class Player {
     this.currentPose = pose;
     if (!this.visualSprite) return;
 
-    if (pose !== 'climbing') {
+    if (pose === 'climbing') {
+      this.visualSprite.setScale(this.baseScale);
+      this.visualSprite.setOrigin(0.5, 0.96);
+      this.visualSprite.setFlipX(false);
+      this.visualSprite.play('anim-idle', true);
+    } else if (pose === 'victory') {
+      this.visualSprite.setScale(this.baseScale);
+      this.visualSprite.setOrigin(0.5, 0.96);
+      this.visualSprite.setFlipX(false);
+      this.visualSprite.play('anim-victory', true);
+    } else if (pose === 'goodjob') {
+      // Pick one of the celebration dance animations at random!
+      const randomCelebration = Phaser.Utils.Array.GetRandom(
+        CELEBRATION_ANIMS as unknown as string[]
+      );
+      this.visualSprite.setScale(this.baseScale);
+      this.visualSprite.setOrigin(0.5, 0.96);
+      this.visualSprite.setFlipX(false);
+      this.visualSprite.play(randomCelebration, true);
+    } else {
       this.visualSprite.stop();
       const texKey = POSE_TEXTURE_MAP[pose] || 'char-question';
       if (this.scene.textures.exists(texKey)) {
@@ -386,10 +492,6 @@ export class Player {
         duration: 160,
         yoyo: true,
       });
-    } else {
-      this.visualSprite.setScale(this.baseScale);
-      this.visualSprite.setOrigin(0.5, 0.96);
-      this.visualSprite.play('anim-idle', true);
     }
   }
 
@@ -417,6 +519,7 @@ export class Player {
     if (this.visualSprite) {
       this.scene.tweens.killTweensOf(this.visualSprite);
       this.visualSprite.angle = 0;
+      this.visualSprite.setFlipX(false);
     }
     this.facing = 'right';
     this.setPose('climbing');
@@ -436,6 +539,7 @@ export class Player {
     if (this.visualSprite) {
       this.scene.tweens.killTweensOf(this.visualSprite);
       this.visualSprite.angle = 0;
+      this.visualSprite.setFlipX(false);
     }
     this.syncVisualPosition();
   }
@@ -608,27 +712,22 @@ export class Player {
       sfx.doubleJump();
       this.spawnDustPuff(8);
 
-      // Iconic Icy Tower Somersault Spin!
+      // Iconic Icy Tower Somersault Flip Animation!
       if (this.currentPose === 'climbing') {
-        const spinDir = this.facing === 'left' ? -1 : 1;
         this.scene.tweens.killTweensOf(this.visualSprite);
         this.visualSprite.angle = 0;
-        this.scene.tweens.add({
-          targets: this.visualSprite,
-          angle: spinDir * 360,
-          duration: 380,
-          ease: 'Cubic.easeOut',
-          onComplete: () => {
-            if (this.visualSprite) {
-              this.visualSprite.angle = 0;
-            }
-            this.isDoubleJumping = false;
-          },
-        });
+        this.visualSprite.setFlipX(this.facing === 'left');
+        this.visualSprite.play('anim-flip', true);
 
-        const jumpAnim =
-          this.facing === 'left' ? 'anim-jump-left' : 'anim-jump-right';
-        this.visualSprite.play(jumpAnim, false);
+        // When flip completes, allow regular airborne transitions to resume
+        this.visualSprite.once(
+          Phaser.Animations.Events.ANIMATION_COMPLETE_KEY + '-anim-flip',
+          () => {
+            if (this.isDoubleJumping) {
+              this.isDoubleJumping = false;
+            }
+          }
+        );
       }
     }
 
@@ -642,6 +741,7 @@ export class Player {
       if (this.visualSprite) {
         this.scene.tweens.killTweensOf(this.visualSprite);
         this.visualSprite.angle = 0;
+        this.visualSprite.setFlipX(false);
       }
       if (this.currentPose === 'climbing') {
         this.visualSprite.play('anim-land', false);
@@ -651,6 +751,7 @@ export class Player {
 
     if (this.currentPose === 'climbing') {
       if (onFloor) {
+        this.visualSprite.setFlipX(false);
         if (Math.abs(body.velocity.x) > 15) {
           // If moving horizontally, immediately break out of land squat into running
           if (body.velocity.x > 0) {
@@ -679,27 +780,33 @@ export class Player {
           }
         }
       } else {
-        if (body.velocity.y <= 20) {
-          const jumpAnim =
-            this.facing === 'left' ? 'anim-jump-left' : 'anim-jump-right';
-          const currentKey = this.visualSprite.anims.currentAnim?.key;
-          if (
-            currentKey !== 'anim-jump-left' &&
-            currentKey !== 'anim-jump-right'
-          ) {
-            this.visualSprite.play(jumpAnim, false);
-          } else if (currentKey !== jumpAnim) {
-            const frameIdx = Math.max(
-              0,
-              (this.visualSprite.anims.currentFrame?.index ?? 1) - 1
-            );
-            this.visualSprite.play(
-              { key: jumpAnim, startFrame: frameIdx },
-              false
-            );
-          }
-        } else {
-          if (!this.isDoubleJumping) {
+        const isFlipping =
+          this.isDoubleJumping ||
+          (this.visualSprite.anims.currentAnim?.key === 'anim-flip' &&
+            this.visualSprite.anims.isPlaying);
+
+        if (!isFlipping) {
+          this.visualSprite.setFlipX(false);
+          if (body.velocity.y <= 20) {
+            const jumpAnim =
+              this.facing === 'left' ? 'anim-jump-left' : 'anim-jump-right';
+            const currentKey = this.visualSprite.anims.currentAnim?.key;
+            if (
+              currentKey !== 'anim-jump-left' &&
+              currentKey !== 'anim-jump-right'
+            ) {
+              this.visualSprite.play(jumpAnim, false);
+            } else if (currentKey !== jumpAnim) {
+              const frameIdx = Math.max(
+                0,
+                (this.visualSprite.anims.currentFrame?.index ?? 1) - 1
+              );
+              this.visualSprite.play(
+                { key: jumpAnim, startFrame: frameIdx },
+                false
+              );
+            }
+          } else {
             this.visualSprite.play('anim-fall', true);
           }
         }

@@ -174,7 +174,7 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
     try {
       const [frame, stickerImg] = await Promise.all([
         captureGameFrame(),
-        loadImage('/stickers/goodjob.webp'),
+        loadImage('/stickers/victory.webp'),
       ]);
       const { summitRatioY, playerRatioX } = getSummitViewRatios();
 
@@ -675,8 +675,8 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
         <div className="completion-hero-banner">
           <div className="completion-sticker-wrap">
             <img
-              src="/stickers/goodjob.webp"
-              alt="Sherbo Celebrating"
+              src="/stickers/victory.webp"
+              alt="Sherbo Victory Dance"
               className="completion-hero-sticker"
               width={256}
               height={256}
