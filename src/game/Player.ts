@@ -58,6 +58,10 @@ export class Player {
   private wasAirborne: boolean = false;
   private facing: 'left' | 'right' = 'right';
   private runPuffTimer: number = 0;
+  private canDoubleJump: boolean = true;
+  private isDoubleJumping: boolean = false;
+  private prevJumpPressed: boolean = false;
+  private wallBounceTimer: number = 0;
 
   public static preloadAssets(scene: Phaser.Scene): void {
     // 1. Extracted 2x HD character sheet animation frames
@@ -406,6 +410,14 @@ export class Player {
     this.jumpBufferTimer = 0;
     this.coyoteTimer = 0;
     this.landLockTimer = 0;
+    this.canDoubleJump = true;
+    this.isDoubleJumping = false;
+    this.prevJumpPressed = false;
+    this.wallBounceTimer = 0;
+    if (this.visualSprite) {
+      this.scene.tweens.killTweensOf(this.visualSprite);
+      this.visualSprite.angle = 0;
+    }
     this.facing = 'right';
     this.setPose('climbing');
     this.touchInput = { left: false, right: false, jump: false };
@@ -418,6 +430,13 @@ export class Player {
     this.sprite.setVelocity(0, 0);
     this.sprite.setAcceleration(0, 0);
     this.jumpBufferTimer = 0;
+    this.canDoubleJump = true;
+    this.isDoubleJumping = false;
+    this.wallBounceTimer = 0;
+    if (this.visualSprite) {
+      this.scene.tweens.killTweensOf(this.visualSprite);
+      this.visualSprite.angle = 0;
+    }
     this.syncVisualPosition();
   }
 
@@ -430,6 +449,9 @@ export class Player {
 
     if (this.landLockTimer > 0) {
       this.landLockTimer = Math.max(0, this.landLockTimer - delta);
+    }
+    if (this.wallBounceTimer > 0) {
+      this.wallBounceTimer = Math.max(0, this.wallBounceTimer - delta);
     }
 
     const moveLeft =
@@ -452,9 +474,12 @@ export class Player {
         Boolean(this.wasd?.SPACE?.isDown) ||
         this.touchInput.jump);
 
+    const jumpJustPressed = jumpPressed && !this.prevJumpPressed;
+    this.prevJumpPressed = jumpPressed;
+
     const onFloor = body.blocked.down || body.touching.down;
 
-    if (jumpPressed) {
+    if (jumpJustPressed) {
       this.jumpBufferTimer = 180;
     } else if (this.jumpBufferTimer > 0) {
       this.jumpBufferTimer -= delta;
@@ -466,6 +491,8 @@ export class Player {
 
     if (onFloor) {
       this.coyoteTimer = 120;
+      this.canDoubleJump = true;
+      this.isDoubleJumping = false;
     } else if (this.coyoteTimer > 0) {
       this.coyoteTimer -= delta;
     }
@@ -476,7 +503,7 @@ export class Player {
     } else if (moveRight && !moveLeft) {
       this.facing = 'right';
       this.sprite.setVelocityX(this.config.player.moveSpeed);
-    } else {
+    } else if (this.wallBounceTimer <= 0) {
       this.sprite.setVelocityX(0);
     }
 
@@ -485,23 +512,120 @@ export class Player {
       this.config.towerWidth -
       this.config.wallThickness -
       this.config.player.width / 2;
-    if (this.sprite.x < minX) {
+
+    if (this.sprite.x <= minX) {
       this.sprite.x = minX;
-      if (body.velocity.x < 0) this.sprite.setVelocityX(0);
-    } else if (this.sprite.x > maxX) {
+      // Icy Tower wall bounce mechanic
+      if (
+        !onFloor &&
+        this.wallBounceTimer <= 0 &&
+        (body.velocity.x < -15 || moveLeft)
+      ) {
+        this.wallBounceTimer = 200;
+        this.sprite.setVelocityX(this.config.player.moveSpeed * 0.95);
+        this.facing = 'right';
+        this.canDoubleJump = true; // Wall bounce refreshes double jump for continuous climbing!
+        sfx.wallBounce();
+        this.spawnDustPuff(5);
+        if (body.velocity.y > -220) {
+          this.sprite.setVelocityY(Math.min(body.velocity.y, -280));
+        }
+      } else if (body.velocity.x < 0) {
+        this.sprite.setVelocityX(0);
+      }
+    } else if (this.sprite.x >= maxX) {
       this.sprite.x = maxX;
-      if (body.velocity.x > 0) this.sprite.setVelocityX(0);
+      // Icy Tower wall bounce mechanic
+      if (
+        !onFloor &&
+        this.wallBounceTimer <= 0 &&
+        (body.velocity.x > 15 || moveRight)
+      ) {
+        this.wallBounceTimer = 200;
+        this.sprite.setVelocityX(-this.config.player.moveSpeed * 0.95);
+        this.facing = 'left';
+        this.canDoubleJump = true; // Wall bounce refreshes double jump!
+        sfx.wallBounce();
+        this.spawnDustPuff(5);
+        if (body.velocity.y > -220) {
+          this.sprite.setVelocityY(Math.min(body.velocity.y, -280));
+        }
+      } else if (body.velocity.x > 0) {
+        this.sprite.setVelocityX(0);
+      }
     }
 
-    // Jump execution
+    // 1. Ground Jump execution (with Icy Tower running momentum scaling)
     if (this.jumpBufferTimer > 0 && (onFloor || this.coyoteTimer > 0)) {
-      this.sprite.setVelocityY(this.config.player.jumpVelocity);
+      const hSpeed = Math.abs(body.velocity.x);
+      const speedPct = Math.min(1, hSpeed / this.config.player.moveSpeed);
+      // Icy Tower logic: running faster yields a higher jump!
+      const momentumBonus = 1 + speedPct * 0.18;
+      this.sprite.setVelocityY(this.config.player.jumpVelocity * momentumBonus);
+
       this.jumpBufferTimer = 0;
       this.coyoteTimer = 0;
       this.landLockTimer = 0;
+      this.canDoubleJump = true;
+      this.isDoubleJumping = false;
       this.spawnDustPuff(6);
       sfx.jump();
       if (this.currentPose === 'climbing') {
+        const jumpAnim =
+          this.facing === 'left' ? 'anim-jump-left' : 'anim-jump-right';
+        this.visualSprite.play(jumpAnim, false);
+      }
+    }
+    // 2. Mid-air Double Jump execution (Icy Tower style somersault spin + momentum boost)
+    else if (
+      jumpJustPressed &&
+      !onFloor &&
+      this.coyoteTimer <= 0 &&
+      this.canDoubleJump
+    ) {
+      this.canDoubleJump = false;
+      this.isDoubleJumping = true;
+      this.jumpBufferTimer = 0;
+
+      // Icy Tower momentum logic: calculate double jump launch velocity
+      const hSpeed = Math.abs(body.velocity.x);
+      const speedPct = Math.min(1, hSpeed / this.config.player.moveSpeed);
+      const doubleJumpMultiplier = 1.08 + speedPct * 0.22;
+      this.sprite.setVelocityY(
+        this.config.player.jumpVelocity * doubleJumpMultiplier
+      );
+
+      // Preserve or boost horizontal velocity if directing jump
+      if (moveLeft && !moveRight) {
+        this.facing = 'left';
+        this.sprite.setVelocityX(-this.config.player.moveSpeed * 1.05);
+      } else if (moveRight && !moveLeft) {
+        this.facing = 'right';
+        this.sprite.setVelocityX(this.config.player.moveSpeed * 1.05);
+      }
+
+      // SFX and particle burst
+      sfx.doubleJump();
+      this.spawnDustPuff(8);
+
+      // Iconic Icy Tower Somersault Spin!
+      if (this.currentPose === 'climbing') {
+        const spinDir = this.facing === 'left' ? -1 : 1;
+        this.scene.tweens.killTweensOf(this.visualSprite);
+        this.visualSprite.angle = 0;
+        this.scene.tweens.add({
+          targets: this.visualSprite,
+          angle: spinDir * 360,
+          duration: 380,
+          ease: 'Cubic.easeOut',
+          onComplete: () => {
+            if (this.visualSprite) {
+              this.visualSprite.angle = 0;
+            }
+            this.isDoubleJumping = false;
+          },
+        });
+
         const jumpAnim =
           this.facing === 'left' ? 'anim-jump-left' : 'anim-jump-right';
         this.visualSprite.play(jumpAnim, false);
@@ -513,6 +637,12 @@ export class Player {
       this.spawnDustPuff(4);
       sfx.land();
       this.landLockTimer = 130;
+      this.canDoubleJump = true;
+      this.isDoubleJumping = false;
+      if (this.visualSprite) {
+        this.scene.tweens.killTweensOf(this.visualSprite);
+        this.visualSprite.angle = 0;
+      }
       if (this.currentPose === 'climbing') {
         this.visualSprite.play('anim-land', false);
       }
@@ -569,7 +699,9 @@ export class Player {
             );
           }
         } else {
-          this.visualSprite.play('anim-fall', true);
+          if (!this.isDoubleJumping) {
+            this.visualSprite.play('anim-fall', true);
+          }
         }
       }
     }
