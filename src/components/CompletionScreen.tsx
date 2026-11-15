@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import confetti from 'canvas-confetti';
 import {
   Trophy,
@@ -277,7 +277,10 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
   onPlayAgain,
 }) => {
   const [isExporting, setIsExporting] = useState(false);
-  const tierConfig = getPerformanceTier(xpPoints, firstTryCount, elapsedTime);
+  const tierConfig = useMemo(
+    () => getPerformanceTier(xpPoints, firstTryCount, elapsedTime),
+    [xpPoints, firstTryCount, elapsedTime]
+  );
   const starCount = tierConfig.stars;
 
   // Staged celebration choreography:
@@ -289,6 +292,7 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
   const [displayXp, setDisplayXp] = useState(0);
   const [animPhase, setAnimPhase] = useState<number>(0);
   const animTimeoutsRef = useRef<number[]>([]);
+  const hasCelebratedRef = useRef(false);
 
   const skipAnimation = () => {
     setDisplayXp(xpPoints);
@@ -298,26 +302,30 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
   };
 
   useEffect(() => {
-    // 3. Confetti explodes!
+    // Ensure the celebration sequence & confetti only run once on summit card mount
+    if (hasCelebratedRef.current) return;
+    hasCelebratedRef.current = true;
+
+    // 3. Single celebratory confetti burst
     try {
       if (tierConfig.tier === 'legendary') {
         confetti({
-          particleCount: 130,
-          spread: 100,
+          particleCount: 120,
+          spread: 95,
           origin: { y: 0.52 },
           colors: tierConfig.confettiColors,
         });
         const t1 = window.setTimeout(() => {
           confetti({
-            particleCount: 80,
-            spread: 120,
-            origin: { x: 0.2, y: 0.58 },
+            particleCount: 70,
+            spread: 110,
+            origin: { x: 0.22, y: 0.58 },
             colors: tierConfig.confettiColors,
           });
           confetti({
-            particleCount: 80,
-            spread: 120,
-            origin: { x: 0.8, y: 0.58 },
+            particleCount: 70,
+            spread: 110,
+            origin: { x: 0.78, y: 0.58 },
             colors: tierConfig.confettiColors,
           });
         }, 300);
@@ -326,11 +334,11 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
         confetti({
           particleCount:
             tierConfig.tier === 'gold'
-              ? 110
+              ? 100
               : tierConfig.tier === 'silver'
-                ? 85
-                : 65,
-          spread: 80,
+                ? 75
+                : 55,
+          spread: 75,
           origin: { y: 0.55 },
           colors: tierConfig.confettiColors,
         });
@@ -339,7 +347,7 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
       // Ignore confetti errors in headless test environments
     }
 
-    // 4. Giant XP score counts upward!
+    // 4. Giant XP score counts upward once!
     const duration = 1200;
     const start = performance.now();
     let lastTick = 0;
@@ -391,6 +399,11 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
       cancelAnimationFrame(rafId);
       animTimeoutsRef.current.forEach((t) => window.clearTimeout(t));
       animTimeoutsRef.current = [];
+      try {
+        confetti.reset();
+      } catch {
+        // Ignore reset errors
+      }
     };
   }, [xpPoints, tierConfig]);
 
