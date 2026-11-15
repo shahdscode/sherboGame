@@ -143,6 +143,63 @@ function drawStatIcon(
   ctx.restore();
 }
 
+export interface ClimberRankInfo {
+  grade: 'S+' | 'S' | 'A' | 'B';
+  title: string;
+  badgeBg: string;
+  badgeBorder: string;
+  badgeTextColor: string;
+  quote: string;
+}
+
+export function getClimberRankAndQuote(
+  xpPoints: number,
+  firstTryCount: number,
+  elapsedTime: number
+): ClimberRankInfo {
+  if (firstTryCount >= 5 && xpPoints >= 3400) {
+    return {
+      grade: 'S+',
+      title: '👑 Summit Legend',
+      badgeBg: '#fef3c7',
+      badgeBorder: '#f59e0b',
+      badgeTextColor: '#b45309',
+      quote: 'Flawless mastery! You crushed every gate on the 1st try like a true champion!',
+    };
+  }
+
+  if (xpPoints >= 3000 || (firstTryCount >= 4 && elapsedTime <= 150)) {
+    return {
+      grade: 'S',
+      title: '⚡ Speed Demon',
+      badgeBg: '#fff7ed',
+      badgeBorder: '#ea580c',
+      badgeTextColor: '#c2410c',
+      quote: 'Lightning-fast thinking! That climb was pure poetry in motion!',
+    };
+  }
+
+  if (xpPoints >= 2200 || firstTryCount >= 3) {
+    return {
+      grade: 'A',
+      title: '🧠 Math Prodigy',
+      badgeBg: '#f0f9ff',
+      badgeBorder: '#0284c7',
+      badgeTextColor: '#0369a1',
+      quote: 'Incredible knowledge and focus! You conquered the tower with style!',
+    };
+  }
+
+  return {
+    grade: 'B',
+    title: '🔥 Tower Conqueror',
+    badgeBg: '#ecfdf5',
+    badgeBorder: '#10b981',
+    badgeTextColor: '#047857',
+    quote: 'Great tenacity and grit! You scaled all 30 steps to the crown!',
+  };
+}
+
 export const CompletionScreen: React.FC<CompletionScreenProps> = ({
   completedCheckpointsCount,
   totalAttempts: _totalAttempts,
@@ -153,7 +210,13 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
   onPlayAgain,
 }) => {
   const [isExporting, setIsExporting] = useState(false);
-  const starCount = xpPoints >= 3800 ? 3 : xpPoints >= 2400 ? 2 : 1;
+  const rankInfo = getClimberRankAndQuote(xpPoints, firstTryCount, elapsedTime);
+  const starCount =
+    rankInfo.grade === 'S+' || rankInfo.grade === 'S'
+      ? 3
+      : rankInfo.grade === 'A'
+        ? 2
+        : 1;
 
   useEffect(() => {
     try {
@@ -370,8 +433,9 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
       ctx.stroke();
       ctx.restore();
 
-      // Header Row: Celebratory Sherbo Sticker + Title + Subtitle
-      const headerCenterX = stickerImg ? cardX + 555 : cardX + cardW / 2;
+      // Header Row: Celebratory Sherbo Sticker + Stars & Rank Badge + Title + Speech Bubble Quote
+      const textStartX = cardX + 288;
+      const textMaxW = cardW - 324; // 660px
 
       if (stickerImg) {
         // Soft glow halo behind Sherbo sticker
@@ -401,37 +465,89 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
         ctx.restore();
       }
 
-      // Star rating row above title
-      const starSpacing = 36;
+      // Top Row: 3 Stars on left + Climber Rank Badge on right
+      const starSpacing = 28;
       for (let s = 0; s < 3; s++) {
-        const sx = headerCenterX + (s - 1) * starSpacing;
-        const sy = cardY + 46;
+        const sx = textStartX + s * starSpacing + 14;
+        const sy = cardY + 38;
         const earned = s < starCount;
         drawStar(
           ctx,
           sx,
           sy,
-          15,
-          6.8,
+          13,
+          5.8,
           earned ? '#fbbf24' : '#e2d5c4',
           earned ? '#b45309' : '#94a3b8'
         );
       }
 
+      // Rank & Title Pill next to the stars
+      const rankPillX = textStartX + 3 * starSpacing + 32;
+      const rankPillY = cardY + 22;
+      const rankPillH = 34;
+      const rankPillW = 340;
+
+      ctx.fillStyle = rankInfo.badgeBg;
+      ctx.beginPath();
+      ctx.roundRect(rankPillX, rankPillY, rankPillW, rankPillH, 999);
+      ctx.fill();
+      ctx.lineWidth = 2.5;
+      ctx.strokeStyle = rankInfo.badgeBorder;
+      ctx.stroke();
+
+      ctx.fillStyle = rankInfo.badgeTextColor;
+      ctx.font = '700 17px "Fredoka", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(
+        `RANK ${rankInfo.grade}  •  ${rankInfo.title}`,
+        rankPillX + rankPillW / 2,
+        rankPillY + 23
+      );
+
       // Title: Sherbo's Tower
       ctx.fillStyle = '#1b2a53';
-      ctx.font = '700 52px "Fredoka", sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText("Sherbo's Tower", headerCenterX, cardY + 108);
+      ctx.font = '700 44px "Fredoka", sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText("Sherbo's Tower", textStartX, cardY + 98);
 
-      // Subtitle: Amazing climb! Here is your final score
-      ctx.fillStyle = '#576582';
-      ctx.font = '600 24px "Fredoka", sans-serif';
-      ctx.fillText(
-        'Amazing climb! Here is your final score',
-        headerCenterX,
-        cardY + 144
-      );
+      // Speech Bubble: Sherbo's Quote
+      const bubbleX = textStartX;
+      const bubbleY = cardY + 114;
+      const bubbleW = textMaxW;
+      const bubbleH = 48;
+      const bubbleR = 14;
+
+      ctx.save();
+      // White bubble background
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.roundRect(bubbleX, bubbleY, bubbleW, bubbleH, bubbleR);
+      ctx.fill();
+      ctx.lineWidth = 2.5;
+      ctx.strokeStyle = '#1b2a53';
+      ctx.stroke();
+
+      // Tail pointing left towards Sherbo
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.moveTo(bubbleX, bubbleY + 14);
+      ctx.lineTo(bubbleX - 14, bubbleY + 24);
+      ctx.lineTo(bubbleX, bubbleY + 34);
+      ctx.closePath();
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(bubbleX, bubbleY + 14);
+      ctx.lineTo(bubbleX - 14, bubbleY + 24);
+      ctx.lineTo(bubbleX, bubbleY + 34);
+      ctx.stroke();
+
+      // Quote text inside bubble
+      ctx.fillStyle = '#1b2a53';
+      ctx.font = '600 17px "Fredoka", sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(`“${rankInfo.quote}”`, bubbleX + 16, bubbleY + 31);
+      ctx.restore();
 
       // 4. Hero Final Score Banner (White 3D Arcade Box with XP & Speed Breakdown)
       const bannerX = cardX + 36;
@@ -683,24 +799,41 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
             />
           </div>
           <div className="completion-hero-copy">
-            <div className="completion-stars-row" aria-label={`${starCount} out of 3 stars`}>
-              {[0, 1, 2].map((idx) => (
-                <span
-                  key={idx}
-                  className={
-                    idx < starCount
-                      ? 'completion-star star-earned'
-                      : 'completion-star star-empty'
-                  }
-                >
-                  ★
-                </span>
-              ))}
+            <div className="completion-top-row">
+              <div
+                className="completion-stars-row"
+                aria-label={`${starCount} out of 3 stars`}
+              >
+                {[0, 1, 2].map((idx) => (
+                  <span
+                    key={idx}
+                    className={
+                      idx < starCount
+                        ? 'completion-star star-earned'
+                        : 'completion-star star-empty'
+                    }
+                  >
+                    ★
+                  </span>
+                ))}
+              </div>
+              <div
+                className={`climber-rank-badge rank-grade-${rankInfo.grade
+                  .toLowerCase()
+                  .replace('+', '-plus')}`}
+              >
+                <span className="rank-grade-tag">RANK {rankInfo.grade}</span>
+                <span className="rank-divider">•</span>
+                <span className="rank-title-tag">{rankInfo.title}</span>
+              </div>
             </div>
+
             <h1 className="completion-title">Sherbo's Tower</h1>
-            <p className="completion-subtitle">
-              Amazing climb! Here is your final score
-            </p>
+
+            <div className="sherbo-speech-bubble">
+              <span className="speech-quote-icon">💬</span>
+              <p className="sherbo-quote-text">"{rankInfo.quote}"</p>
+            </div>
           </div>
         </div>
 

@@ -1189,15 +1189,127 @@ kbd {
   min-width: 0;
 }
 
+.completion-top-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  line-height: 1;
+}
+
 .completion-stars-row {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
   line-height: 1;
 }
 
 .completion-star {
-  font-size: 1.05rem;
+  font-size: 0.98rem;
+}
+
+.climber-rank-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  font-weight: 700;
+  border: 1.5px solid;
+  line-height: 1.2;
+}
+
+.rank-grade-s-plus {
+  background: #fef3c7;
+  border-color: #f59e0b;
+  color: #b45309;
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.28);
+}
+
+.rank-grade-s {
+  background: #fff7ed;
+  border-color: #ea580c;
+  color: #c2410c;
+}
+
+.rank-grade-a {
+  background: #f0f9ff;
+  border-color: #0284c7;
+  color: #0369a1;
+}
+
+.rank-grade-b {
+  background: #ecfdf5;
+  border-color: #10b981;
+  color: #047857;
+}
+
+.rank-grade-tag {
+  letter-spacing: 0.4px;
+}
+
+.rank-divider {
+  opacity: 0.45;
+}
+
+.rank-title-tag {
+  font-size: 0.70rem;
+}
+
+.sherbo-speech-bubble {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: #fff9f3;
+  border: 1.5px solid #1b2a53;
+  border-radius: 10px;
+  padding: 4px 8px;
+  margin-top: 3px;
+  box-shadow: 0 2px 0 rgba(27, 42, 83, 0.08);
+}
+
+.sherbo-speech-bubble::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: -6px;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  border-right: 6px solid #1b2a53;
+}
+
+.sherbo-speech-bubble::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: -4px;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  border-right: 5px solid #fff9f3;
+}
+
+.speech-quote-icon {
+  font-size: 0.78rem;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.sherbo-quote-text {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: #1b2a53;
+  line-height: 1.25;
+  margin: 0;
+  font-style: italic;
 }
 
 .star-earned {
