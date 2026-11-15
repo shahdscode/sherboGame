@@ -93,7 +93,6 @@ export class Player {
   private canDoubleJump: boolean = true;
   private isDoubleJumping: boolean = false;
   private prevJumpPressed: boolean = false;
-  private wallBounceTimer: number = 0;
 
   public static preloadAssets(scene: Phaser.Scene): void {
     // 1. Extracted 2x HD character sheet animation frames
@@ -515,7 +514,6 @@ export class Player {
     this.canDoubleJump = true;
     this.isDoubleJumping = false;
     this.prevJumpPressed = false;
-    this.wallBounceTimer = 0;
     if (this.visualSprite) {
       this.scene.tweens.killTweensOf(this.visualSprite);
       this.visualSprite.angle = 0;
@@ -535,7 +533,6 @@ export class Player {
     this.jumpBufferTimer = 0;
     this.canDoubleJump = true;
     this.isDoubleJumping = false;
-    this.wallBounceTimer = 0;
     if (this.visualSprite) {
       this.scene.tweens.killTweensOf(this.visualSprite);
       this.visualSprite.angle = 0;
@@ -553,9 +550,6 @@ export class Player {
 
     if (this.landLockTimer > 0) {
       this.landLockTimer = Math.max(0, this.landLockTimer - delta);
-    }
-    if (this.wallBounceTimer > 0) {
-      this.wallBounceTimer = Math.max(0, this.wallBounceTimer - delta);
     }
 
     const moveLeft =
@@ -607,7 +601,7 @@ export class Player {
     } else if (moveRight && !moveLeft) {
       this.facing = 'right';
       this.sprite.setVelocityX(this.config.player.moveSpeed);
-    } else if (this.wallBounceTimer <= 0) {
+    } else {
       this.sprite.setVelocityX(0);
     }
 
@@ -617,55 +611,17 @@ export class Player {
       this.config.wallThickness -
       this.config.player.width / 2;
 
-    if (this.sprite.x <= minX) {
+    if (this.sprite.x < minX) {
       this.sprite.x = minX;
-      // Icy Tower wall bounce mechanic
-      if (
-        !onFloor &&
-        this.wallBounceTimer <= 0 &&
-        (body.velocity.x < -15 || moveLeft)
-      ) {
-        this.wallBounceTimer = 200;
-        this.sprite.setVelocityX(this.config.player.moveSpeed * 0.95);
-        this.facing = 'right';
-        this.canDoubleJump = true; // Wall bounce refreshes double jump for continuous climbing!
-        sfx.wallBounce();
-        this.spawnDustPuff(5);
-        if (body.velocity.y > -220) {
-          this.sprite.setVelocityY(Math.min(body.velocity.y, -280));
-        }
-      } else if (body.velocity.x < 0) {
-        this.sprite.setVelocityX(0);
-      }
-    } else if (this.sprite.x >= maxX) {
+      if (body.velocity.x < 0) this.sprite.setVelocityX(0);
+    } else if (this.sprite.x > maxX) {
       this.sprite.x = maxX;
-      // Icy Tower wall bounce mechanic
-      if (
-        !onFloor &&
-        this.wallBounceTimer <= 0 &&
-        (body.velocity.x > 15 || moveRight)
-      ) {
-        this.wallBounceTimer = 200;
-        this.sprite.setVelocityX(-this.config.player.moveSpeed * 0.95);
-        this.facing = 'left';
-        this.canDoubleJump = true; // Wall bounce refreshes double jump!
-        sfx.wallBounce();
-        this.spawnDustPuff(5);
-        if (body.velocity.y > -220) {
-          this.sprite.setVelocityY(Math.min(body.velocity.y, -280));
-        }
-      } else if (body.velocity.x > 0) {
-        this.sprite.setVelocityX(0);
-      }
+      if (body.velocity.x > 0) this.sprite.setVelocityX(0);
     }
 
-    // 1. Ground Jump execution (with Icy Tower running momentum scaling)
+    // 1. Ground Jump execution (restored previous standard jump height)
     if (this.jumpBufferTimer > 0 && (onFloor || this.coyoteTimer > 0)) {
-      const hSpeed = Math.abs(body.velocity.x);
-      const speedPct = Math.min(1, hSpeed / this.config.player.moveSpeed);
-      // Icy Tower logic: running faster yields a higher jump!
-      const momentumBonus = 1 + speedPct * 0.18;
-      this.sprite.setVelocityY(this.config.player.jumpVelocity * momentumBonus);
+      this.sprite.setVelocityY(this.config.player.jumpVelocity);
 
       this.jumpBufferTimer = 0;
       this.coyoteTimer = 0;
@@ -680,39 +636,34 @@ export class Player {
         this.visualSprite.play(jumpAnim, false);
       }
     }
-    // 2. Mid-air Double Jump execution (Icy Tower style somersault spin + momentum boost)
+    // 2. Mid-air Double Jump execution (only during upward ascent; disabled while falling mid-air)
     else if (
       jumpJustPressed &&
       !onFloor &&
       this.coyoteTimer <= 0 &&
-      this.canDoubleJump
+      this.canDoubleJump &&
+      body.velocity.y <= 0
     ) {
       this.canDoubleJump = false;
       this.isDoubleJumping = true;
       this.jumpBufferTimer = 0;
 
-      // Icy Tower momentum logic: calculate double jump launch velocity
-      const hSpeed = Math.abs(body.velocity.x);
-      const speedPct = Math.min(1, hSpeed / this.config.player.moveSpeed);
-      const doubleJumpMultiplier = 1.08 + speedPct * 0.22;
-      this.sprite.setVelocityY(
-        this.config.player.jumpVelocity * doubleJumpMultiplier
-      );
+      // Restored previous standard jump height
+      this.sprite.setVelocityY(this.config.player.jumpVelocity);
 
-      // Preserve or boost horizontal velocity if directing jump
       if (moveLeft && !moveRight) {
         this.facing = 'left';
-        this.sprite.setVelocityX(-this.config.player.moveSpeed * 1.05);
+        this.sprite.setVelocityX(-this.config.player.moveSpeed);
       } else if (moveRight && !moveLeft) {
         this.facing = 'right';
-        this.sprite.setVelocityX(this.config.player.moveSpeed * 1.05);
+        this.sprite.setVelocityX(this.config.player.moveSpeed);
       }
 
       // SFX and particle burst
       sfx.doubleJump();
       this.spawnDustPuff(8);
 
-      // Iconic Icy Tower Somersault Flip Animation!
+      // Somersault Flip Animation
       if (this.currentPose === 'climbing') {
         this.scene.tweens.killTweensOf(this.visualSprite);
         this.visualSprite.angle = 0;
