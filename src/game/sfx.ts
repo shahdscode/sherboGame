@@ -160,6 +160,15 @@ export const sfx = {
   jump(): void {
     tone(340, 0.15, 'triangle', 0.22, 680);
   },
+  /** Icy Tower style double-jump ascending dual chirp */
+  doubleJump(): void {
+    tone(460, 0.12, 'triangle', 0.24, 820);
+    tone(680, 0.15, 'sine', 0.18, 1080, 0.04);
+  },
+  /** Snappy tactile wall kick bounce sound */
+  wallBounce(): void {
+    tone(400, 0.08, 'triangle', 0.22, 660);
+  },
   /**
    * Bouncy landing sound — uses triangle wave (260Hz -> 140Hz) so its 2nd/3rd harmonics
    * resonate clearly on mobile phone speakers (which physically cut off sub-200Hz sine waves).

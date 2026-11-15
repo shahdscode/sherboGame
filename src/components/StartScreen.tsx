@@ -100,7 +100,7 @@ export const StartScreen: React.FC<StartScreenProps> = ({
                       <ArrowUp size={13} />
                     </kbd>
                   </span>
-                  <span>Tap Jump to climb</span>
+                  <span>Tap Jump (Double-tap in air for Double Jump!)</span>
                 </div>
               </div>
             ) : (
@@ -114,7 +114,7 @@ export const StartScreen: React.FC<StartScreenProps> = ({
                       <ArrowRight size={13} />
                     </kbd>
                   </span>
-                  <span>Run Left / Right</span>
+                  <span>Run Left / Right (Wall bounce)</span>
                 </div>
                 <div className="control-row">
                   <span className="key-group">
@@ -123,7 +123,7 @@ export const StartScreen: React.FC<StartScreenProps> = ({
                       <ArrowUp size={13} />
                     </kbd>
                   </span>
-                  <span>Jump Up</span>
+                  <span>Jump (Press again in mid-air to Double Jump!)</span>
                 </div>
               </div>
             )}
