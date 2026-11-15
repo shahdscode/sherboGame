@@ -9,18 +9,29 @@ import {
   Sparkles,
   Download,
   Award,
+  Flame,
+  Shield,
+  Layers,
 } from 'lucide-react';
 import { towerConfig, formatStopwatchTime } from '../data/towerConfig';
 import { captureGameFrame, getSummitViewRatios } from '../game/TowerGame';
 import { sfx } from '../game/sfx';
+import {
+  ScoringState,
+  getPerformanceGrade,
+  ACHIEVEMENTS,
+  AchievementId,
+  sumQuestionXp,
+} from '../game/scoring';
 
-interface CompletionScreenProps {
+export interface CompletionScreenProps {
   completedCheckpointsCount: number;
   totalAttempts: number;
   firstTryCount: number;
   xpPoints: number;
   elapsedTime: number;
   speedBonus: number;
+  scoringState?: ScoringState;
   onPlayAgain: () => void;
 }
 
@@ -164,7 +175,7 @@ export type PerformanceTier = 'legendary' | 'gold' | 'silver' | 'comeback';
 
 export interface PerformanceTierConfig {
   tier: PerformanceTier;
-  letterGrade: 'S+' | 'S' | 'A' | 'B';
+  letterGrade: 'S+' | 'S' | 'A' | 'B' | 'C' | 'D';
   title: string;
   badgeTag: string;
   heroHeadline: string;
@@ -186,19 +197,21 @@ export interface PerformanceTierConfig {
 
 export function getPerformanceTier(
   xpPoints: number,
-  firstTryCount: number,
-  elapsedTime: number
+  _firstTryCount: number = 0,
+  _elapsedTime: number = 0
 ): PerformanceTierConfig {
-  // 1. Perfect run: 5/5 first-try combos (zero mistakes)
-  if (firstTryCount >= 5 && xpPoints >= 3200) {
+  const gradeInfo = getPerformanceGrade(xpPoints);
+
+  // S+: 3500+ XP — Tower Legend
+  if (gradeInfo.grade === 'S+') {
     return {
       tier: 'legendary',
       letterGrade: 'S+',
-      title: '👑 LEGENDARY SUMMIT',
-      badgeTag: 'RANK S+ • PERFECT RUN',
-      heroHeadline: 'Legendary Summit!',
-      subtitle: 'Flawless run! Every rune gate cracked on the 1st try!',
-      quote: 'Flawless mastery! 5 out of 5 combos without a single slip. You are a true tower legend!',
+      title: '👑 TOWER LEGEND',
+      badgeTag: 'RANK S+ • TOWER LEGEND',
+      heroHeadline: 'Tower Legend!',
+      subtitle: 'Flawless mastery! You conquered the tower with peak perfection!',
+      quote: 'Flawless mastery! Every rune gate cracked with supreme focus. You are a true tower legend!',
       stickerSrc: '/stickers/victory.webp',
       stickerAlt: 'Sherbo Legendary Victory',
       themeClass: 'theme-legendary',
@@ -214,16 +227,16 @@ export function getPerformanceTier(
     };
   }
 
-  // 2. Good performance: 4+ combos or fast high-score run
-  if (firstTryCount >= 4 || (xpPoints >= 2800 && elapsedTime <= 160)) {
+  // S: 3200–3499 XP — Master Climber
+  if (gradeInfo.grade === 'S') {
     return {
       tier: 'gold',
       letterGrade: 'S',
-      title: '🥇 GOLD SUMMIT',
-      badgeTag: 'RANK S • GOLD ACHIEVEMENT',
-      heroHeadline: 'Golden Victory!',
-      subtitle: 'Blazing speed and sharp focus conquered the tower!',
-      quote: "Brilliant climbing! Incredible speed and razor-sharp thinking. You're in the elite league!",
+      title: '🥇 MASTER CLIMBER',
+      badgeTag: 'RANK S • MASTER CLIMBER',
+      heroHeadline: 'Master Climber!',
+      subtitle: 'Outstanding performance! Blazing speed and sharp focus conquered the tower!',
+      quote: "Brilliant climbing! Razor-sharp thinking and incredible precision. You're in the elite league!",
       stickerSrc: '/stickers/celebrate-confetti-dance.webp',
       stickerAlt: 'Sherbo Gold Celebration',
       themeClass: 'theme-gold',
@@ -239,18 +252,43 @@ export function getPerformanceTier(
     };
   }
 
-  // 3. Average performance: 2-3 combos or solid score
-  if (firstTryCount >= 2 || xpPoints >= 1900) {
+  // A: 2800–3199 XP — Elite Explorer
+  if (gradeInfo.grade === 'A') {
     return {
-      tier: 'silver',
+      tier: 'gold',
       letterGrade: 'A',
-      title: '🥈 SILVER SUMMIT',
-      badgeTag: 'RANK A • SILVER ACHIEVEMENT',
-      heroHeadline: 'Silver Milestone!',
-      subtitle: 'Resilient climb! You tackled the gates and conquered the tower!',
+      title: '🌟 ELITE EXPLORER',
+      badgeTag: 'RANK A • ELITE EXPLORER',
+      heroHeadline: 'Elite Explorer!',
+      subtitle: 'Remarkable skill! You navigated the gates and dominated the climb!',
       quote: 'Solid climbing! You pushed through tough challenges and reached the crown. Well done!',
       stickerSrc: '/stickers/celebrate-cheer.webp',
-      stickerAlt: 'Sherbo Silver Cheer',
+      stickerAlt: 'Sherbo Elite Explorer',
+      themeClass: 'theme-gold',
+      badgeBg: '#f0fdf4',
+      badgeBorder: '#22c55e',
+      badgeTextColor: '#15803d',
+      accentColor: '#16a34a',
+      secondaryAccent: '#4ade80',
+      scoreBannerBg: '#f0fdf4',
+      stars: 3,
+      confettiColors: ['#22c55e', '#4ade80', '#fbbf24', '#ffffff'],
+      replayButtonText: 'Climb Again',
+    };
+  }
+
+  // B: 2300–2799 XP — Skilled Adventurer
+  if (gradeInfo.grade === 'B') {
+    return {
+      tier: 'silver',
+      letterGrade: 'B',
+      title: '🥈 SKILLED ADVENTURER',
+      badgeTag: 'RANK B • SKILLED ADVENTURER',
+      heroHeadline: 'Skilled Adventurer!',
+      subtitle: 'Resilient climb! You conquered the challenges and scaled the tower!',
+      quote: 'Great spirit and perseverance! You overcame the hurdles and conquered the summit!',
+      stickerSrc: '/stickers/celebrate-clap.webp',
+      stickerAlt: 'Sherbo Skilled Adventurer',
       themeClass: 'theme-silver',
       badgeBg: '#f0f9ff',
       badgeBorder: '#0284c7',
@@ -264,16 +302,41 @@ export function getPerformanceTier(
     };
   }
 
-  // 4. Needs improvement: Comeback challenger
+  // C: 1700–2299 XP — Rising Climber
+  if (gradeInfo.grade === 'C') {
+    return {
+      tier: 'silver',
+      letterGrade: 'C',
+      title: '🥉 RISING CLIMBER',
+      badgeTag: 'RANK C • RISING CLIMBER',
+      heroHeadline: 'Rising Climber!',
+      subtitle: 'Solid persistence! You solved the gates and touched the summit crown!',
+      quote: 'Determined climbing! Each attempt brings you closer to tower mastery.',
+      stickerSrc: '/stickers/celebrate-happy.webp',
+      stickerAlt: 'Sherbo Rising Climber',
+      themeClass: 'theme-silver',
+      badgeBg: '#faf5ff',
+      badgeBorder: '#9333ea',
+      badgeTextColor: '#6b21a8',
+      accentColor: '#9333ea',
+      secondaryAccent: '#c084fc',
+      scoreBannerBg: '#faf5ff',
+      stars: 2,
+      confettiColors: ['#c084fc', '#9333ea', '#38bdf8', '#ffffff'],
+      replayButtonText: 'Climb Again',
+    };
+  }
+
+  // D: Below 1700 XP — Apprentice
   return {
     tier: 'comeback',
-    letterGrade: 'B',
-    title: '🔥 COMEBACK CHALLENGER',
-    badgeTag: 'RANK B • RISING STAR',
-    heroHeadline: 'Summit Reached!',
-    subtitle: 'You conquered all 30 steps! Ready to claim the crown?',
+    letterGrade: 'D',
+    title: '🧗 APPRENTICE',
+    badgeTag: 'RANK D • APPRENTICE',
+    heroHeadline: 'Apprentice Climber!',
+    subtitle: 'Every master climber began with a climb! Ready to claim the crown?',
     quote: "Every master started with a climb! You never gave up and reached the top. One more run and you'll crush it!",
-    stickerSrc: '/stickers/celebrate-happy.webp',
+    stickerSrc: '/stickers/retry.webp',
     stickerAlt: 'Sherbo Comeback Cheer',
     themeClass: 'theme-comeback',
     badgeBg: '#fff1f2',
@@ -290,11 +353,12 @@ export function getPerformanceTier(
 
 export const CompletionScreen: React.FC<CompletionScreenProps> = ({
   completedCheckpointsCount,
-  totalAttempts: _totalAttempts,
+  totalAttempts,
   firstTryCount,
   xpPoints,
   elapsedTime,
   speedBonus,
+  scoringState,
   onPlayAgain,
 }) => {
   const [isExporting, setIsExporting] = useState(false);
@@ -303,6 +367,18 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
     [xpPoints, firstTryCount, elapsedTime]
   );
   const starCount = tierConfig.stars;
+
+  // Extracted Centralized Scoring Components
+  const questionXp = scoringState
+    ? sumQuestionXp(scoringState.gateQuestionXp)
+    : Math.max(0, xpPoints - speedBonus - 300);
+  const streakXp = scoringState?.streakXp ?? 0;
+  const summitXp = scoringState?.summitXp ?? (completedCheckpointsCount >= 5 ? 300 : 0);
+  const speedXp = scoringState?.speedXp ?? speedBonus;
+  const achievementXp = scoringState?.achievementXp ?? 0;
+  const totalMistakes = scoringState?.totalMistakes ?? Math.max(0, totalAttempts - 5);
+  const finalAttempts = scoringState?.totalAttempts ?? totalAttempts;
+  const unlockedAchievements: AchievementId[] = scoringState?.unlockedAchievements ?? [];
 
   const [bestScore, setBestScore] = useState<number>(() => {
     try {
@@ -773,7 +849,7 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
       ctx.font = '600 20px "Fredoka", sans-serif';
       ctx.textAlign = 'left';
       ctx.fillText(
-        `Includes +${speedBonus.toLocaleString()} XP Speed Bonus • ${firstTryCount} / ${towerConfig.numberOfCheckpoints} Combos`,
+        `Q: +${questionXp} • Streak: +${streakXp} • Summit: +${summitXp} • Speed: +${speedXp} • Ach: +${achievementXp}`,
         bannerX + 32,
         bannerY + 140
       );
@@ -797,7 +873,7 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
         },
         {
           type: 'grade',
-          label: 'Letter Grade',
+          label: 'Performance Grade',
           val: `${tierConfig.letterGrade}`,
           border: '#7e57d8',
           lip: '#5733a8',
@@ -813,8 +889,8 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
         },
         {
           type: 'combos',
-          label: '1st-Try Combos',
-          val: `${firstTryCount} / ${towerConfig.numberOfCheckpoints}`,
+          label: 'Attempts / Mistakes',
+          val: `${finalAttempts} Att • ${totalMistakes} Err`,
           border: '#10b981',
           lip: '#047857',
           badgeBg: '#ecfdf5',
@@ -967,6 +1043,16 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
           </div>
           <div className="completion-hero-copy">
             <div className="completion-top-row">
+              <span
+                className="completion-badge-tag"
+                style={{
+                  background: tierConfig.badgeBg,
+                  borderColor: tierConfig.badgeBorder,
+                  color: tierConfig.badgeTextColor,
+                }}
+              >
+                {tierConfig.badgeTag}
+              </span>
               <div
                 className="completion-stars-row"
                 aria-label={`${starCount} out of 3 stars`}
@@ -1005,7 +1091,51 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
             {displayXp.toLocaleString()} XP
           </div>
           <div className="xp-banner-subtext">
-            Includes +{speedBonus.toLocaleString()} XP Speed Bonus • {firstTryCount} / {towerConfig.numberOfCheckpoints} Combos
+            Final XP = Questions ({questionXp}) + Streak ({streakXp}) + Summit ({summitXp}) + Speed ({speedXp}) + Achievements ({achievementXp})
+          </div>
+        </div>
+
+        {/* 5-Way Scoring Formula Breakdown */}
+        <div className="scoring-breakdown-card" data-testid="scoring-breakdown">
+          <div className="scoring-breakdown-header">
+            <span className="scoring-breakdown-title">
+              <Sparkles size={16} /> XP Formula Breakdown
+            </span>
+            <span className="stat-label" style={{ color: '#5733a8' }}>
+              Base: 3,800 + Bonus: 275
+            </span>
+          </div>
+
+          <div className="scoring-breakdown-grid">
+            <div className="scoring-breakdown-item" data-testid="breakdown-question-xp">
+              <span className="breakdown-item-label">Questions</span>
+              <span className="breakdown-item-val">+{questionXp}</span>
+              <span className="breakdown-item-max">/ 2,500</span>
+            </div>
+
+            <div className="scoring-breakdown-item" data-testid="breakdown-streak-xp">
+              <span className="breakdown-item-label">Streak</span>
+              <span className="breakdown-item-val">+{streakXp}</span>
+              <span className="breakdown-item-max">/ 400</span>
+            </div>
+
+            <div className="scoring-breakdown-item" data-testid="breakdown-summit-xp">
+              <span className="breakdown-item-label">Summit</span>
+              <span className="breakdown-item-val">+{summitXp}</span>
+              <span className="breakdown-item-max">/ 300</span>
+            </div>
+
+            <div className="scoring-breakdown-item" data-testid="breakdown-speed-xp">
+              <span className="breakdown-item-label">Speed</span>
+              <span className="breakdown-item-val">+{speedXp}</span>
+              <span className="breakdown-item-max">/ 600</span>
+            </div>
+
+            <div className="scoring-breakdown-item" data-testid="breakdown-achievement-xp">
+              <span className="breakdown-item-label">Achievements</span>
+              <span className="breakdown-item-val">+{achievementXp}</span>
+              <span className="breakdown-item-max">/ 275</span>
+            </div>
           </div>
         </div>
 
@@ -1029,7 +1159,7 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
             <div className="stat-box-val stat-box-grade">
               {tierConfig.letterGrade}
             </div>
-            <div className="stat-box-label">Letter Grade</div>
+            <div className="stat-box-label">{tierConfig.title.replace(/[^a-zA-Z+ ]/g, '').trim()}</div>
           </div>
 
           <div
@@ -1043,13 +1173,45 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
 
           <div
             className="stat-box stat-box-violet"
-            data-testid="stat-first-try"
+            data-testid="stat-attempts-mistakes"
           >
             <Zap size={18} className="icon-amber" />
             <div className="stat-box-val">
-              {firstTryCount} / {towerConfig.numberOfCheckpoints}
+              {finalAttempts} <span style={{ fontSize: '0.85rem', color: '#576582' }}>/</span> {totalMistakes}
             </div>
-            <div className="stat-box-label">1st Try Combos</div>
+            <div className="stat-box-label">Attempts / Mistakes</div>
+          </div>
+        </div>
+
+        {/* Special Achievements Deck */}
+        <div className="achievements-section-card" data-testid="achievements-deck">
+          <div className="achievements-section-header">
+            <span className="achievements-section-title">
+              <Award size={16} /> Special Achievements
+            </span>
+            <span className="stat-label" style={{ color: '#286d6a' }}>
+              {unlockedAchievements.length} / 3 Unlocked (+{achievementXp} XP)
+            </span>
+          </div>
+
+          <div className="achievements-deck-grid">
+            {Object.values(ACHIEVEMENTS).map((ach) => {
+              const isUnlocked = unlockedAchievements.includes(ach.id);
+              return (
+                <div
+                  key={ach.id}
+                  className={`achievement-tile ${isUnlocked ? 'unlocked' : 'locked'}`}
+                  data-testid={`achievement-badge-${ach.id.toLowerCase()}`}
+                  title={`${ach.title}: ${ach.description}`}
+                >
+                  <div className="achievement-tile-icon">{ach.icon}</div>
+                  <div className="achievement-tile-name">{ach.title}</div>
+                  <div className="achievement-tile-xp">
+                    {isUnlocked ? `+${ach.xp} XP` : `${ach.xp} XP`}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
 
