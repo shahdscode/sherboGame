@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import confetti from 'canvas-confetti';
 import {
   Sparkles,
@@ -27,6 +27,15 @@ const BLOCK_THEMES = [
   'arcade-tile-gold',
   'arcade-tile-violet',
   'arcade-tile-coral',
+];
+
+const CELEBRATION_STICKERS = [
+  '/stickers/celebrate-clap.webp',
+  '/stickers/celebrate-confetti.webp',
+  '/stickers/celebrate-happy.webp',
+  '/stickers/celebrate-cheer.webp',
+  '/stickers/celebrate-clap-cheer.webp',
+  '/stickers/celebrate-confetti-dance.webp',
 ];
 
 /**
@@ -111,9 +120,25 @@ export const QuestionModal: React.FC<QuestionModalProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isCorrect, onContinue, onSelectOption, onSubmitAnswer]);
 
+  const [celebrationSticker, setCelebrationSticker] = useState<string>(() => {
+    return CELEBRATION_STICKERS[
+      Math.floor(Math.random() * CELEBRATION_STICKERS.length)
+    ];
+  });
+
+  useEffect(() => {
+    if (isCorrect) {
+      const randomSticker =
+        CELEBRATION_STICKERS[
+          Math.floor(Math.random() * CELEBRATION_STICKERS.length)
+        ];
+      setCelebrationSticker(randomSticker);
+    }
+  }, [isCorrect]);
+
   // Determine which sticker character to display
   const characterImgSrc = isCorrect
-    ? '/stickers/goodjob.webp'
+    ? celebrationSticker
     : isIncorrect
       ? '/stickers/retry.webp'
       : '/stickers/question.webp';

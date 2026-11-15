@@ -303,6 +303,7 @@ export class TowerScene extends Phaser.Scene {
     this.isPausedAtCheckpoint = false;
     this.isCompleted = true;
     this.player.freeze();
+    this.player.setPose('victory');
     this.physics.world.pause();
     sfx.victory();
 

@@ -4,7 +4,7 @@ export interface TouchInputState {
   jump: boolean;
 }
 
-export type CharacterPose = 'climbing' | 'question' | 'retry' | 'goodjob';
+export type CharacterPose = 'climbing' | 'question' | 'retry' | 'goodjob' | 'victory';
 
 export interface StepUpdatePayload {
   currentStep: number;
