@@ -45,13 +45,16 @@ export interface TowerConfig {
     gravityY: number;
   };
   rewards: {
-    maxTotalScore: number;
     xpPerCheckpoint: number;
     penalty1stMistake: number;
     penalty2ndMistake: number;
     penalty3rdMistake: number;
     firstTryBonusXp: number;
     summitBonusXp: number;
+    maxSpeedBonus: number;
+    targetTimeSeconds: number;
+    speedBonusDecayPerSec: number;
+    speedBonusMin: number;
   };
 }
 
@@ -93,18 +96,48 @@ export const towerConfig: TowerConfigRuntime = {
     gravityY: 1220,
   },
   rewards: {
-    maxTotalScore: 1500,
-    xpPerCheckpoint: 300,
-    penalty1stMistake: 50,
-    penalty2ndMistake: 150,
-    penalty3rdMistake: 300,
-    firstTryBonusXp: 0,
-    summitBonusXp: 0,
+    xpPerCheckpoint: 500,
+    penalty1stMistake: 100,
+    penalty2ndMistake: 250,
+    penalty3rdMistake: 400,
+    firstTryBonusXp: 150,
+    summitBonusXp: 500,
+    maxSpeedBonus: 1500,
+    targetTimeSeconds: 60,
+    speedBonusDecayPerSec: 5,
+    speedBonusMin: 100,
   },
   // summit platform at y = 380: groundY = 380 + 75 * 108 = 8480; worldHeight = 8480 + 180 = 8660
   worldHeight: 8660,
   groundY: 8480,
 };
+
+/**
+ * Calculates a dynamic speed bonus based on stopwatch clear time.
+ * Fast climbers who solve questions promptly earn up to +1500 bonus XP.
+ */
+export function calculateSpeedBonus(
+  elapsedSeconds: number,
+  config: TowerConfig = towerConfig
+): number {
+  const { maxSpeedBonus, targetTimeSeconds, speedBonusDecayPerSec, speedBonusMin } =
+    config.rewards;
+  const overtime = Math.max(0, elapsedSeconds - targetTimeSeconds);
+  return Math.max(
+    speedBonusMin,
+    Math.round(maxSpeedBonus - overtime * speedBonusDecayPerSec)
+  );
+}
+
+/**
+ * Formats seconds into a stopwatch `mm:ss` display (e.g. 01:24).
+ */
+export function formatStopwatchTime(seconds: number): string {
+  const safeSecs = Math.max(0, Math.floor(seconds));
+  const mins = Math.floor(safeSecs / 60);
+  const secs = safeSecs % 60;
+  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+}
 
 /**
  * Returns the section index (1-based, 1..6) that a given step belongs to.

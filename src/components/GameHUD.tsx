@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Flag, Footprints, Zap, Compass, Volume2, VolumeX } from 'lucide-react';
+import { Flag, Footprints, Zap, Compass, Timer, Volume2, VolumeX } from 'lucide-react';
 import { CheckpointStateItem } from '../hooks/useTowerGame';
-import { towerConfig } from '../data/towerConfig';
+import { towerConfig, formatStopwatchTime } from '../data/towerConfig';
 import { sfx } from '../game/sfx';
 
 interface GameHUDProps {
@@ -10,6 +10,7 @@ interface GameHUDProps {
   activeCheckpointNumber: number | null;
   checkpoints: CheckpointStateItem[];
   xpPoints: number;
+  elapsedTime: number;
 }
 
 export const GameHUD: React.FC<GameHUDProps> = ({
@@ -18,6 +19,7 @@ export const GameHUD: React.FC<GameHUDProps> = ({
   activeCheckpointNumber,
   checkpoints,
   xpPoints,
+  elapsedTime,
 }) => {
   const [muted, setMutedState] = useState<boolean>(() => sfx.isMuted());
 
@@ -77,11 +79,19 @@ export const GameHUD: React.FC<GameHUDProps> = ({
         </div>
       </div>
 
+      <div className="hud-stat-pill timer-pill" data-testid="hud-stopwatch">
+        <Timer size={16} className="icon-gold" />
+        <div>
+          <span className="stat-label">Time</span>
+          <span className="stat-value">{formatStopwatchTime(elapsedTime)}</span>
+        </div>
+      </div>
+
       <div className="hud-stat-pill xp-pill" data-testid="hud-xp">
         <Zap size={16} className="icon-amber" />
         <div>
           <span className="stat-label">Score</span>
-          <span className="stat-value">{xpPoints} / 1500 XP</span>
+          <span className="stat-value">{xpPoints.toLocaleString()} XP</span>
         </div>
       </div>
 

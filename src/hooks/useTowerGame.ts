@@ -5,6 +5,7 @@ import {
   CheckpointQuestion,
   towerConfig,
   getCheckpointStepRange,
+  calculateSpeedBonus,
 } from '../data/towerConfig';
 import { checkpointQuestions } from '../data/sampleQuestions';
 import { gameEvents, TouchInputState } from '../game/EventBus';
@@ -34,14 +35,14 @@ export interface QuestionAttemptFeedback {
 
 export function getPenaltyForMistakes(mistakes: number): number {
   if (mistakes <= 0) return 0;
-  if (mistakes === 1) return towerConfig.rewards.penalty1stMistake; // 50
-  if (mistakes === 2) return towerConfig.rewards.penalty2ndMistake; // 150
-  return towerConfig.rewards.penalty3rdMistake; // 300
+  if (mistakes === 1) return towerConfig.rewards.penalty1stMistake;
+  if (mistakes === 2) return towerConfig.rewards.penalty2ndMistake;
+  return towerConfig.rewards.penalty3rdMistake;
 }
 
 export function getQuestionXpForMistakes(mistakes: number): number {
   const penalty = getPenaltyForMistakes(mistakes);
-  return Math.max(0, towerConfig.rewards.xpPerCheckpoint - penalty);
+  return Math.max(100, towerConfig.rewards.xpPerCheckpoint - penalty);
 }
 
 export function useTowerGame(
@@ -59,6 +60,8 @@ export function useTowerGame(
   const [totalAttempts, setTotalAttempts] = useState<number>(0);
   const [firstTryCount, setFirstTryCount] = useState<number>(0);
   const [xpPoints, setXpPoints] = useState<number>(0);
+  const [elapsedTime, setElapsedTime] = useState<number>(0);
+  const [speedBonus, setSpeedBonus] = useState<number>(0);
   // The Start button stays locked until the Phaser scene has loaded its assets
   const [sceneReady, setSceneReady] = useState<boolean>(gameEvents.sceneReady);
   const [loadProgress, setLoadProgress] = useState<number>(0);
@@ -159,9 +162,14 @@ export function useTowerGame(
     );
 
     const unsubSummit = gameEvents.on('evt:summit-celebrated', () => {
-      if (towerConfig.rewards.summitBonusXp > 0) {
-        setXpPoints((prev) => prev + towerConfig.rewards.summitBonusXp);
-      }
+      setElapsedTime((currentElapsed) => {
+        const bonus = calculateSpeedBonus(currentElapsed, towerConfig);
+        setSpeedBonus(bonus);
+        const summitTotal =
+          (towerConfig.rewards.summitBonusXp || 0) + bonus;
+        setXpPoints((prev) => prev + summitTotal);
+        return currentElapsed;
+      });
       setGameState('COMPLETED');
     });
 
@@ -176,6 +184,29 @@ export function useTowerGame(
     };
   }, []);
 
+  // Continuous Stopwatch Timer
+  // Ticks every second while the student is actively playing, climbing, and solving
+  useEffect(() => {
+    let intervalId: number | null = null;
+    const isClockRunning =
+      gameState === 'PLAYING' ||
+      gameState === 'QUESTION_ACTIVE' ||
+      gameState === 'CHECKPOINT_REACHED' ||
+      gameState === 'UNLOCK_NEXT_SECTION';
+
+    if (isClockRunning) {
+      intervalId = window.setInterval(() => {
+        setElapsedTime((prev) => prev + 1);
+      }, 1000);
+    }
+
+    return () => {
+      if (intervalId !== null) {
+        window.clearInterval(intervalId);
+      }
+    };
+  }, [gameState]);
+
   const startGame = useCallback(() => {
     // Never start before the scene is listening — the command would be lost and the
     // game would sit frozen behind a dismissed start screen.
@@ -183,6 +214,8 @@ export function useTowerGame(
     sfx.unlock();
     sfx.click();
     sfx.preloadVoices();
+    setElapsedTime(0);
+    setSpeedBonus(0);
     setGameState('PLAYING');
     gameEvents.emit('cmd:start-game', undefined);
   }, []);
@@ -221,11 +254,12 @@ export function useTowerGame(
 
         const mistakes = feedback.wrongOptionIndices.length;
         const isFirstTry = mistakes === 0;
+        const comboBonus = isFirstTry ? towerConfig.rewards.firstTryBonusXp : 0;
         if (isFirstTry) {
           setFirstTryCount((prev) => prev + 1);
         }
 
-        const earnedXp = getQuestionXpForMistakes(mistakes);
+        const earnedXp = getQuestionXpForMistakes(mistakes) + comboBonus;
 
         setXpPoints((prev) => prev + earnedXp);
 
@@ -347,6 +381,8 @@ export function useTowerGame(
     setTotalAttempts(0);
     setFirstTryCount(0);
     setXpPoints(0);
+    setElapsedTime(0);
+    setSpeedBonus(0);
     setCheckpoints(buildInitialCheckpoints());
     setFeedback({
       status: 'idle',
@@ -385,6 +421,8 @@ export function useTowerGame(
     totalAttempts,
     firstTryCount,
     xpPoints,
+    elapsedTime,
+    speedBonus,
     sceneReady,
     loadProgress,
     loadFailed,

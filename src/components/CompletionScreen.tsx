@@ -4,12 +4,12 @@ import {
   Trophy,
   RotateCcw,
   CheckCircle,
-  Target,
+  Timer,
   Zap,
   Sparkles,
   Download,
 } from 'lucide-react';
-import { towerConfig } from '../data/towerConfig';
+import { towerConfig, formatStopwatchTime } from '../data/towerConfig';
 import { captureGameFrame, getSummitViewRatios } from '../game/TowerGame';
 
 interface CompletionScreenProps {
@@ -17,6 +17,8 @@ interface CompletionScreenProps {
   totalAttempts: number;
   firstTryCount: number;
   xpPoints: number;
+  elapsedTime: number;
+  speedBonus: number;
   onPlayAgain: () => void;
 }
 
@@ -69,7 +71,7 @@ function drawStar(
 
 function drawStatIcon(
   ctx: CanvasRenderingContext2D,
-  type: 'steps' | 'gates' | 'tries' | 'combos',
+  type: 'steps' | 'gates' | 'time' | 'combos',
   cx: number,
   cy: number,
   color: string
@@ -103,17 +105,23 @@ function drawStatIcon(
     ctx.lineTo(cx - 2, cy + 6);
     ctx.lineTo(cx + 8, cy - 5);
     ctx.stroke();
-  } else if (type === 'tries') {
-    // Bullseye target
+  } else if (type === 'time') {
+    // Stopwatch icon
     ctx.beginPath();
-    ctx.arc(cx, cy, 15, 0, Math.PI * 2);
+    ctx.arc(cx, cy + 2, 14, 0, Math.PI * 2);
     ctx.stroke();
+    // Top stem & button
     ctx.beginPath();
-    ctx.arc(cx, cy, 8, 0, Math.PI * 2);
+    ctx.moveTo(cx, cy - 12);
+    ctx.lineTo(cx, cy - 16);
+    ctx.moveTo(cx - 5, cy - 16);
+    ctx.lineTo(cx + 5, cy - 16);
+    // Clock hands pointing to ~1:20
+    ctx.moveTo(cx, cy + 2);
+    ctx.lineTo(cx, cy - 6);
+    ctx.moveTo(cx, cy + 2);
+    ctx.lineTo(cx + 6, cy + 2);
     ctx.stroke();
-    ctx.beginPath();
-    ctx.arc(cx, cy, 3, 0, Math.PI * 2);
-    ctx.fill();
   } else {
     // Trophy cup
     ctx.beginPath();
@@ -137,15 +145,15 @@ function drawStatIcon(
 
 export const CompletionScreen: React.FC<CompletionScreenProps> = ({
   completedCheckpointsCount,
-  totalAttempts,
+  totalAttempts: _totalAttempts,
   firstTryCount,
   xpPoints,
+  elapsedTime,
+  speedBonus,
   onPlayAgain,
 }) => {
   const [isExporting, setIsExporting] = useState(false);
-  const maxScore = towerConfig.rewards.maxTotalScore;
-  const scorePct = Math.max(0, Math.min(100, Math.round((xpPoints / maxScore) * 100)));
-  const starCount = scorePct >= 85 ? 3 : scorePct >= 60 ? 2 : 1;
+  const starCount = xpPoints >= 3800 ? 3 : xpPoints >= 2400 ? 2 : 1;
 
   useEffect(() => {
     try {
@@ -425,7 +433,7 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
         cardY + 144
       );
 
-      // 4. Hero Final Score Banner (White 3D Arcade Box with XP Bar)
+      // 4. Hero Final Score Banner (White 3D Arcade Box with XP & Speed Breakdown)
       const bannerX = cardX + 36;
       const bannerY = cardY + 178;
       const bannerW = cardW - 72; // 912
@@ -451,16 +459,16 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
       ctx.fillStyle = '#b85720';
       ctx.font = '700 18px "Fredoka", sans-serif';
       ctx.textAlign = 'left';
-      ctx.fillText('⚡ FINAL SCORE', bannerX + 32, bannerY + 40);
+      ctx.fillText('⚡ FINAL SCORE', bannerX + 32, bannerY + 38);
 
-      // Percentage pill on top-right of banner
-      const pctPillW = 148;
-      const pctPillH = 34;
-      const pctPillX = bannerX + bannerW - pctPillW - 28;
-      const pctPillY = bannerY + 18;
+      // Stopwatch Clear Time pill on top-right of banner
+      const timePillW = 180;
+      const timePillH = 34;
+      const timePillX = bannerX + bannerW - timePillW - 28;
+      const timePillY = bannerY + 18;
       ctx.fillStyle = '#fff4ea';
       ctx.beginPath();
-      ctx.roundRect(pctPillX, pctPillY, pctPillW, pctPillH, 999);
+      ctx.roundRect(timePillX, timePillY, timePillW, timePillH, 999);
       ctx.fill();
       ctx.lineWidth = 2;
       ctx.strokeStyle = '#ee7b3c';
@@ -469,41 +477,31 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
       ctx.fillStyle = '#ee7b3c';
       ctx.font = '700 18px "Fredoka", sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText(`${scorePct}% SCORE`, pctPillX + pctPillW / 2, pctPillY + 23);
+      ctx.fillText(`⏱️ ${formatStopwatchTime(elapsedTime)}`, timePillX + timePillW / 2, timePillY + 23);
 
       // Huge XP Score Value
       ctx.fillStyle = '#ee7b3c';
-      ctx.font = '700 54px "Fredoka", sans-serif';
+      ctx.font = '700 58px "Fredoka", sans-serif';
       ctx.textAlign = 'left';
       ctx.fillText(
-        `${xpPoints} / ${maxScore} XP`,
+        `${xpPoints.toLocaleString()} XP`,
         bannerX + 32,
-        bannerY + 104
+        bannerY + 102
       );
 
-      // XP Progress Track
-      const trackX = bannerX + 32;
-      const trackY = bannerY + 124;
-      const trackW = bannerW - 64;
-      const trackH = 20;
-
-      ctx.fillStyle = '#f3decb';
-      ctx.beginPath();
-      ctx.roundRect(trackX, trackY, trackW, trackH, 999);
-      ctx.fill();
-
-      const fillW = Math.max(24, Math.round((scorePct / 100) * trackW));
-      const barGrad = ctx.createLinearGradient(trackX, 0, trackX + fillW, 0);
-      barGrad.addColorStop(0, '#f59e0b');
-      barGrad.addColorStop(1, '#ee7b3c');
-      ctx.fillStyle = barGrad;
-      ctx.beginPath();
-      ctx.roundRect(trackX, trackY, fillW, trackH, 999);
-      ctx.fill();
+      // Breakdown note
+      ctx.fillStyle = '#576582';
+      ctx.font = '600 20px "Fredoka", sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(
+        `Includes +${speedBonus.toLocaleString()} XP Speed Bonus • ${firstTryCount} / ${towerConfig.numberOfCheckpoints} Combos`,
+        bannerX + 32,
+        bannerY + 140
+      );
 
       // 5. Four Tactile 3D Arcade Power-Block Stat Tiles (2x2 Grid)
       const stats: Array<{
-        type: 'steps' | 'gates' | 'tries' | 'combos';
+        type: 'steps' | 'gates' | 'time' | 'combos';
         label: string;
         val: string;
         border: string;
@@ -527,9 +525,9 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
           badgeBg: '#ecfdf5',
         },
         {
-          type: 'tries',
-          label: 'Stone Tries',
-          val: `${totalAttempts}`,
+          type: 'time',
+          label: 'Stopwatch Time',
+          val: `${formatStopwatchTime(elapsedTime)}`,
           border: '#ee7b3c',
           lip: '#b85720',
           badgeBg: '#fff4ea',
@@ -641,7 +639,7 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
             await navigator.share({
               files: [file],
               title: "Sherbo's Tower",
-              text: `I scored ${xpPoints} / ${maxScore} XP on Sherbo's Tower!`,
+              text: `I scored ${xpPoints.toLocaleString()} XP in ${formatStopwatchTime(elapsedTime)} on Sherbo's Tower!`,
             });
             return;
           }
@@ -712,16 +710,15 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
               <Zap size={20} className="icon-amber" />
               <span className="xp-banner-title">Final Score</span>
             </div>
-            <span className="xp-banner-pct-pill">{scorePct}%</span>
+            <span className="xp-banner-pct-pill">
+              ⏱️ {formatStopwatchTime(elapsedTime)}
+            </span>
           </div>
           <div className="xp-banner-score">
-            {xpPoints} / {maxScore} XP ({scorePct}%)
+            {xpPoints.toLocaleString()} XP
           </div>
-          <div className="xp-progress-track">
-            <div
-              className="xp-progress-fill"
-              style={{ width: `${Math.max(8, scorePct)}%` }}
-            />
+          <div className="xp-banner-subtext">
+            Includes +{speedBonus.toLocaleString()} XP Speed Bonus • {firstTryCount} / {towerConfig.numberOfCheckpoints} Combos
           </div>
         </div>
 
@@ -750,11 +747,11 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
 
           <div
             className="stat-box stat-box-orange"
-            data-testid="stat-total-attempts"
+            data-testid="stat-clear-time"
           >
-            <Target size={18} className="icon-gold" />
-            <div className="stat-box-val">{totalAttempts}</div>
-            <div className="stat-box-label">Stone Tries</div>
+            <Timer size={18} className="icon-gold" />
+            <div className="stat-box-val">{formatStopwatchTime(elapsedTime)}</div>
+            <div className="stat-box-label">Clear Time</div>
           </div>
 
           <div

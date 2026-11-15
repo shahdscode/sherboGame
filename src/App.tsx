@@ -19,6 +19,8 @@ export const App: React.FC = () => {
     totalAttempts,
     firstTryCount,
     xpPoints,
+    elapsedTime,
+    speedBonus,
     sceneReady,
     loadProgress,
     loadFailed,
@@ -44,6 +46,7 @@ export const App: React.FC = () => {
         activeCheckpointNumber={activeCheckpointNumber}
         checkpoints={checkpoints}
         xpPoints={xpPoints}
+        elapsedTime={elapsedTime}
       />
 
       {gameState === 'INTRO' && <StartScreen
@@ -69,6 +72,8 @@ export const App: React.FC = () => {
           totalAttempts={totalAttempts}
           firstTryCount={firstTryCount}
           xpPoints={xpPoints}
+          elapsedTime={elapsedTime}
+          speedBonus={speedBonus}
           onPlayAgain={restartGame}
         />
       )}
