@@ -403,16 +403,70 @@ export class PlatformManager {
       const cc = cloudConfigs[i];
       const startCloudX = ((i * 190) % (towerWidth + 240)) - 120;
       const key = `tex-cloud-${i}`;
-      const localX = -cc.w / 2 - 2;
-      const localY = -cc.h * 0.8 - 2;
+      const padX = Math.round(cc.w * 0.18) + 14;
+      const padTop = Math.round(cc.h * 0.90) + 16;
+      const padBottom = Math.round(cc.h * 0.45) + 12;
+      const localX = -cc.w / 2 - padX;
+      const localY = -padTop;
+      const bakeW = cc.w + padX * 2;
+      const bakeH = padTop + padBottom;
 
-      // Stylized multi-puff cloud shape, drawn once
-      this.bake(key, localX, localY, cc.w + 4, cc.h * 1.1 + 4, (g) => {
+      // Stylized fluffy multi-billow cartoon cloud shape with depth shading & sunlit highlights
+      this.bake(key, localX, localY, bakeW, bakeH, (g) => {
+        const w = cc.w;
+        const h = cc.h;
+        const variant = i % 3;
+
+        // 1. Soft Ambient Underbelly Shadow (gives volumetric 3D presence)
+        g.fillStyle(0x1b2a53, cc.alpha * 0.14);
+        g.fillRoundedRect(-w * 0.46, 0, w * 0.92, h * 0.44, h * 0.22);
+
+        // 2. Main Fluffy Cloud Body
         g.fillStyle(cc.color, cc.alpha);
-        g.fillRoundedRect(-cc.w / 2, -cc.h / 4, cc.w, cc.h / 2, cc.h / 4);
-        g.fillCircle(-cc.w * 0.22, -cc.h * 0.2, cc.h * 0.38);
-        g.fillCircle(cc.w * 0.08, -cc.h * 0.32, cc.h * 0.46);
-        g.fillCircle(cc.w * 0.28, -cc.h * 0.16, cc.h * 0.32);
+
+        if (variant === 0) {
+          // Variant 0: Majestic Cumulus with towering central crown dome
+          g.fillRoundedRect(-w * 0.44, -h * 0.12, w * 0.88, h * 0.44, h * 0.22);
+          g.fillCircle(-w * 0.36, h * 0.04, h * 0.26);
+          g.fillCircle(w * 0.36, h * 0.04, h * 0.26);
+          g.fillCircle(-w * 0.24, -h * 0.22, h * 0.40);
+          g.fillCircle(-w * 0.02, -h * 0.42, h * 0.54);
+          g.fillCircle(w * 0.22, -h * 0.26, h * 0.44);
+          g.fillCircle(w * 0.38, -h * 0.08, h * 0.30);
+
+          // 3. Sunlit Highlights on upper crests
+          g.fillStyle(0xffffff, cc.alpha * 0.45);
+          g.fillCircle(-w * 0.26, -h * 0.28, h * 0.28);
+          g.fillCircle(-w * 0.04, -h * 0.50, h * 0.38);
+          g.fillCircle(w * 0.20, -h * 0.32, h * 0.30);
+        } else if (variant === 1) {
+          // Variant 1: Twin-Peak billowing cloud
+          g.fillRoundedRect(-w * 0.46, -h * 0.12, w * 0.92, h * 0.44, h * 0.22);
+          g.fillCircle(-w * 0.36, -h * 0.08, h * 0.28);
+          g.fillCircle(-w * 0.16, -h * 0.38, h * 0.48);
+          g.fillCircle(w * 0.14, -h * 0.40, h * 0.46);
+          g.fillCircle(w * 0.36, -h * 0.14, h * 0.32);
+
+          // 3. Sunlit Highlights
+          g.fillStyle(0xffffff, cc.alpha * 0.45);
+          g.fillCircle(-w * 0.18, -h * 0.46, h * 0.32);
+          g.fillCircle(w * 0.12, -h * 0.48, h * 0.32);
+          g.fillCircle(-w * 0.36, -h * 0.14, h * 0.18);
+        } else {
+          // Variant 2: Wide cascading cumulus with soft side fluffs
+          g.fillRoundedRect(-w * 0.48, -h * 0.12, w * 0.96, h * 0.44, h * 0.22);
+          g.fillCircle(-w * 0.44, h * 0.04, h * 0.22);
+          g.fillCircle(w * 0.44, h * 0.04, h * 0.22);
+          g.fillCircle(-w * 0.30, -h * 0.20, h * 0.36);
+          g.fillCircle(-w * 0.08, -h * 0.34, h * 0.44);
+          g.fillCircle(w * 0.14, -h * 0.34, h * 0.46);
+          g.fillCircle(w * 0.32, -h * 0.18, h * 0.34);
+
+          // 3. Sunlit Highlights
+          g.fillStyle(0xffffff, cc.alpha * 0.45);
+          g.fillCircle(-w * 0.10, -h * 0.42, h * 0.30);
+          g.fillCircle(w * 0.12, -h * 0.42, h * 0.32);
+        }
       });
       const cloud = this.addBaked(key, startCloudX + localX, cc.y + localY, -25);
 
@@ -833,12 +887,24 @@ export class PlatformManager {
           ? gateNames[checkpointNumber] || `GATE ${checkpointNumber}`
           : '';
 
+      const checkpointNames: Record<number, string> = {
+        1: 'CHECKPOINT ONE',
+        2: 'CHECKPOINT TWO',
+        3: 'CHECKPOINT THREE',
+        4: 'CHECKPOINT FOUR',
+        5: 'CHECKPOINT FIVE',
+      };
+      const checkpointTitle =
+        checkpointNumber !== null
+          ? checkpointNames[checkpointNumber] || `CHECKPOINT ${checkpointNumber}`
+          : '';
+
       if (isCheckpoint) {
         const stepBadge = this.scene.add
           .text(
             this.config.wallThickness + 58,
             y - 1,
-            `⚡ ${gateTitle}`,
+            `⚡ ${checkpointTitle}`,
             {
               fontFamily: '"Fredoka", sans-serif',
               fontSize: '14px',
