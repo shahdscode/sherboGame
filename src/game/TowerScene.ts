@@ -1,5 +1,9 @@
 import Phaser from 'phaser';
-import { towerConfig, TowerConfigRuntime } from '../data/towerConfig';
+import {
+  towerConfig,
+  TowerConfigRuntime,
+  getMaxStepForSection,
+} from '../data/towerConfig';
 import { PlatformManager } from './PlatformManager';
 import { Player } from './Player';
 import { CameraManager } from './CameraManager';
@@ -278,8 +282,10 @@ export class TowerScene extends Phaser.Scene {
     this.platformManager.unlockSection(nextSectionIndex);
     sfx.unlockGate();
 
-    const unlockedUpToStep =
-      nextSectionIndex * this.config.stepsPerCheckpoint;
+    const unlockedUpToStep = getMaxStepForSection(
+      nextSectionIndex,
+      this.config
+    );
 
     // Return character back to climbing figure when resuming climb
     this.player.setPose('climbing');

@@ -4,7 +4,7 @@ import { CheckpointQuestion } from './towerConfig';
  * Configurable Checkpoint Questions.
  * Replace this array with questions for any subject (Mathematics, Science, Programming, History, etc.)
  * without modifying the Phaser game engine or React UI components.
- * There are 5 checkpoints (Steps 5, 10, 15, 20, 25); Step 30 is the Finish Line.
+ * There are 5 checkpoints (Steps 5, 13, 24, 38, 55); Step 75 is the Finish Line.
  */
 export const checkpointQuestions: CheckpointQuestion[] = [
   {
