@@ -57,6 +57,7 @@ export class Player {
   private landLockTimer: number = 0;
   private wasAirborne: boolean = false;
   private facing: 'left' | 'right' = 'right';
+  private runPuffTimer: number = 0;
 
   public static preloadAssets(scene: Phaser.Scene): void {
     // 1. Extracted 2x HD character sheet animation frames
@@ -212,31 +213,137 @@ export class Player {
     this.visualSprite.y = bodyBottomY;
   }
 
-  private spawnDustPuff(count: number = 5): void {
+  /**
+   * Returns a dynamic smoke color palette tailored to the current tower level/altitude.
+   *
+   * As the climber ascends, the background behind changes dramatically:
+   *  - Level 1 (Dawn Base, y > 3080): Light warm cream (#f8e7d6) -> Deep navy & charcoal with flame orange.
+   *  - Level 2 (Golden Hour, 2540 < y <= 3080): Amber orange glow (#f5cca5 -> #b84b2c) -> Deep plum & sunburst gold.
+   *  - Level 3 (Sunset Twilight, 2000 < y <= 2540): Dark crimson sunset (#b84b2c -> #7f1d2e) -> Luminous warm cream & coral gold.
+   *  - Level 4 (Twilight Indigo, 1460 < y <= 2000): Deep purple-indigo (#7f1d2e -> #1b2a53) -> Ethereal radiant cyan, mint & lavender.
+   *  - Level 5 (Night Sky, 920 < y <= 1460): Deep midnight navy (#1b2a53 -> #0f1a36) -> Moonlit ivory, radiant gold & celestial sky blue.
+   *  - Level 6 (Summit Crown, y <= 920): Starry deep space (#0a1226 -> #121e3d) -> Pure celestial white, cosmic cyan & starlight gold.
+   */
+  private getSmokePaletteForAltitude(y: number): {
+    colors: number[];
+    alpha: number;
+    scaleMultiplier: number;
+  } {
+    const cpSteps = this.config.checkpointSteps || [5, 13, 24, 38, 55];
+    const cpY = (step: number) =>
+      this.config.groundY - step * this.config.platformSpacingY;
+
+    const y1 = cpY(cpSteps[0]);
+    const y2 = cpY(cpSteps[1]);
+    const y3 = cpY(cpSteps[2]);
+    const y4 = cpY(cpSteps[3]);
+    const y5 = cpY(cpSteps[4]);
+
+    if (y > y1) {
+      // Level 1: Steps 1-5 (Dawn Warm Cream)
+      return {
+        colors: [0x1b2a53, 0x2c3e6b, 0xee7b3c, 0x334155],
+        alpha: 0.85,
+        scaleMultiplier: 1.0,
+      };
+    } else if (y > y2) {
+      // Level 2: Steps 6-13 (Golden Hour Amber)
+      return {
+        colors: [0x2e122b, 0x581c2b, 0xfde047, 0xf59e0b, 0xffedd5],
+        alpha: 0.88,
+        scaleMultiplier: 1.05,
+      };
+    } else if (y > y3) {
+      // Level 3: Steps 14-24 (Sunset Twilight Crimson)
+      return {
+        colors: [0xfff4eb, 0xfde047, 0xffa285, 0xffffff, 0xf87171],
+        alpha: 0.9,
+        scaleMultiplier: 1.1,
+      };
+    } else if (y > y4) {
+      // Level 4: Steps 25-38 (Evening Indigo / Twilight Purple)
+      return {
+        colors: [0x5eead4, 0xa7f3d0, 0xe9d5ff, 0xffffff, 0x38bdf8],
+        alpha: 0.92,
+        scaleMultiplier: 1.15,
+      };
+    } else if (y > y5) {
+      // Level 5: Steps 39-55 (Deep Night Sky / Midnight Blue)
+      return {
+        colors: [0xfffbeb, 0xfef08a, 0x93c5fd, 0xffffff, 0x67e8f9],
+        alpha: 0.92,
+        scaleMultiplier: 1.2,
+      };
+    } else {
+      // Level 6: Steps 56-75 (Summit Crown / Starry Deep Space)
+      return {
+        colors: [0xffffff, 0x67e8f9, 0xfde047, 0xfbcfe8, 0x38bdf8],
+        alpha: 0.95,
+        scaleMultiplier: 1.25,
+      };
+    }
+  }
+
+  private spawnDustPuff(count: number = 5, isRun: boolean = false): void {
+    if (!this.sprite || !this.scene) return;
     const footY = this.sprite.y + this.config.player.height / 2 - 2;
     const footX = this.sprite.x;
+    const palette = this.getSmokePaletteForAltitude(footY);
+
     for (let i = 0; i < count; i++) {
-      const dir = i % 2 === 0 ? -1 : 1;
-      const spreadX = dir * Phaser.Math.Between(8, 28);
+      const color =
+        palette.colors[Phaser.Math.Between(0, palette.colors.length - 1)];
+
+      const dir = isRun
+        ? (this.facing === 'left' ? 1 : -1)
+        : (i % 2 === 0 ? -1 : 1);
+
+      const spreadDist = isRun
+        ? Phaser.Math.Between(6, 18)
+        : Phaser.Math.Between(8, 28);
+      const spreadX = dir * spreadDist;
+
+      const baseR = isRun
+        ? Phaser.Math.FloatBetween(2.8, 4.6)
+        : Phaser.Math.FloatBetween(4.2, 7.5);
+      const r = baseR * palette.scaleMultiplier;
+
       const puff = this.scene.add
         .circle(
-          footX + Phaser.Math.Between(-8, 8),
-          footY,
-          Phaser.Math.Between(4, 7),
-          0x1b2a53, // Dark Deep Navy smoke for clear visibility against light background
-          0.78
+          footX + Phaser.Math.Between(-6, 6),
+          footY + Phaser.Math.Between(-2, 2),
+          r,
+          color,
+          palette.alpha
         )
         .setDepth(21);
+
+      puff.setScale(0.5);
+
+      const duration = isRun
+        ? Phaser.Math.Between(220, 280)
+        : Phaser.Math.Between(340, 420);
 
       this.scene.tweens.add({
         targets: puff,
         x: puff.x + spreadX,
-        y: footY - Phaser.Math.Between(4, 16),
-        scale: 0.2,
-        alpha: 0,
-        duration: 280,
+        y: footY - (isRun ? Phaser.Math.Between(2, 8) : Phaser.Math.Between(6, 18)),
+        scale: isRun ? 0.9 : 1.2,
+        duration: duration * 0.38,
         ease: 'Quad.easeOut',
-        onComplete: () => puff.destroy(),
+        onComplete: () => {
+          if (!puff.active) return;
+          this.scene.tweens.add({
+            targets: puff,
+            x: puff.x + spreadX * 0.35,
+            y: puff.y - (isRun ? 3 : 8),
+            scale: 0.15,
+            alpha: 0,
+            duration: duration * 0.62,
+            ease: 'Cubic.easeIn',
+            onComplete: () => puff.destroy(),
+          });
+        },
       });
     }
   }
@@ -422,7 +529,17 @@ export class Player {
           } else {
             this.visualSprite.play('anim-run-left', true);
           }
+
+          // Subtle running smoke puff under feet
+          if (Math.abs(body.velocity.x) > 40) {
+            this.runPuffTimer += delta;
+            if (this.runPuffTimer >= 160) {
+              this.runPuffTimer = 0;
+              this.spawnDustPuff(2, true);
+            }
+          }
         } else {
+          this.runPuffTimer = 110;
           const currentAnim = this.visualSprite.anims.currentAnim;
           if (
             !currentAnim ||
