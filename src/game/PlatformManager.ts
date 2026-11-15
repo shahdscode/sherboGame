@@ -360,26 +360,26 @@ export class PlatformManager {
     this.addBaked('tex-moon', moonX - 34, moonY - 34, -28);
 
     // 3. Animated Drifting Geometric Clouds
-    // 14 clouds positioned across various altitudes
+    // 14 clouds positioned across various altitudes, dynamically colored & tuned to contrast with each level's sky
     const cloudConfigs = [
-      // Base / Dawn clouds (warm white & peach)
-      { y: 3520, w: 140, h: 42, speed: 18, color: 0xffffff, alpha: 0.55 },
-      { y: 3340, w: 110, h: 36, speed: 14, color: 0xfbeee0, alpha: 0.5 },
-      { y: 3120, w: 160, h: 46, speed: 20, color: 0xffffff, alpha: 0.48 },
-      { y: 2900, w: 125, h: 38, speed: 16, color: 0xfbeee0, alpha: 0.52 },
-      // Golden Hour clouds (amber / gold tint)
-      { y: 2650, w: 150, h: 44, speed: 22, color: 0xfef08a, alpha: 0.45 },
-      { y: 2420, w: 120, h: 36, speed: 17, color: 0xffe8d6, alpha: 0.48 },
-      { y: 2200, w: 170, h: 48, speed: 24, color: 0xfef08a, alpha: 0.4 },
-      { y: 1980, w: 130, h: 40, speed: 19, color: 0xffe8d6, alpha: 0.42 },
-      // Sunset / Twilight clouds
-      { y: 1740, w: 160, h: 44, speed: 23, color: 0xfbd5b5, alpha: 0.38 },
-      { y: 1500, w: 120, h: 36, speed: 18, color: 0xf5cca5, alpha: 0.35 },
-      // Summit night mist clouds
-      { y: 1240, w: 150, h: 38, speed: 20, color: 0xffffff, alpha: 0.18 },
-      { y: 980, w: 130, h: 34, speed: 16, color: 0xffffff, alpha: 0.16 },
-      { y: 720, w: 160, h: 40, speed: 22, color: 0xffffff, alpha: 0.15 },
-      { y: 440, w: 140, h: 36, speed: 18, color: 0xffffff, alpha: 0.14 },
+      // Base / Dawn clouds (warm peach-cream against light dawn sky)
+      { y: 3520, w: 140, h: 42, speed: 18, color: 0xffedd5, alpha: 0.60 },
+      { y: 3340, w: 110, h: 36, speed: 14, color: 0xfbeee0, alpha: 0.55 },
+      { y: 3120, w: 160, h: 46, speed: 20, color: 0xffedd5, alpha: 0.58 },
+      { y: 2900, w: 125, h: 38, speed: 16, color: 0xfbeee0, alpha: 0.54 },
+      // Golden Hour clouds (warm amber & radiant golden tint)
+      { y: 2650, w: 150, h: 44, speed: 22, color: 0xfef08a, alpha: 0.52 },
+      { y: 2420, w: 120, h: 36, speed: 17, color: 0xffdfba, alpha: 0.54 },
+      { y: 2200, w: 170, h: 48, speed: 24, color: 0xfef08a, alpha: 0.50 },
+      { y: 1980, w: 130, h: 40, speed: 19, color: 0xffdfba, alpha: 0.52 },
+      // Sunset / Twilight clouds (apricot coral & rose cream glow against crimson)
+      { y: 1740, w: 160, h: 44, speed: 23, color: 0xfed7aa, alpha: 0.52 },
+      { y: 1500, w: 120, h: 36, speed: 18, color: 0xfecdd3, alpha: 0.50 },
+      // Night & Summit clouds (ethereal cyan, moonlit ice blue, starlight gold, pure celestial white)
+      { y: 1240, w: 150, h: 38, speed: 20, color: 0x99f6e4, alpha: 0.46 },
+      { y: 980, w: 130, h: 34, speed: 16, color: 0xe0f2fe, alpha: 0.48 },
+      { y: 720, w: 160, h: 40, speed: 22, color: 0xfef08a, alpha: 0.48 },
+      { y: 440, w: 140, h: 36, speed: 18, color: 0xffffff, alpha: 0.52 },
     ];
 
     for (let i = 0; i < cloudConfigs.length; i++) {
