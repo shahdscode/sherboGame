@@ -323,7 +323,10 @@ export class TowerScene extends Phaser.Scene {
       });
     }
 
-    gameEvents.emit('evt:summit-celebrated', undefined);
+    // Allow the student to watch the character celebrate at the summit before the result card arrives
+    window.setTimeout(() => {
+      gameEvents.emit('evt:summit-celebrated', undefined);
+    }, 850);
   }
 
   private handleRestartGame(): void {
