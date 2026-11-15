@@ -8,6 +8,7 @@ import {
   Zap,
   Sparkles,
   Download,
+  Award,
 } from 'lucide-react';
 import { towerConfig, formatStopwatchTime } from '../data/towerConfig';
 import { captureGameFrame, getSummitViewRatios } from '../game/TowerGame';
@@ -72,7 +73,7 @@ function drawStar(
 
 function drawStatIcon(
   ctx: CanvasRenderingContext2D,
-  type: 'steps' | 'gates' | 'time' | 'combos',
+  type: 'best' | 'grade' | 'time' | 'combos',
   cx: number,
   cy: number,
   color: string
@@ -84,27 +85,46 @@ function drawStatIcon(
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
 
-  if (type === 'steps') {
-    // Rising 3-step stairs icon with sparkle
+  if (type === 'best') {
+    // Trophy cup for Best Score
     ctx.beginPath();
-    ctx.moveTo(cx - 16, cy + 12);
-    ctx.lineTo(cx - 6, cy + 12);
-    ctx.lineTo(cx - 6, cy + 2);
-    ctx.lineTo(cx + 5, cy + 2);
-    ctx.lineTo(cx + 5, cy - 8);
-    ctx.lineTo(cx + 16, cy - 8);
+    ctx.moveTo(cx - 11, cy - 12);
+    ctx.lineTo(cx + 11, cy - 12);
+    ctx.lineTo(cx + 9, cy - 1);
+    ctx.arc(cx, cy - 1, 9, 0, Math.PI, false);
+    ctx.closePath();
     ctx.stroke();
-    // Little star at top-left
-    drawStar(ctx, cx - 10, cy - 9, 6, 2.5, color);
-  } else if (type === 'gates') {
-    // Checkmark circle
+    // Stem + base
     ctx.beginPath();
-    ctx.arc(cx, cy, 15, 0, Math.PI * 2);
+    ctx.moveTo(cx, cy + 8);
+    ctx.lineTo(cx, cy + 14);
+    ctx.moveTo(cx - 8, cy + 14);
+    ctx.lineTo(cx + 8, cy + 14);
+    ctx.stroke();
+    // Handles
+    ctx.beginPath();
+    ctx.arc(cx - 9, cy - 6, 4, Math.PI * 0.5, Math.PI * 1.5, false);
     ctx.stroke();
     ctx.beginPath();
-    ctx.moveTo(cx - 7, cy + 1);
-    ctx.lineTo(cx - 2, cy + 6);
-    ctx.lineTo(cx + 8, cy - 5);
+    ctx.arc(cx + 9, cy - 6, 4, Math.PI * 1.5, Math.PI * 0.5, false);
+    ctx.stroke();
+  } else if (type === 'grade') {
+    // Medal / Rosette with ribbon tails
+    ctx.beginPath();
+    ctx.arc(cx, cy - 3, 11, 0, Math.PI * 2);
+    ctx.stroke();
+    // Star inside medal
+    drawStar(ctx, cx, cy - 3, 6, 2.8, color);
+    // Ribbon tails
+    ctx.beginPath();
+    ctx.moveTo(cx - 5, cy + 7);
+    ctx.lineTo(cx - 9, cy + 16);
+    ctx.lineTo(cx - 3, cy + 14);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(cx + 5, cy + 7);
+    ctx.lineTo(cx + 9, cy + 16);
+    ctx.lineTo(cx + 3, cy + 14);
     ctx.stroke();
   } else if (type === 'time') {
     // Stopwatch icon
@@ -124,20 +144,16 @@ function drawStatIcon(
     ctx.lineTo(cx + 6, cy + 2);
     ctx.stroke();
   } else {
-    // Trophy cup
+    // Combos: Lightning spark
     ctx.beginPath();
-    ctx.moveTo(cx - 11, cy - 12);
-    ctx.lineTo(cx + 11, cy - 12);
-    ctx.lineTo(cx + 9, cy - 1);
-    ctx.arc(cx, cy - 1, 9, 0, Math.PI, false);
+    ctx.moveTo(cx + 1, cy - 14);
+    ctx.lineTo(cx - 7, cy);
+    ctx.lineTo(cx, cy);
+    ctx.lineTo(cx - 2, cy + 14);
+    ctx.lineTo(cx + 7, cy - 1);
+    ctx.lineTo(cx, cy - 1);
     ctx.closePath();
-    ctx.stroke();
-    // Stem + base
-    ctx.beginPath();
-    ctx.moveTo(cx, cy + 8);
-    ctx.lineTo(cx, cy + 14);
-    ctx.moveTo(cx - 8, cy + 14);
-    ctx.lineTo(cx + 8, cy + 14);
+    ctx.fill();
     ctx.stroke();
   }
 
@@ -148,6 +164,7 @@ export type PerformanceTier = 'legendary' | 'gold' | 'silver' | 'comeback';
 
 export interface PerformanceTierConfig {
   tier: PerformanceTier;
+  letterGrade: 'S+' | 'S' | 'A' | 'B';
   title: string;
   badgeTag: string;
   heroHeadline: string;
@@ -176,6 +193,7 @@ export function getPerformanceTier(
   if (firstTryCount >= 5 && xpPoints >= 3200) {
     return {
       tier: 'legendary',
+      letterGrade: 'S+',
       title: '👑 LEGENDARY SUMMIT',
       badgeTag: 'RANK S+ • PERFECT RUN',
       heroHeadline: 'Legendary Summit!',
@@ -200,6 +218,7 @@ export function getPerformanceTier(
   if (firstTryCount >= 4 || (xpPoints >= 2800 && elapsedTime <= 160)) {
     return {
       tier: 'gold',
+      letterGrade: 'S',
       title: '🥇 GOLD SUMMIT',
       badgeTag: 'RANK S • GOLD ACHIEVEMENT',
       heroHeadline: 'Golden Victory!',
@@ -224,6 +243,7 @@ export function getPerformanceTier(
   if (firstTryCount >= 2 || xpPoints >= 1900) {
     return {
       tier: 'silver',
+      letterGrade: 'A',
       title: '🥈 SILVER SUMMIT',
       badgeTag: 'RANK A • SILVER ACHIEVEMENT',
       heroHeadline: 'Silver Milestone!',
@@ -247,6 +267,7 @@ export function getPerformanceTier(
   // 4. Needs improvement: Comeback challenger
   return {
     tier: 'comeback',
+    letterGrade: 'B',
     title: '🔥 COMEBACK CHALLENGER',
     badgeTag: 'RANK B • RISING STAR',
     heroHeadline: 'Summit Reached!',
@@ -263,7 +284,7 @@ export function getPerformanceTier(
     scoreBannerBg: '#fff1f2',
     stars: 1,
     confettiColors: ['#f43f5e', '#fb7185', '#fda4af', '#fef3c7'],
-    replayButtonText: 'Replay & Take The Crown!',
+    replayButtonText: 'Climb Again',
   };
 }
 
@@ -282,6 +303,29 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
     [xpPoints, firstTryCount, elapsedTime]
   );
   const starCount = tierConfig.stars;
+
+  const [bestScore, setBestScore] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('sherbo_tower_best_score');
+      const parsed = saved ? parseInt(saved, 10) : 0;
+      return Math.max(parsed, xpPoints);
+    } catch {
+      return xpPoints;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('sherbo_tower_best_score');
+      const prev = saved ? parseInt(saved, 10) : 0;
+      if (xpPoints > prev) {
+        localStorage.setItem('sherbo_tower_best_score', xpPoints.toString());
+        setBestScore(xpPoints);
+      }
+    } catch {
+      // Ignore localStorage errors
+    }
+  }, [xpPoints]);
 
   // Staged celebration choreography:
   // 0: Initial mount + Confetti explosion
@@ -639,7 +683,7 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
         ctx.restore();
       }
 
-      // Top Row: 3 Stars on left + Climber Rank Badge on right
+      // Top Row: 3 Stars on left
       const starSpacing = 28;
       for (let s = 0; s < 3; s++) {
         const sx = textStartX + s * starSpacing + 14;
@@ -656,72 +700,17 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
         );
       }
 
-      // Rank & Title Pill next to the stars
-      const rankPillX = textStartX + 3 * starSpacing + 32;
-      const rankPillY = cardY + 22;
-      const rankPillH = 34;
-      const rankPillW = 340;
-
-      ctx.fillStyle = tierConfig.badgeBg;
-      ctx.beginPath();
-      ctx.roundRect(rankPillX, rankPillY, rankPillW, rankPillH, 999);
-      ctx.fill();
-      ctx.lineWidth = 2.5;
-      ctx.strokeStyle = tierConfig.badgeBorder;
-      ctx.stroke();
-
-      ctx.fillStyle = tierConfig.badgeTextColor;
-      ctx.font = '700 16px "Fredoka", sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText(
-        tierConfig.badgeTag,
-        rankPillX + rankPillW / 2,
-        rankPillY + 23
-      );
-
       // Title: Hero Headline
       ctx.fillStyle = '#1b2a53';
-      ctx.font = '700 44px "Fredoka", sans-serif';
+      ctx.font = '700 46px "Fredoka", sans-serif';
       ctx.textAlign = 'left';
-      ctx.fillText(tierConfig.heroHeadline, textStartX, cardY + 98);
+      ctx.fillText(tierConfig.heroHeadline, textStartX, cardY + 96);
 
-      // Speech Bubble: Sherbo's Quote
-      const bubbleX = textStartX;
-      const bubbleY = cardY + 114;
-      const bubbleW = textMaxW;
-      const bubbleH = 48;
-      const bubbleR = 14;
-
-      ctx.save();
-      // White bubble background
-      ctx.fillStyle = '#ffffff';
-      ctx.beginPath();
-      ctx.roundRect(bubbleX, bubbleY, bubbleW, bubbleH, bubbleR);
-      ctx.fill();
-      ctx.lineWidth = 2.5;
-      ctx.strokeStyle = '#1b2a53';
-      ctx.stroke();
-
-      // Tail pointing left towards Sherbo
-      ctx.fillStyle = '#ffffff';
-      ctx.beginPath();
-      ctx.moveTo(bubbleX, bubbleY + 14);
-      ctx.lineTo(bubbleX - 14, bubbleY + 24);
-      ctx.lineTo(bubbleX, bubbleY + 34);
-      ctx.closePath();
-      ctx.fill();
-      ctx.beginPath();
-      ctx.moveTo(bubbleX, bubbleY + 14);
-      ctx.lineTo(bubbleX - 14, bubbleY + 24);
-      ctx.lineTo(bubbleX, bubbleY + 34);
-      ctx.stroke();
-
-      // Quote text inside bubble
-      ctx.fillStyle = '#1b2a53';
-      ctx.font = '600 17px "Fredoka", sans-serif';
+      // Subtitle
+      ctx.fillStyle = '#576582';
+      ctx.font = '600 20px "Fredoka", sans-serif';
       ctx.textAlign = 'left';
-      ctx.fillText(`“${tierConfig.quote}”`, bubbleX + 16, bubbleY + 31);
-      ctx.restore();
+      ctx.fillText(tierConfig.subtitle, textStartX, cardY + 132);
 
       // 4. Hero Final Score Banner (White 3D Arcade Box with XP & Speed Breakdown)
       const bannerX = cardX + 36;
@@ -791,7 +780,7 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
 
       // 5. Four Tactile 3D Arcade Power-Block Stat Tiles (2x2 Grid)
       const stats: Array<{
-        type: 'steps' | 'gates' | 'time' | 'combos';
+        type: 'best' | 'grade' | 'time' | 'combos';
         label: string;
         val: string;
         border: string;
@@ -799,36 +788,36 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
         badgeBg: string;
       }> = [
         {
-          type: 'steps',
-          label: 'Steps Climbed',
-          val: `${towerConfig.totalSteps} / ${towerConfig.totalSteps}`,
-          border: '#3f9f9b',
-          lip: '#286d6a',
-          badgeBg: '#e6f7f5',
-        },
-        {
-          type: 'gates',
-          label: 'Gates Unlocked',
-          val: `${completedCheckpointsCount} / ${towerConfig.numberOfCheckpoints}`,
-          border: '#10b981',
-          lip: '#047857',
-          badgeBg: '#ecfdf5',
-        },
-        {
-          type: 'time',
-          label: 'Stopwatch Time',
-          val: `${formatStopwatchTime(elapsedTime)}`,
+          type: 'best',
+          label: 'Best Score',
+          val: `${bestScore.toLocaleString()} XP`,
           border: '#ee7b3c',
           lip: '#b85720',
           badgeBg: '#fff4ea',
         },
         {
-          type: 'combos',
-          label: '1st-Try Combos',
-          val: `${firstTryCount} / ${towerConfig.numberOfCheckpoints}`,
+          type: 'grade',
+          label: 'Letter Grade',
+          val: `${tierConfig.letterGrade}`,
           border: '#7e57d8',
           lip: '#5733a8',
           badgeBg: '#f3effd',
+        },
+        {
+          type: 'time',
+          label: 'Total Time',
+          val: `${formatStopwatchTime(elapsedTime)}`,
+          border: '#3f9f9b',
+          lip: '#286d6a',
+          badgeBg: '#e6f7f5',
+        },
+        {
+          type: 'combos',
+          label: '1st-Try Combos',
+          val: `${firstTryCount} / ${towerConfig.numberOfCheckpoints}`,
+          border: '#10b981',
+          lip: '#047857',
+          badgeBg: '#ecfdf5',
         },
       ];
 
@@ -995,17 +984,10 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
                   </span>
                 ))}
               </div>
-              <div className="climber-rank-badge badge-stamped">
-                <span className="rank-badge-tag">{tierConfig.badgeTag}</span>
-              </div>
             </div>
 
             <h1 className="completion-title">{tierConfig.heroHeadline}</h1>
-
-            <div className="sherbo-speech-bubble">
-              <span className="speech-quote-icon">💬</span>
-              <p className="sherbo-quote-text">"{tierConfig.quote}"</p>
-            </div>
+            <p className="completion-subtitle">{tierConfig.subtitle}</p>
           </div>
         </div>
 
@@ -1030,44 +1012,44 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
         <div className="stats-summary-grid">
           <div
             className="stat-box stat-box-teal"
-            data-testid="stat-steps-completed"
+            data-testid="stat-best-score"
           >
-            <Sparkles size={18} className="icon-cyan" />
+            <Trophy size={18} className="icon-gold" />
             <div className="stat-box-val">
-              {towerConfig.totalSteps} / {towerConfig.totalSteps}
+              {bestScore.toLocaleString()} XP
             </div>
-            <div className="stat-box-label">Steps Climbed</div>
+            <div className="stat-box-label">Best Score</div>
           </div>
 
           <div
             className="stat-box stat-box-emerald"
-            data-testid="stat-checkpoints-passed"
+            data-testid="stat-letter-grade"
           >
-            <CheckCircle size={18} className="icon-emerald" />
-            <div className="stat-box-val">
-              {completedCheckpointsCount} / {towerConfig.numberOfCheckpoints}
+            <Award size={18} className="icon-purple" />
+            <div className="stat-box-val stat-box-grade">
+              {tierConfig.letterGrade}
             </div>
-            <div className="stat-box-label">Gates Unlocked</div>
+            <div className="stat-box-label">Letter Grade</div>
           </div>
 
           <div
             className="stat-box stat-box-orange"
             data-testid="stat-clear-time"
           >
-            <Timer size={18} className="icon-gold" />
+            <Timer size={18} className="icon-cyan" />
             <div className="stat-box-val">{formatStopwatchTime(elapsedTime)}</div>
-            <div className="stat-box-label">Clear Time</div>
+            <div className="stat-box-label">Total Time</div>
           </div>
 
           <div
             className="stat-box stat-box-violet"
             data-testid="stat-first-try"
           >
-            <Trophy size={18} className="icon-purple" />
+            <Zap size={18} className="icon-amber" />
             <div className="stat-box-val">
               {firstTryCount} / {towerConfig.numberOfCheckpoints}
             </div>
-            <div className="stat-box-label">1st-Try Combos</div>
+            <div className="stat-box-label">1st Try Combos</div>
           </div>
         </div>
 

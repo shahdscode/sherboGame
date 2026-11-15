@@ -1682,6 +1682,11 @@ kbd {
   color: #1b2a53;
 }
 
+.stat-box-grade {
+  font-size: 1.35rem;
+  letter-spacing: 0.8px;
+}
+
 .stat-box-label {
   font-size: 0.74rem;
   font-weight: 600;
