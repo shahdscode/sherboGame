@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Flag, Footprints, Zap, Compass, Timer, Volume2, VolumeX, Flame } from 'lucide-react';
+import { Flag, Footprints, Zap, Timer, Volume2, VolumeX, Flame } from 'lucide-react';
 import { CheckpointStateItem } from '../hooks/useTowerGame';
 import { towerConfig, formatStopwatchTime } from '../data/towerConfig';
 import { sfx } from '../game/sfx';
@@ -7,8 +7,8 @@ import { sfx } from '../game/sfx';
 interface GameHUDProps {
   currentStep: number;
   completedCheckpointsCount: number;
-  activeCheckpointNumber: number | null;
-  checkpoints: CheckpointStateItem[];
+  activeCheckpointNumber?: number | null;
+  checkpoints?: CheckpointStateItem[];
   xpPoints: number;
   elapsedTime: number;
   currentStreak?: number;
@@ -22,8 +22,6 @@ interface FloatingGain {
 export const GameHUD: React.FC<GameHUDProps> = ({
   currentStep,
   completedCheckpointsCount,
-  activeCheckpointNumber,
-  checkpoints,
   xpPoints,
   elapsedTime,
   currentStreak = 0,
@@ -64,15 +62,6 @@ export const GameHUD: React.FC<GameHUDProps> = ({
     }
   };
 
-  const nextActiveCheckpoint = checkpoints.find((c) => c.status === 'active');
-
-  const currentTargetLabel =
-    activeCheckpointNumber !== null
-      ? `CP ${activeCheckpointNumber}`
-      : nextActiveCheckpoint
-        ? `CP ${nextActiveCheckpoint.checkpointNumber}`
-        : 'Finish Line';
-
   return (
     <>
       <header
@@ -97,14 +86,6 @@ export const GameHUD: React.FC<GameHUDProps> = ({
             <span className="stat-value">
               {completedCheckpointsCount} / {towerConfig.numberOfCheckpoints}
             </span>
-          </div>
-        </div>
-
-        <div className="hud-stat-pill" data-testid="hud-current-target">
-          <Compass size={16} className="icon-emerald" />
-          <div>
-            <span className="stat-label">Target</span>
-            <span className="stat-value">{currentTargetLabel}</span>
           </div>
         </div>
 
