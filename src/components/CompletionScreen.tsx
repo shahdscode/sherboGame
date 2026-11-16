@@ -577,10 +577,10 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
 
       // 2. Top Showcase: Framed Live Summit Scene Window
       const winX = 48;
-      const winY = 46;
+      const winY = 44;
       const winW = outW - 96; // 984
-      const winH = 492;
-      const winR = 28;
+      const winH = 460;
+      const winR = 26;
 
       // Window 3D shadow
       ctx.fillStyle = '#070c1a';
@@ -665,10 +665,10 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
 
       // 3. Bottom Showcase: Tactile 3D Arcade Score Card
       const cardX = 48;
-      const cardY = 514;
+      const cardY = 530;
       const cardW = outW - 96; // 984
-      const cardH = 774;
-      const cardR = 32;
+      const cardH = 750;
+      const cardR = 30;
 
       // Card 3D solid bottom lip + drop shadow
       ctx.fillStyle = 'rgba(5, 10, 22, 0.55)';
@@ -700,24 +700,25 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
       ctx.stroke();
       ctx.restore();
 
-      // Header Row: Celebratory Sherbo Sticker + Stars & Rank Badge + Title + Speech Bubble Quote
-      const textStartX = cardX + 288;
-      const textMaxW = cardW - 324; // 660px
+      // Header Row: Celebratory Sherbo Sticker + Stars + Title
+      const textStartX = cardX + 260;
+      const textMaxW = cardW - 296; // 688px
+      const textCenterX = textStartX + textMaxW / 2;
 
       if (stickerImg) {
         // Soft glow halo behind Sherbo sticker
-        const haloX = cardX + 152;
-        const haloY = cardY + 86;
-        const haloGrad = ctx.createRadialGradient(haloX, haloY, 12, haloX, haloY, 105);
+        const haloX = cardX + 138;
+        const haloY = cardY + 74;
+        const haloGrad = ctx.createRadialGradient(haloX, haloY, 12, haloX, haloY, 95);
         haloGrad.addColorStop(0, 'rgba(238, 123, 60, 0.32)');
         haloGrad.addColorStop(1, 'rgba(238, 123, 60, 0)');
         ctx.fillStyle = haloGrad;
         ctx.beginPath();
-        ctx.arc(haloX, haloY, 105, 0, Math.PI * 2);
+        ctx.arc(haloX, haloY, 95, 0, Math.PI * 2);
         ctx.fill();
 
         // Draw sticker popping slightly above the card border!
-        const stickerSize = 196;
+        const stickerSize = 176;
         ctx.save();
         ctx.shadowColor = 'rgba(27, 42, 83, 0.28)';
         ctx.shadowBlur = 18;
@@ -725,18 +726,18 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
         ctx.drawImage(
           stickerImg,
           haloX - stickerSize / 2,
-          cardY - 26,
+          cardY - 14,
           stickerSize,
           stickerSize
         );
         ctx.restore();
       }
 
-      // Top Row: 3 Stars on left
-      const starSpacing = 28;
+      // Top Row: 3 Stars centered above title
+      const starSpacing = 32;
       for (let s = 0; s < 3; s++) {
-        const sx = textStartX + s * starSpacing + 14;
-        const sy = cardY + 38;
+        const sx = textCenterX + (s - 1) * starSpacing;
+        const sy = cardY + 36;
         const earned = s < starCount;
         drawStar(
           ctx,
@@ -749,23 +750,17 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
         );
       }
 
-      // Title: Hero Headline
+      // Title: "Sherbo's Tower" centered in title card
       ctx.fillStyle = '#1b2a53';
-      ctx.font = '700 46px "Fredoka", sans-serif';
-      ctx.textAlign = 'left';
-      ctx.fillText(tierConfig.heroHeadline, textStartX, cardY + 96);
-
-      // Subtitle
-      ctx.fillStyle = '#576582';
-      ctx.font = '600 20px "Fredoka", sans-serif';
-      ctx.textAlign = 'left';
-      ctx.fillText(tierConfig.subtitle, textStartX, cardY + 132);
+      ctx.font = '700 48px "Fredoka", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText("Sherbo's Tower", textCenterX, cardY + 98);
 
       // 4. Hero Final Score Banner (White 3D Arcade Box with XP & Speed Breakdown)
       const bannerX = cardX + 36;
-      const bannerY = cardY + 178;
+      const bannerY = cardY + 138;
       const bannerW = cardW - 72; // 912
-      const bannerH = 166;
+      const bannerH = 162;
       const bannerR = 24;
 
       // 3D colored bottom lip
@@ -871,11 +866,11 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
       ];
 
       const gridStartX = cardX + 36;
-      const gridStartY = cardY + 368;
+      const gridStartY = cardY + 324;
       const gapX = 24;
-      const gapY = 24;
+      const gapY = 20;
       const boxW = (cardW - 72 - gapX) / 2; // 444
-      const boxH = 132;
+      const boxH = 130;
       const boxR = 22;
 
       stats.forEach((st, i) => {
@@ -1035,8 +1030,7 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
               </div>
             </div>
 
-            <h1 className="completion-title">{tierConfig.heroHeadline}</h1>
-            <p className="completion-subtitle">{tierConfig.subtitle}</p>
+            <h1 className="completion-title">Sherbo's Tower</h1>
           </div>
         </div>
 
