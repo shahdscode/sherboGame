@@ -504,7 +504,7 @@ body,
 
 .grade-item {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 10px;
   background: rgba(12, 20, 38, 0.72);
   border: 1.5px solid rgba(255, 255, 255, 0.1);

@@ -152,7 +152,6 @@ export const StartScreen: React.FC<StartScreenProps> = ({
                         {g.minXp > 0 ? `${g.minXp.toLocaleString()}+ XP` : '< 1,700 XP'}
                       </span>
                     </div>
-                    <p className="grade-desc">{g.description}</p>
                   </div>
                 </div>
               ))}
