@@ -622,21 +622,9 @@ body,
 
 .grade-details {
   display: flex;
-  flex-direction: column;
-  justify-content: center;
+  align-items: center;
   flex: 1;
   min-width: 0;
-  gap: 2px;
-}
-
-.grade-title-row {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
-  line-height: 1.18;
-  min-width: 0;
-  width: 100%;
 }
 
 .grade-rank-title {
@@ -645,20 +633,6 @@ body,
   font-weight: 800;
   color: #ffffff;
   letter-spacing: 0.2px;
-  line-height: 1.2;
-}
-
-.grade-xp-req {
-  font-family: var(--font-display);
-  font-size: 0.70rem;
-  font-weight: 700;
-  color: #ffcc00;
-  background: rgba(255, 204, 0, 0.14);
-  border: 1px solid rgba(255, 204, 0, 0.35);
-  padding: 1px 6px;
-  border-radius: 999px;
-  white-space: nowrap;
-  display: inline-block;
   line-height: 1.2;
 }
 
@@ -686,6 +660,28 @@ body,
 .info-box p {
   color: #cbd5e1;
   margin: 0;
+}
+
+.controls-compact-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.controls-compact-list .control-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  font-size: 0.84rem;
+  color: #cbd5e1;
+}
+
+.control-jump-hint {
+  font-size: 0.82rem;
+  color: #94a3b8;
+  font-weight: 600;
+  letter-spacing: 0.2px;
 }
 
 .controls-list {
@@ -2619,68 +2615,98 @@ kbd {
   }
 
   .start-hero-banner {
-    padding: 12px 14px;
-    gap: 14px;
+    padding: 8px 12px;
+    gap: 12px;
   }
 
   .start-hero-sticker-wrap {
-    width: 96px;
-    height: 96px;
-    margin-top: -14px;
-    margin-bottom: -10px;
-    margin-left: -4px;
+    width: 68px;
+    height: 68px;
+    margin-top: -10px;
+    margin-bottom: -8px;
+    margin-left: -2px;
   }
 
   .start-hero-sticker {
-    width: 104px;
-    height: 104px;
+    width: 76px;
+    height: 76px;
+  }
+
+  .start-hero-text .game-title {
+    font-size: 1.5rem;
   }
 
   .info-grid {
     grid-template-columns: 1fr;
-    gap: 8px;
+    gap: 6px;
+  }
+
+  .info-box {
+    padding: 8px 11px;
+    border-radius: 13px;
+  }
+
+  .info-box.info-box-grades {
+    padding: 8px 11px;
+  }
+
+  .info-box-header {
+    margin-bottom: 5px;
+    gap: 6px;
+  }
+
+  .info-box-header h3 {
+    font-size: 0.94rem;
+  }
+
+  .info-box p {
+    font-size: 0.80rem;
+    line-height: 1.34;
+  }
+
+  .controls-compact-list {
+    gap: 4px;
+  }
+
+  .controls-compact-list .control-row {
+    gap: 7px;
+    font-size: 0.80rem;
+  }
+
+  .control-jump-hint {
+    font-size: 0.76rem;
   }
 
   .grades-list {
     grid-template-columns: repeat(2, 1fr);
-    gap: 7px 8px;
+    gap: 5px 6px;
+    margin-top: 2px;
   }
 
   .grade-item {
-    padding: 7px 9px;
-    gap: 8px;
-    border-radius: 10px;
+    padding: 5px 8px;
+    gap: 7px;
+    border-radius: 9px;
   }
 
   .grade-badge {
-    width: 32px;
-    height: 32px;
-    font-size: 0.92rem;
-    border-radius: 8px;
-  }
-
-  .grade-title-row {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 2px;
+    width: 27px;
+    height: 27px;
+    font-size: 0.84rem;
+    border-radius: 7px;
   }
 
   .grade-rank-title {
-    font-size: 0.82rem;
+    font-size: 0.78rem;
     font-weight: 800;
     color: #ffffff;
-    line-height: 1.18;
+    line-height: 1.15;
     white-space: normal;
   }
 
-  .grade-xp-req {
-    font-size: 0.68rem;
-    padding: 1px 5px;
-  }
-
   .modal-card {
-    padding: 13px 15px;
-    gap: 9px;
+    padding: 12px 14px;
+    gap: 8px;
     border-radius: 18px;
   }
 
