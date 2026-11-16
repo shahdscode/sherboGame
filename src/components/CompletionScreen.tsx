@@ -1238,7 +1238,7 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
 
           <button
             type="button"
-            className="secondary-cta-btn play-again-btn"
+            className="primary-cta-btn play-again-btn"
             onClick={onPlayAgain}
             disabled={isExporting}
             data-testid="play-again-btn"
