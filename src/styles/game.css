@@ -456,16 +456,195 @@ body,
   box-shadow: 0 4px 0 #0a1020;
 }
 
-.info-box.info-box-rules,
-.info-box:first-child {
+.info-box.info-box-rules {
   border-color: #ff7828;
   box-shadow: 0 4px 0 #8f3a09;
 }
 
-.info-box.info-box-controls,
-.info-box:last-child {
+.info-box.info-box-controls {
   border-color: #00e5ff;
   box-shadow: 0 4px 0 #006d7d;
+}
+
+.info-box.info-box-grades {
+  grid-column: 1 / -1;
+  border-color: #c084fc;
+  box-shadow: 0 4px 0 #6b21a8;
+  padding: 14px 16px;
+}
+
+.grades-list {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.grade-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: rgba(12, 20, 38, 0.72);
+  border: 1.5px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 8px 10px;
+  transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+
+.grade-item:hover {
+  transform: translateY(-1px);
+}
+
+.grade-item.grade-s-plus {
+  border-color: rgba(250, 204, 21, 0.45);
+}
+.grade-item.grade-s-plus:hover {
+  border-color: #facc15;
+  box-shadow: 0 0 12px rgba(250, 204, 21, 0.25);
+}
+
+.grade-item.grade-s {
+  border-color: rgba(245, 158, 11, 0.4);
+}
+.grade-item.grade-s:hover {
+  border-color: #f59e0b;
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.2);
+}
+
+.grade-item.grade-a {
+  border-color: rgba(34, 197, 94, 0.4);
+}
+.grade-item.grade-a:hover {
+  border-color: #22c55e;
+  box-shadow: 0 0 12px rgba(34, 197, 94, 0.2);
+}
+
+.grade-item.grade-b {
+  border-color: rgba(2, 132, 199, 0.4);
+}
+.grade-item.grade-b:hover {
+  border-color: #0284c7;
+  box-shadow: 0 0 12px rgba(2, 132, 199, 0.2);
+}
+
+.grade-item.grade-c {
+  border-color: rgba(168, 85, 247, 0.4);
+}
+.grade-item.grade-c:hover {
+  border-color: #a855f7;
+  box-shadow: 0 0 12px rgba(168, 85, 247, 0.2);
+}
+
+.grade-item.grade-d {
+  border-color: rgba(244, 63, 94, 0.4);
+}
+.grade-item.grade-d:hover {
+  border-color: #f43f5e;
+  box-shadow: 0 0 12px rgba(244, 63, 94, 0.2);
+}
+
+.grade-badge-wrap {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.grade-badge {
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 800;
+  min-width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  border: 1.5px solid;
+  letter-spacing: 0.5px;
+}
+
+.grade-s-plus .grade-badge {
+  background: linear-gradient(135deg, #fef08a 0%, #facc15 100%);
+  color: #78350f;
+  border-color: #f59e0b;
+  box-shadow: 0 0 10px rgba(250, 204, 21, 0.4);
+}
+
+.grade-s .grade-badge {
+  background: #fff7ed;
+  color: #c2410c;
+  border-color: #ea580c;
+}
+
+.grade-a .grade-badge {
+  background: #f0fdf4;
+  color: #166534;
+  border-color: #22c55e;
+}
+
+.grade-b .grade-badge {
+  background: #f0f9ff;
+  color: #0369a1;
+  border-color: #0284c7;
+}
+
+.grade-c .grade-badge {
+  background: #f5f3ff;
+  color: #6d28d9;
+  border-color: #8b5cf6;
+}
+
+.grade-d .grade-badge {
+  background: #fff1f2;
+  color: #be123c;
+  border-color: #f43f5e;
+}
+
+.grade-details {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  gap: 2px;
+}
+
+.grade-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  line-height: 1.2;
+}
+
+.grade-rank-title {
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.grade-xp-req {
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #ffcc00;
+  background: rgba(255, 204, 0, 0.12);
+  border: 1px solid rgba(255, 204, 0, 0.3);
+  padding: 1px 6px;
+  border-radius: 999px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.grade-desc {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  line-height: 1.32;
+  margin: 0;
 }
 
 .info-box-header {
@@ -2414,6 +2593,16 @@ kbd {
 
   .info-grid {
     grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .grades-list {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .grade-item {
+    padding: 7px 9px;
     gap: 8px;
   }
 

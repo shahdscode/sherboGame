@@ -70,15 +70,58 @@ export interface PerformanceGradeInfo {
   minXp: number;
   badgeTag: string;
   themeClass: string;
+  description: string;
 }
 
 export const PERFORMANCE_GRADES: PerformanceGradeInfo[] = [
-  { grade: 'S+', title: 'Tower Legend', minXp: 3500, badgeTag: 'RANK S+ • TOWER LEGEND', themeClass: 'theme-legendary' },
-  { grade: 'S', title: 'Master Climber', minXp: 3200, badgeTag: 'RANK S • MASTER CLIMBER', themeClass: 'theme-gold' },
-  { grade: 'A', title: 'Elite Explorer', minXp: 2800, badgeTag: 'RANK A • ELITE EXPLORER', themeClass: 'theme-gold' },
-  { grade: 'B', title: 'Skilled Adventurer', minXp: 2300, badgeTag: 'RANK B • SKILLED ADVENTURER', themeClass: 'theme-silver' },
-  { grade: 'C', title: 'Rising Climber', minXp: 1700, badgeTag: 'RANK C • RISING CLIMBER', themeClass: 'theme-silver' },
-  { grade: 'D', title: 'Apprentice', minXp: 0, badgeTag: 'RANK D • APPRENTICE', themeClass: 'theme-comeback' },
+  {
+    grade: 'S+',
+    title: 'Tower Legend',
+    minXp: 3500,
+    badgeTag: 'RANK S+ • TOWER LEGEND',
+    themeClass: 'theme-legendary',
+    description: 'Flawless run with 1st-try combos, maximum speed bonus, and peak perfection.',
+  },
+  {
+    grade: 'S',
+    title: 'Master Climber',
+    minXp: 3200,
+    badgeTag: 'RANK S • MASTER CLIMBER',
+    themeClass: 'theme-gold',
+    description: 'Outstanding precision and blazing speed with high combo streaks.',
+  },
+  {
+    grade: 'A',
+    title: 'Elite Explorer',
+    minXp: 2800,
+    badgeTag: 'RANK A • ELITE EXPLORER',
+    themeClass: 'theme-gold',
+    description: 'Remarkable skill, consistent correct answers, and fast gate clears.',
+  },
+  {
+    grade: 'B',
+    title: 'Skilled Adventurer',
+    minXp: 2300,
+    badgeTag: 'RANK B • SKILLED ADVENTURER',
+    themeClass: 'theme-silver',
+    description: 'Resilient climbing, tackling gate challenges with a steady pace.',
+  },
+  {
+    grade: 'C',
+    title: 'Rising Climber',
+    minXp: 1700,
+    badgeTag: 'RANK C • RISING CLIMBER',
+    themeClass: 'theme-silver',
+    description: 'Conquered the tower checkpoints and successfully reached the summit.',
+  },
+  {
+    grade: 'D',
+    title: 'Apprentice',
+    minXp: 0,
+    badgeTag: 'RANK D • APPRENTICE',
+    themeClass: 'theme-comeback',
+    description: 'Reached the finish line! Keep climbing to sharpen speed and combos.',
+  },
 ];
 
 export function getPerformanceGrade(totalXp: number): PerformanceGradeInfo {

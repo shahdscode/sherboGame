@@ -8,7 +8,9 @@ import {
   Gamepad2,
   Loader2,
   RotateCcw,
+  Award,
 } from 'lucide-react';
+import { PERFORMANCE_GRADES } from '../game/scoring';
 
 interface StartScreenProps {
   onStart: () => void;
@@ -127,6 +129,34 @@ export const StartScreen: React.FC<StartScreenProps> = ({
                 </div>
               </div>
             )}
+          </div>
+
+          <div className="info-box info-box-grades">
+            <div className="info-box-header">
+              <Award size={18} className="icon-purple" />
+              <h3>Letter Grades & Ranks</h3>
+            </div>
+            <div className="grades-list">
+              {PERFORMANCE_GRADES.map((g) => (
+                <div
+                  key={g.grade}
+                  className={`grade-item grade-${g.grade.toLowerCase().replace('+', '-plus')}`}
+                >
+                  <div className="grade-badge-wrap">
+                    <span className="grade-badge">{g.grade}</span>
+                  </div>
+                  <div className="grade-details">
+                    <div className="grade-title-row">
+                      <span className="grade-rank-title">{g.title}</span>
+                      <span className="grade-xp-req">
+                        {g.minXp > 0 ? `${g.minXp.toLocaleString()}+ XP` : '< 1,700 XP'}
+                      </span>
+                    </div>
+                    <p className="grade-desc">{g.description}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
