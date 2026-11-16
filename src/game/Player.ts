@@ -560,6 +560,17 @@ export class Player {
     this.syncVisualPosition();
   }
 
+  public setPosition(x: number, y: number): void {
+    this.sprite.setPosition(x, y);
+    const body = this.sprite.body as Phaser.Physics.Arcade.Body;
+    if (body) {
+      body.reset(x, y);
+      body.setVelocity(0, 0);
+      body.setAcceleration(0, 0);
+    }
+    this.syncVisualPosition();
+  }
+
   public update(delta: number, canControl: boolean): void {
     const body = this.sprite.body as Phaser.Physics.Arcade.Body;
     if (!body || !body.enable) {

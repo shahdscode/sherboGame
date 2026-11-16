@@ -33,6 +33,56 @@ let activeGame: Phaser.Game | null = null;
  * Uses Phaser's snapshot API so the WebGL canvas does not need `preserveDrawingBuffer`,
  * which costs a full-screen buffer copy on every single frame.
  */
+export interface SummitCropRect {
+  normX: number;
+  normY: number;
+  normW: number;
+  normH: number;
+}
+
+/**
+ * Calculates the exact normalized crop rectangle for the summit showcase window,
+ * showing exclusively the summit finish scene: both observatory windows, constellation lines,
+ * trophy cup with aura, character beside the cup, and the checkered finish line at the bottom.
+ */
+export function getSummitViewCrop(targetAspect: number = 1.7): SummitCropRect {
+  const fallback: SummitCropRect = {
+    normX: 0.04,
+    normY: 0.08,
+    normW: 0.92,
+    normH: 0.92 / targetAspect,
+  };
+  try {
+    const game = activeGame;
+    if (!game) return fallback;
+    const scene = game.scene.getScene('TowerScene') as TowerScene | null;
+    const cam = scene?.cameras?.main;
+    if (!cam || !cam.worldView || cam.worldView.height <= 0) return fallback;
+
+    const summitWorldY =
+      towerConfig.groundY - towerConfig.totalSteps * towerConfig.platformSpacingY; // 380
+
+    // Full width showing both observatory windows (left at x:130, right at x:590)
+    // Symmetrical span from x: 30 to 690 (worldW = 660, centered at 360).
+    const worldW = 660;
+    const worldLeft = (towerConfig.towerWidth - worldW) / 2; // 30
+
+    // Bottom is placed precisely below the checkered platform surface tiles
+    const worldBottom = summitWorldY + 22; // 402
+    const worldH = worldW / targetAspect;
+    const worldTop = worldBottom - worldH;
+
+    const normX = Math.max(0, (worldLeft - cam.worldView.x) / cam.worldView.width);
+    const normY = Math.max(0, (worldTop - cam.worldView.y) / cam.worldView.height);
+    const normW = Math.min(1 - normX, worldW / cam.worldView.width);
+    const normH = Math.min(1 - normY, worldH / cam.worldView.height);
+
+    return { normX, normY, normW, normH };
+  } catch {
+    return fallback;
+  }
+}
+
 export function getSummitViewRatios(): { summitRatioY: number; playerRatioX: number } {
   const fallback = { summitRatioY: 0.36, playerRatioX: 0.35 };
   try {
@@ -48,7 +98,7 @@ export function getSummitViewRatios(): { summitRatioY: number; playerRatioX: num
       0.18,
       0.75
     );
-    const playerWorldX = scene?.player?.sprite?.x ?? 260;
+    const playerWorldX = scene?.player?.sprite?.x ?? 388;
     const playerRatioX = Phaser.Math.Clamp(
       (playerWorldX - cam.worldView.x) / cam.worldView.width,
       0.15,
@@ -68,8 +118,21 @@ export function captureGameFrame(staticPose: boolean = false): Promise<HTMLImage
       return;
     }
     const scene = game.scene.getScene('TowerScene') as TowerScene | null;
-    if (staticPose && scene?.player) {
-      scene.player.setStaticVictoryFrame(true);
+    if (scene?.player) {
+      if (staticPose) {
+        scene.player.setStaticVictoryFrame(true);
+      }
+      // Ensure character is standing right beside the trophy cup for the snapshot
+      const summitPlatform = scene.platformManager?.getPlatform(
+        towerConfig.totalSteps
+      );
+      if (summitPlatform) {
+        const centerX = towerConfig.towerWidth / 2;
+        scene.player.setPosition(
+          centerX + 28,
+          summitPlatform.y - towerConfig.player.height / 2
+        );
+      }
     }
 
     let settled = false;

@@ -1657,7 +1657,7 @@ kbd {
 
 .completion-title {
   font-family: var(--font-display);
-  font-size: 1.42rem;
+  font-size: 1.62rem;
   font-weight: 800;
   text-align: center;
   color: #1b2a53;
@@ -1895,7 +1895,7 @@ kbd {
     height: 66px;
   }
   .completion-title {
-    font-size: 1.35rem;
+    font-size: 1.48rem;
   }
   .xp-reward-banner {
     padding: 10px 14px;
@@ -1954,7 +1954,7 @@ kbd {
     height: 56px;
   }
   .completion-title {
-    font-size: 1.2rem;
+    font-size: 1.32rem;
   }
   .xp-banner-score {
     font-size: 1.4rem;
@@ -2007,7 +2007,7 @@ kbd {
     height: 72px;
   }
   .completion-title {
-    font-size: 1.4rem;
+    font-size: 1.54rem;
     text-align: center;
   }
   .xp-reward-banner {
@@ -2067,7 +2067,7 @@ kbd {
     height: 58px;
   }
   .completion-title {
-    font-size: 1.22rem;
+    font-size: 1.34rem;
   }
   .xp-banner-score {
     font-size: 1.45rem;
