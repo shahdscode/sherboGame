@@ -492,24 +492,21 @@ body,
 .grades-list {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
+  gap: 6px 8px;
   margin-top: 4px;
-}
-
-@media (max-width: 768px) and (min-width: 541px) {
-  .grades-list {
-    grid-template-columns: repeat(2, 1fr);
-  }
 }
 
 .grade-item {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
   background: rgba(12, 20, 38, 0.72);
   border: 1.5px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  padding: 8px 10px;
+  border-radius: 10px;
+  padding: 6px 8px;
+  box-sizing: border-box;
+  min-width: 0;
+  overflow: hidden;
   transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
 }
 
@@ -574,16 +571,17 @@ body,
 
 .grade-badge {
   font-family: var(--font-display);
-  font-size: 0.95rem;
+  font-size: 0.88rem;
   font-weight: 800;
-  min-width: 34px;
-  height: 34px;
+  width: 30px;
+  height: 30px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 9px;
+  border-radius: 8px;
   border: 1.5px solid;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
+  flex-shrink: 0;
 }
 
 .grade-s-plus .grade-badge {
@@ -626,22 +624,24 @@ body,
 .grade-details {
   display: flex;
   flex-direction: column;
+  justify-content: center;
   flex: 1;
   min-width: 0;
-  gap: 2px;
+  gap: 1px;
 }
 
 .grade-title-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 6px;
-  line-height: 1.2;
+  gap: 4px;
+  line-height: 1.15;
+  min-width: 0;
 }
 
 .grade-rank-title {
   font-family: var(--font-display);
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   font-weight: 800;
   color: #ffffff;
   white-space: nowrap;
@@ -651,12 +651,12 @@ body,
 
 .grade-xp-req {
   font-family: var(--font-display);
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   font-weight: 700;
   color: #ffcc00;
-  background: rgba(255, 204, 0, 0.12);
-  border: 1px solid rgba(255, 204, 0, 0.3);
-  padding: 1px 6px;
+  background: rgba(255, 204, 0, 0.14);
+  border: 1px solid rgba(255, 204, 0, 0.35);
+  padding: 1px 5px;
   border-radius: 999px;
   white-space: nowrap;
   flex-shrink: 0;
@@ -2619,13 +2619,28 @@ kbd {
   }
 
   .grades-list {
-    grid-template-columns: 1fr;
-    gap: 6px;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 5px 6px;
   }
 
   .grade-item {
-    padding: 7px 9px;
-    gap: 8px;
+    padding: 5px 6px;
+    gap: 5px;
+  }
+
+  .grade-badge {
+    width: 25px;
+    height: 25px;
+    font-size: 0.78rem;
+  }
+
+  .grade-rank-title {
+    font-size: 0.72rem;
+  }
+
+  .grade-xp-req {
+    font-size: 0.62rem;
+    padding: 1px 4px;
   }
 
   .modal-card {
