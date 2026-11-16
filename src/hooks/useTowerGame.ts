@@ -13,6 +13,10 @@ import {
   selectSessionQuestions,
   fetchQuestionsFromPublic,
 } from '../data/questionBank';
+import {
+  notifyPlatformGameCompleted,
+  setupPlatformMessageListener,
+} from '../utils/platformBridge.ts';
 import { gameEvents, TouchInputState } from '../game/EventBus';
 import { sfx } from '../game/sfx';
 import {
@@ -20,6 +24,7 @@ import {
   ScoringState,
   createInitialScoringState,
   calculateGateQuestionXp,
+  getPerformanceGrade,
 } from '../game/scoring';
 
 export interface CheckpointStateItem {
@@ -112,6 +117,7 @@ export function useTowerGame(
     scoringEngineRef.current.getState()
   );
   const questionStartTimeRef = useRef<number | null>(null);
+  const hasNotifiedPlatformRef = useRef<boolean>(false);
 
   // The Start button stays locked until the Phaser scene has loaded its assets
   const [sceneReady, setSceneReady] = useState<boolean>(gameEvents.sceneReady);
@@ -242,7 +248,23 @@ export function useTowerGame(
       setSpeedBonus(updated.speedXp);
       setXpPoints(updated.totalXp);
       setGameState('COMPLETED');
+
+      // Send the true completion flag to the host educational platform
+      if (!hasNotifiedPlatformRef.current) {
+        hasNotifiedPlatformRef.current = true;
+        const gradeInfo = getPerformanceGrade(updated.totalXp);
+        notifyPlatformGameCompleted({
+          score: updated.totalXp,
+          grade: gradeInfo.grade,
+          gradeName: gradeInfo.title,
+          elapsedTimeSeconds: finalElapsed,
+          totalAttempts: updated.totalAttempts,
+          firstTryCount: firstTryCount,
+        });
+      }
     });
+
+    const unsubPlatform = setupPlatformMessageListener(() => hasNotifiedPlatformRef.current);
 
     return () => {
       unsubReady();
@@ -253,6 +275,7 @@ export function useTowerGame(
       unsubSectionUnlocked();
       unsubSummitReached();
       unsubSummitCelebrated();
+      unsubPlatform();
     };
   }, []);
 
@@ -472,6 +495,7 @@ export function useTowerGame(
   const restartGame = useCallback(() => {
     sfx.click();
     isSubmittingRef.current = false;
+    hasNotifiedPlatformRef.current = false;
     scoringEngineRef.current.reset();
     setScoringState(scoringEngineRef.current.getState());
     setCurrentStep(0);
