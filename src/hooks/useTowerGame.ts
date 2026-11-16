@@ -66,6 +66,7 @@ export function useTowerGame(
   const [firstTryCount, setFirstTryCount] = useState<number>(0);
   const [xpPoints, setXpPoints] = useState<number>(0);
   const [elapsedTime, setElapsedTime] = useState<number>(0);
+  const elapsedTimeRef = useRef<number>(0);
   const [speedBonus, setSpeedBonus] = useState<number>(0);
 
   // Centralized Scoring Engine (single source of truth for scoring)
@@ -181,18 +182,28 @@ export function useTowerGame(
       }
     );
 
-    const unsubSummit = gameEvents.on('evt:summit-celebrated', () => {
-      setElapsedTime((currentElapsed) => {
-        scoringEngineRef.current.recordSummitCompletion(
-          currentElapsed,
-          towerConfig.numberOfCheckpoints
-        );
-        const updated = scoringEngineRef.current.getState();
-        setScoringState(updated);
-        setSpeedBonus(updated.speedXp);
-        setXpPoints(updated.totalXp);
-        return currentElapsed;
-      });
+    const unsubSummitReached = gameEvents.on('evt:summit-reached', () => {
+      const finalElapsed = elapsedTimeRef.current;
+      scoringEngineRef.current.recordSummitCompletion(
+        finalElapsed,
+        towerConfig.numberOfCheckpoints
+      );
+      const updated = scoringEngineRef.current.getState();
+      setScoringState(updated);
+      setSpeedBonus(updated.speedXp);
+      setXpPoints(updated.totalXp);
+    });
+
+    const unsubSummitCelebrated = gameEvents.on('evt:summit-celebrated', () => {
+      const finalElapsed = elapsedTimeRef.current;
+      scoringEngineRef.current.recordSummitCompletion(
+        finalElapsed,
+        towerConfig.numberOfCheckpoints
+      );
+      const updated = scoringEngineRef.current.getState();
+      setScoringState(updated);
+      setSpeedBonus(updated.speedXp);
+      setXpPoints(updated.totalXp);
       setGameState('COMPLETED');
     });
 
@@ -203,7 +214,8 @@ export function useTowerGame(
       unsubStep();
       unsubCheckpoint();
       unsubSectionUnlocked();
-      unsubSummit();
+      unsubSummitReached();
+      unsubSummitCelebrated();
     };
   }, []);
 
@@ -219,7 +231,11 @@ export function useTowerGame(
 
     if (isClockRunning) {
       intervalId = window.setInterval(() => {
-        setElapsedTime((prev) => prev + 1);
+        setElapsedTime((prev) => {
+          const next = prev + 1;
+          elapsedTimeRef.current = next;
+          return next;
+        });
       }, 1000);
     }
 
@@ -237,8 +253,14 @@ export function useTowerGame(
     sfx.unlock();
     sfx.click();
     sfx.preloadVoices();
+    scoringEngineRef.current.reset();
+    setScoringState(scoringEngineRef.current.getState());
+    elapsedTimeRef.current = 0;
     setElapsedTime(0);
     setSpeedBonus(0);
+    setXpPoints(0);
+    setTotalAttempts(0);
+    setFirstTryCount(0);
     setGameState('PLAYING');
     gameEvents.emit('cmd:start-game', undefined);
   }, []);
@@ -419,6 +441,7 @@ export function useTowerGame(
     setTotalAttempts(0);
     setFirstTryCount(0);
     setXpPoints(0);
+    elapsedTimeRef.current = 0;
     setElapsedTime(0);
     setSpeedBonus(0);
     setCheckpoints(buildInitialCheckpoints());

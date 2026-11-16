@@ -342,22 +342,19 @@ export function getPerformanceTier(
   };
 }
 
-const BEST_SCORE_STORAGE_KEY = "sherbo_tower_player_best_score";
+const BEST_SCORE_STORAGE_KEY = "sherbo_tower_student_personal_best_v3";
 
 function getStoredPlayerBestScore(currentXp: number): number {
   try {
+    // Clean up poisoned legacy keys from previous testing or debug sessions
+    localStorage.removeItem("sherbo_tower_best_score");
+    localStorage.removeItem("sherbo_tower_player_best_score");
+
     const stored = localStorage.getItem(BEST_SCORE_STORAGE_KEY);
     if (stored) {
       const parsed = parseInt(stored, 10);
       if (!isNaN(parsed) && parsed > 0) {
         return Math.max(parsed, currentXp);
-      }
-    }
-    const legacy = localStorage.getItem("sherbo_tower_best_score");
-    if (legacy) {
-      const legacyParsed = parseInt(legacy, 10);
-      if (!isNaN(legacyParsed) && legacyParsed > 0 && legacyParsed !== 3650) {
-        return Math.max(legacyParsed, currentXp);
       }
     }
     return currentXp;
@@ -866,12 +863,18 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
   completedCheckpointsCount: _completedCheckpointsCount,
   totalAttempts: _totalAttempts,
   firstTryCount,
-  xpPoints,
+  xpPoints: rawXpPoints,
   elapsedTime,
-  speedBonus,
+  speedBonus: rawSpeedBonus,
+  scoringState,
   onPlayAgain,
 }) => {
   const [isExporting, setIsExporting] = useState(false);
+
+  // Single source of truth: prioritize finalized scoringState to avoid any timing or batching discrepancies
+  const xpPoints = scoringState?.totalXp ?? rawXpPoints;
+  const speedBonus = scoringState?.speedXp ?? rawSpeedBonus;
+
   const tierConfig = useMemo(
     () => getPerformanceTier(xpPoints, firstTryCount, elapsedTime),
     [xpPoints, firstTryCount, elapsedTime]
@@ -1141,7 +1144,7 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
             {displayXp.toLocaleString()} XP
           </div>
           <div className="xp-banner-subtext">
-            Includes +${speedBonus.toLocaleString()} XP Speed Bonus • {firstTryCount} / {towerConfig.numberOfCheckpoints} Combos
+            Includes +{speedBonus.toLocaleString()} XP Speed Bonus • {firstTryCount} / {towerConfig.numberOfCheckpoints} Combos
           </div>
         </div>
 

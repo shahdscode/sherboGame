@@ -41,6 +41,7 @@ export interface TowerEventMap {
   'evt:step-updated': StepUpdatePayload;
   'evt:checkpoint-reached': CheckpointReachedPayload;
   'evt:section-unlocked': SectionUnlockedPayload;
+  'evt:summit-reached': void;
   'evt:summit-celebrated': void;
 }
 

@@ -331,6 +331,9 @@ export class TowerScene extends Phaser.Scene {
       });
     }
 
+    // Immediately notify that summit was reached so stopwatch stops and scoring is calculated
+    gameEvents.emit('evt:summit-reached', undefined);
+
     // Allow the student to watch the character celebrate at the summit before the result card arrives
     window.setTimeout(() => {
       gameEvents.emit('evt:summit-celebrated', undefined);
