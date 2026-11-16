@@ -13,7 +13,7 @@ import { sfx } from './sfx';
 
 export class TowerScene extends Phaser.Scene {
   private config: TowerConfigRuntime = towerConfig;
-  private platformManager!: PlatformManager;
+  public platformManager!: PlatformManager;
   public player!: Player;
   private cameraManager!: CameraManager;
   private checkpointManager!: CheckpointManager;
@@ -311,8 +311,16 @@ export class TowerScene extends Phaser.Scene {
       this.config.totalSteps
     );
     if (summitPlatform) {
+      // Position character right beside the trophy cup (cup is at centerX = 360)
+      const centerX = this.config.towerWidth / 2;
+      const besideCupX = centerX + 28;
+      this.player.setPosition(
+        besideCupX,
+        summitPlatform.y - this.config.player.height / 2
+      );
+
       const ring = this.add
-        .circle(this.player.sprite.x, summitPlatform.y, 24, 0xfde047, 0.85)
+        .circle(besideCupX, summitPlatform.y, 24, 0xfde047, 0.85)
         .setDepth(25);
       this.tweens.add({
         targets: ring,
