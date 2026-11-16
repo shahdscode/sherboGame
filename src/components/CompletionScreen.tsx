@@ -1146,8 +1146,7 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
               </div>
             </div>
 
-            <h1 className="completion-title">{tierConfig.heroHeadline}</h1>
-            <p className="completion-subtitle">{tierConfig.subtitle}</p>
+            <h1 className="completion-title">Sherbo's Tower</h1>
           </div>
         </div>
 

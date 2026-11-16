@@ -37,6 +37,12 @@ export const App: React.FC = () => {
     (gameState === 'QUESTION_ACTIVE' || gameState === 'CHECKPOINT_REACHED') &&
     activeQuestion !== null;
 
+  const isDebugCompleted =
+    typeof window !== 'undefined' &&
+    new URLSearchParams(window.location.search).get('screen') === 'completed';
+
+  const showCompletion = gameState === 'COMPLETED' || isDebugCompleted;
+
   return (
     <div className="fullscreen-game-shell">
       <TowerGame />
@@ -51,7 +57,7 @@ export const App: React.FC = () => {
         currentStreak={scoringState?.currentStreak ?? 0}
       />
 
-      {gameState === 'INTRO' && <StartScreen
+      {gameState === 'INTRO' && !showCompletion && <StartScreen
           onStart={startGame}
           ready={sceneReady}
           progress={loadProgress}
@@ -68,20 +74,20 @@ export const App: React.FC = () => {
         />
       )}
 
-      {gameState === 'COMPLETED' && (
+      {showCompletion && (
         <CompletionScreen
-          completedCheckpointsCount={completedCheckpointsCount}
-          totalAttempts={totalAttempts}
-          firstTryCount={firstTryCount}
-          xpPoints={xpPoints}
-          elapsedTime={elapsedTime}
-          speedBonus={speedBonus}
+          completedCheckpointsCount={completedCheckpointsCount || 5}
+          totalAttempts={totalAttempts || 5}
+          firstTryCount={firstTryCount || 5}
+          xpPoints={xpPoints || 3650}
+          elapsedTime={elapsedTime || 124000}
+          speedBonus={speedBonus || 500}
           scoringState={scoringState}
           onPlayAgain={restartGame}
         />
       )}
 
-      {gameState !== 'COMPLETED' && (
+      {!showCompletion && (
         <TouchControls
           disabled={gameState !== 'PLAYING'}
           onChange={setTouchControls}

@@ -1154,22 +1154,36 @@ kbd {
   position: fixed;
   top: max(72px, env(safe-area-inset-top, 72px));
   right: max(16px, env(safe-area-inset-right, 16px));
-  z-index: 45;
+  z-index: 55;
   pointer-events: none;
   animation: slideInFromRight 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .completion-side-card {
   pointer-events: auto;
-  width: min(400px, calc(100vw - 32px));
-  max-height: calc(100dvh - 90px);
-  padding: 16px 18px;
-  gap: 10px;
+  width: min(390px, calc(100vw - 32px));
+  max-height: min(620px, calc(100dvh - 84px));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 14px 16px;
+  gap: 8px;
   background: #f8e7d6;
   border: 2.5px solid #1b2a53;
-  border-radius: 22px;
+  border-radius: 20px;
   box-shadow: 0 7px 0 #1b2a53, 0 18px 42px rgba(27, 42, 83, 0.34);
-  overflow: visible;
+}
+
+.completion-side-card::-webkit-scrollbar {
+  width: 5px;
+}
+
+.completion-side-card::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.completion-side-card::-webkit-scrollbar-thumb {
+  background: rgba(27, 42, 83, 0.25);
+  border-radius: 999px;
 }
 
 @keyframes slideInFromRight {
@@ -1195,49 +1209,50 @@ kbd {
 }
 
 .completion-sticker-wrap {
-  width: 78px;
-  height: 78px;
+  width: 72px;
+  height: 72px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-top: -16px;
-  margin-bottom: -8px;
-  margin-left: -6px;
 }
 
 .completion-hero-sticker {
-  width: 86px;
-  height: 86px;
+  width: 76px;
+  height: 76px;
   object-fit: contain;
-  filter: drop-shadow(0 6px 12px rgba(27, 42, 83, 0.25));
+  filter: drop-shadow(0 4px 10px rgba(27, 42, 83, 0.22));
 }
 
 .completion-hero-copy {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  flex: 1;
   min-width: 0;
+  gap: 4px;
 }
 
 .completion-top-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
   line-height: 1;
 }
 
 .completion-stars-row {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
+  justify-content: center;
+  gap: 4px;
   line-height: 1;
 }
 
 .completion-star {
-  font-size: 0.98rem;
+  font-size: 1.05rem;
 }
 
 .climber-rank-badge {
@@ -1652,20 +1667,13 @@ kbd {
 
 .completion-title {
   font-family: var(--font-display);
-  font-size: 1.48rem;
-  text-align: left;
+  font-size: 1.42rem;
+  font-weight: 800;
+  text-align: center;
   color: #1b2a53;
   margin: 0;
-  line-height: 1.1;
-}
-
-.completion-subtitle {
-  text-align: left;
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: #576582;
-  line-height: 1.3;
-  margin: 0;
+  line-height: 1.15;
+  width: 100%;
 }
 
 .stats-summary-grid {
@@ -1815,6 +1823,8 @@ kbd {
   align-items: center;
   justify-content: center;
   gap: 8px;
+  white-space: nowrap;
+  min-height: 42px;
 }
 
 .save-score-btn:hover:not(:disabled) {
@@ -1874,6 +1884,8 @@ kbd {
   gap: 8px;
   box-shadow: 0 4px 0 #1b2a53;
   transition: all 0.15s ease;
+  white-space: nowrap;
+  min-height: 42px;
 }
 
 .secondary-cta-btn:hover {
@@ -1887,36 +1899,267 @@ kbd {
   box-shadow: 0 2px 0 #1b2a53;
 }
 
-@media (max-width: 600px) {
-  .completion-side-wrapper {
-    top: auto;
-    bottom: 16px;
-    right: 12px;
-    left: 12px;
-  }
-  .completion-side-card {
-    width: 100%;
-    max-height: 52dvh;
-    padding: 12px 14px;
-    gap: 6px;
-  }
-  .completion-title {
-    font-size: 1.35rem;
-  }
-  .completion-actions-row {
-    flex-direction: row;
-  }
-  .completion-actions-row > button {
-    flex: 1;
-    padding: 8px 10px;
-    font-size: 0.85rem;
-  }
-}
-
 .play-again-btn {
   background: linear-gradient(180deg, #f58e54 0%, #ee7b3c 100%);
   color: #ffffff;
   box-shadow: 0 5px 0 #b85720;
+}
+
+/* Laptop View (Compact height viewport handling) */
+@media (max-height: 800px) and (min-width: 601px) {
+  .completion-side-wrapper {
+    top: max(56px, env(safe-area-inset-top, 56px));
+    right: max(16px, env(safe-area-inset-right, 16px));
+  }
+  .completion-side-card {
+    width: min(370px, calc(100vw - 32px));
+    max-height: calc(100dvh - 68px);
+    padding: 12px 14px;
+    gap: 6px;
+  }
+  .completion-hero-banner {
+    padding: 8px 12px;
+    gap: 10px;
+  }
+  .completion-sticker-wrap {
+    width: 62px;
+    height: 62px;
+  }
+  .completion-hero-sticker {
+    width: 66px;
+    height: 66px;
+  }
+  .completion-title {
+    font-size: 1.3rem;
+  }
+  .xp-reward-banner {
+    padding: 10px 14px;
+    gap: 4px;
+  }
+  .xp-banner-score {
+    font-size: 1.55rem;
+  }
+  .xp-banner-subtext {
+    font-size: 0.72rem;
+  }
+  .stats-summary-grid {
+    gap: 6px;
+  }
+  .stat-box {
+    padding: 6px 8px;
+    gap: 1px;
+  }
+  .stat-box-val {
+    font-size: 1.05rem;
+  }
+  .stat-box-label {
+    font-size: 0.68rem;
+  }
+  .completion-actions-row {
+    gap: 6px;
+  }
+  .completion-actions-row > button {
+    padding: 8px 12px;
+    font-size: 0.88rem;
+    min-height: 38px;
+  }
+}
+
+@media (max-height: 680px) and (min-width: 601px) {
+  .completion-side-wrapper {
+    top: max(46px, env(safe-area-inset-top, 46px));
+  }
+  .completion-side-card {
+    width: min(350px, calc(100vw - 32px));
+    max-height: calc(100dvh - 54px);
+    padding: 10px 12px;
+    gap: 5px;
+  }
+  .completion-hero-banner {
+    padding: 6px 10px;
+    gap: 8px;
+  }
+  .completion-sticker-wrap {
+    width: 52px;
+    height: 52px;
+  }
+  .completion-hero-sticker {
+    width: 56px;
+    height: 56px;
+  }
+  .completion-title {
+    font-size: 1.18rem;
+  }
+  .xp-banner-score {
+    font-size: 1.38rem;
+  }
+  .stat-box-val {
+    font-size: 0.95rem;
+  }
+  .completion-actions-row {
+    flex-direction: row;
+    gap: 6px;
+  }
+  .completion-actions-row > button {
+    flex: 1;
+    padding: 7px 8px;
+    font-size: 0.82rem;
+    min-height: 36px;
+  }
+}
+
+/* Mobile View (Portrait & Default Mobile) */
+@media (max-width: 600px) {
+  .completion-side-wrapper {
+    top: auto;
+    bottom: max(12px, env(safe-area-inset-bottom, 12px));
+    right: 12px;
+    left: 12px;
+    display: flex;
+    justify-content: center;
+  }
+  .completion-side-card {
+    width: 100%;
+    max-width: 410px;
+    max-height: calc(100dvh - 84px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 12px 14px;
+    gap: 7px;
+    border-radius: 18px;
+  }
+  .completion-hero-banner {
+    padding: 8px 12px;
+    gap: 10px;
+  }
+  .completion-sticker-wrap {
+    width: 62px;
+    height: 62px;
+  }
+  .completion-hero-sticker {
+    width: 66px;
+    height: 66px;
+  }
+  .completion-title {
+    font-size: 1.28rem;
+    text-align: center;
+  }
+  .xp-reward-banner {
+    padding: 10px 12px;
+    gap: 4px;
+  }
+  .xp-banner-score {
+    font-size: 1.48rem;
+  }
+  .xp-banner-subtext {
+    font-size: 0.72rem;
+  }
+  .stats-summary-grid {
+    gap: 6px;
+  }
+  .stat-box {
+    padding: 6px 8px;
+    border-radius: 12px;
+  }
+  .stat-box-val {
+    font-size: 1.05rem;
+  }
+  .stat-box-label {
+    font-size: 0.68rem;
+  }
+  .completion-actions-row {
+    flex-direction: row;
+    gap: 8px;
+  }
+  .completion-actions-row > button {
+    flex: 1;
+    padding: 9px 8px;
+    font-size: 0.84rem;
+    white-space: nowrap;
+    min-height: 40px;
+  }
+}
+
+@media (max-width: 380px) {
+  .completion-side-card {
+    padding: 10px 10px;
+    gap: 5px;
+  }
+  .completion-hero-banner {
+    padding: 6px 8px;
+    gap: 8px;
+  }
+  .completion-sticker-wrap {
+    width: 50px;
+    height: 50px;
+  }
+  .completion-hero-sticker {
+    width: 54px;
+    height: 54px;
+  }
+  .completion-title {
+    font-size: 1.15rem;
+  }
+  .xp-banner-score {
+    font-size: 1.35rem;
+  }
+  .stat-box-val {
+    font-size: 0.95rem;
+  }
+  .completion-actions-row > button {
+    font-size: 0.78rem;
+    padding: 8px 4px;
+    gap: 4px;
+  }
+}
+
+/* Mobile View (Landscape Orientation) */
+@media (max-height: 520px) and (orientation: landscape) {
+  .completion-side-wrapper {
+    top: 8px;
+    bottom: 8px;
+    right: 12px;
+    left: auto;
+  }
+  .completion-side-card {
+    max-height: calc(100dvh - 16px);
+    width: 330px;
+    padding: 8px 10px;
+    gap: 5px;
+  }
+  .completion-hero-banner {
+    padding: 6px 8px;
+  }
+  .completion-sticker-wrap {
+    width: 48px;
+    height: 48px;
+  }
+  .completion-hero-sticker {
+    width: 52px;
+    height: 52px;
+  }
+  .completion-title {
+    font-size: 1.12rem;
+  }
+  .xp-banner-score {
+    font-size: 1.3rem;
+  }
+  .stats-summary-grid {
+    gap: 4px;
+  }
+  .stat-box {
+    padding: 4px 6px;
+  }
+  .completion-actions-row {
+    flex-direction: row;
+    gap: 6px;
+  }
+  .completion-actions-row > button {
+    flex: 1;
+    padding: 6px 8px;
+    font-size: 0.8rem;
+    min-height: 34px;
+  }
 }
 
 /* Utility Icon Colors matching slide */
@@ -2169,7 +2412,8 @@ kbd {
   }
 
   .completion-title {
-    font-size: 1.65rem;
+    font-size: 1.28rem;
+    text-align: center;
   }
 
   .completion-sticker {
@@ -2323,16 +2567,6 @@ body {
   }
 }
 
-@media (max-width: 600px) {
-  /* The final score card was capped at half the screen, hiding its own buttons */
-  .completion-side-card {
-    max-height: calc(100dvh - 96px);
-  }
-
-  .completion-side-wrapper {
-    bottom: max(12px, env(safe-area-inset-bottom, 12px));
-  }
-}
 
 /* ==========================================================================
    Upgraded Unified Scoring System V2 Styles
