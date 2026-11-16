@@ -850,11 +850,13 @@ function drawMobileScoreCard(
     ctx.fillText(st.label, textX, by + 144);
   });
 
-  // 6. Branded Arcade Footer Frame (Enlarged & Vibrant)
+  // 6. Branded Arcade Footer Frame (Enlarged & Vibrant, perfectly centered in the space below)
   const footerW = 860;
   const footerH = 78;
   const footerX = cardX + (cardW - footerW) / 2;
-  const footerY = gridStartY + 2 * boxH + gapY + 22;
+  const gridBottom = gridStartY + 2 * boxH + gapY;
+  const cardBottom = cardY + cardH;
+  const footerY = Math.round(gridBottom + (cardBottom - gridBottom - footerH) / 2);
 
   ctx.fillStyle = "#050812";
   ctx.beginPath();
