@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import confetti from 'canvas-confetti';
 import {
   Sparkles,
@@ -120,21 +120,24 @@ export const QuestionModal: React.FC<QuestionModalProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isCorrect, onContinue, onSelectOption, onSubmitAnswer]);
 
-  const [celebrationSticker, setCelebrationSticker] = useState<string>(() => {
+  // Pick one celebration sticker per question and preload it immediately so transition is instant and zero-flicker
+  const celebrationSticker = useMemo(() => {
     return CELEBRATION_STICKERS[
       Math.floor(Math.random() * CELEBRATION_STICKERS.length)
     ];
-  });
+  }, [question.id]);
 
   useEffect(() => {
-    if (isCorrect) {
-      const randomSticker =
-        CELEBRATION_STICKERS[
-          Math.floor(Math.random() * CELEBRATION_STICKERS.length)
-        ];
-      setCelebrationSticker(randomSticker);
-    }
-  }, [isCorrect]);
+    const urls = [
+      '/stickers/question.webp',
+      '/stickers/retry.webp',
+      celebrationSticker,
+    ];
+    urls.forEach((url) => {
+      const img = new Image();
+      img.src = url;
+    });
+  }, [celebrationSticker]);
 
   // Determine which sticker character to display
   const characterImgSrc = isCorrect
@@ -148,6 +151,21 @@ export const QuestionModal: React.FC<QuestionModalProps> = ({
     : isIncorrect
       ? 'Retry Character'
       : 'Question Character';
+
+  // Keep outgoing sticker briefly mounted for a silky-smooth crossfade transition
+  const [outgoingSrc, setOutgoingSrc] = useState<string | null>(null);
+  const lastSrcRef = useRef<string>(characterImgSrc);
+
+  useEffect(() => {
+    if (lastSrcRef.current !== characterImgSrc) {
+      setOutgoingSrc(lastSrcRef.current);
+      lastSrcRef.current = characterImgSrc;
+      const timer = window.setTimeout(() => {
+        setOutgoingSrc(null);
+      }, 520);
+      return () => window.clearTimeout(timer);
+    }
+  }, [characterImgSrc]);
 
   const mistakeCount = feedback.wrongOptionIndices.length;
   const characterMoodTag = isCorrect
@@ -244,11 +262,22 @@ export const QuestionModal: React.FC<QuestionModalProps> = ({
                     : 'halo-active'
               }`}
             >
+              {outgoingSrc && outgoingSrc !== characterImgSrc && (
+                <img
+                  key={`out-${outgoingSrc}`}
+                  src={outgoingSrc}
+                  alt=""
+                  aria-hidden="true"
+                  className="question-character-sticker-large sticker-layer-outgoing"
+                />
+              )}
               <img
                 key={characterImgSrc}
                 src={characterImgSrc}
                 alt={characterImgAlt}
-                className="question-character-sticker-large"
+                className={`question-character-sticker-large ${
+                  isCorrect ? 'sticker-celebrating' : ''
+                }`}
                 data-testid="question-character-sticker"
               />
             </div>
