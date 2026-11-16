@@ -8,6 +8,11 @@ import {
   calculateSpeedBonus,
 } from '../data/towerConfig';
 import { checkpointQuestions } from '../data/sampleQuestions';
+import {
+  defaultQuestionBank,
+  selectSessionQuestions,
+  fetchQuestionsFromPublic,
+} from '../data/questionBank';
 import { gameEvents, TouchInputState } from '../game/EventBus';
 import { sfx } from '../game/sfx';
 import {
@@ -51,8 +56,40 @@ export function getQuestionXpForMistakes(mistakes: number): number {
 }
 
 export function useTowerGame(
-  questions: CheckpointQuestion[] = checkpointQuestions
+  customQuestions?: CheckpointQuestion[]
 ) {
+  const [questionBank, setQuestionBank] = useState<CheckpointQuestion[]>(defaultQuestionBank);
+  const questionBankRef = useRef<CheckpointQuestion[]>(defaultQuestionBank);
+  const [sessionQuestions, setSessionQuestions] = useState<CheckpointQuestion[]>(() =>
+    customQuestions && customQuestions.length > 0
+      ? customQuestions
+      : selectSessionQuestions(defaultQuestionBank)
+  );
+
+  // Sync if customQuestions prop changes
+  useEffect(() => {
+    if (customQuestions && customQuestions.length > 0) {
+      setSessionQuestions(customQuestions);
+    }
+  }, [customQuestions]);
+
+  // Attempt to load dynamic questions from public/questions.json if running in browser
+  useEffect(() => {
+    let isMounted = true;
+    fetchQuestionsFromPublic().then((fetched) => {
+      if (isMounted && fetched && fetched.length > 0) {
+        setQuestionBank(fetched);
+        questionBankRef.current = fetched;
+        if (!customQuestions) {
+          setSessionQuestions(selectSessionQuestions(fetched));
+        }
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, [customQuestions]);
+
   const [gameState, setGameState] = useState<GameState>('INTRO');
   const [currentStep, setCurrentStep] = useState<number>(0);
   const [highestStep, setHighestStep] = useState<number>(0);
@@ -261,14 +298,17 @@ export function useTowerGame(
     setXpPoints(0);
     setTotalAttempts(0);
     setFirstTryCount(0);
+    if (!customQuestions) {
+      setSessionQuestions(selectSessionQuestions(questionBankRef.current));
+    }
     setGameState('PLAYING');
     gameEvents.emit('cmd:start-game', undefined);
-  }, []);
+  }, [customQuestions]);
 
   const activeQuestion: CheckpointQuestion | null =
     activeCheckpointNumber !== null
-      ? questions.find((q) => q.checkpointNumber === activeCheckpointNumber) ||
-        questions[activeCheckpointNumber - 1] ||
+      ? sessionQuestions.find((q) => q.checkpointNumber === activeCheckpointNumber) ||
+        sessionQuestions[activeCheckpointNumber - 1] ||
         null
       : null;
 
@@ -445,6 +485,9 @@ export function useTowerGame(
     setElapsedTime(0);
     setSpeedBonus(0);
     setCheckpoints(buildInitialCheckpoints());
+    if (!customQuestions) {
+      setSessionQuestions(selectSessionQuestions(questionBankRef.current));
+    }
     setFeedback({
       status: 'idle',
       selectedOptionIndex: null,
@@ -459,7 +502,7 @@ export function useTowerGame(
     });
     setGameState('PLAYING');
     gameEvents.emit('cmd:restart-game', undefined);
-  }, []);
+  }, [customQuestions]);
 
   const dismissNotification = useCallback((id: string) => {
     setScoringState((prev) => ({
@@ -485,6 +528,8 @@ export function useTowerGame(
     completedCheckpointsCount,
     activeCheckpointNumber,
     activeQuestion,
+    questionBank,
+    sessionQuestions,
     feedback,
     totalAttempts,
     firstTryCount,
