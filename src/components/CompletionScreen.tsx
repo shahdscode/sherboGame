@@ -573,73 +573,103 @@ function drawMobileScoreCard(
   ctx.stroke();
   ctx.restore();
 
-  // Header Row: Celebratory Sherbo Sticker + 3 Stars + Centered Title "Sherbo's Tower"
-  const haloX = cardX + 130;
-  const haloY = cardY + 98;
+  // Header Hero Frame: Prominent frame for "Sherbo's Tower" + Celebratory Character Sticker
+  const heroFrameX = cardX + 36;
+  const heroFrameY = cardY + 32;
+  const heroFrameW = cardW - 72; // 912
+  const heroFrameH = 216;
+  const heroFrameR = 24;
+
+  // 3D solid lip for hero frame
+  ctx.fillStyle = "#070c18";
+  ctx.beginPath();
+  ctx.roundRect(heroFrameX, heroFrameY + 8, heroFrameW, heroFrameH, heroFrameR);
+  ctx.fill();
+
+  // Hero frame background: midnight arcade navy with flame orange border
+  const heroFrameGrad = ctx.createLinearGradient(
+    heroFrameX,
+    heroFrameY,
+    heroFrameX,
+    heroFrameY + heroFrameH
+  );
+  heroFrameGrad.addColorStop(0, "#19284d");
+  heroFrameGrad.addColorStop(1, "#111b35");
+  ctx.fillStyle = heroFrameGrad;
+  ctx.beginPath();
+  ctx.roundRect(heroFrameX, heroFrameY, heroFrameW, heroFrameH, heroFrameR);
+  ctx.fill();
+  ctx.lineWidth = 3.5;
+  ctx.strokeStyle = "#ff7828";
+  ctx.stroke();
+
+  // Large Character Sticker inside the frame on the left
+  const haloX = heroFrameX + 118;
+  const haloY = heroFrameY + heroFrameH / 2;
 
   if (stickerImg) {
     const haloGrad = ctx.createRadialGradient(
       haloX,
       haloY,
-      14,
+      16,
       haloX,
       haloY,
-      115
+      105
     );
-    haloGrad.addColorStop(0, "rgba(255, 120, 40, 0.35)");
+    haloGrad.addColorStop(0, "rgba(255, 120, 40, 0.42)");
     haloGrad.addColorStop(1, "rgba(255, 120, 40, 0)");
     ctx.fillStyle = haloGrad;
     ctx.beginPath();
-    ctx.arc(haloX, haloY, 115, 0, Math.PI * 2);
+    ctx.arc(haloX, haloY, 105, 0, Math.PI * 2);
     ctx.fill();
 
-    const stickerSize = 192;
+    const stickerSize = 200;
     ctx.save();
-    ctx.shadowColor = "rgba(0, 0, 0, 0.4)";
+    ctx.shadowColor = "rgba(0, 0, 0, 0.45)";
     ctx.shadowBlur = 18;
     ctx.shadowOffsetY = 6;
     ctx.drawImage(
       stickerImg,
       haloX - stickerSize / 2,
-      cardY - 2,
+      haloY - stickerSize / 2,
       stickerSize,
       stickerSize
     );
     ctx.restore();
   }
 
-  // Header content: 3 Stars + "Sherbo's Tower" centered in header area
-  const headerContentCenterX = cardX + 575;
+  // Header content: 3 Stars + "Sherbo's Tower" centered in the right portion of the hero frame
+  const headerContentCenterX = heroFrameX + 540;
 
   // 3 Stars centered
-  const starSpacing = 42;
+  const starSpacing = 44;
   const starsStartX = headerContentCenterX - starSpacing;
   for (let s = 0; s < 3; s++) {
     const sx = starsStartX + s * starSpacing;
-    const sy = cardY + 44;
+    const sy = heroFrameY + 54;
     const earned = s < starCount;
     drawStar(
       ctx,
       sx,
       sy,
-      18,
-      8,
+      20,
+      9,
       earned ? "#ffb703" : "#202d4a",
       earned ? "#ff8800" : "#141e33"
     );
   }
 
-  // Centered Title: "Sherbo's Tower" with significantly larger, bold vibrant typography
+  // Centered Title: "Sherbo's Tower" with large bold typography
   ctx.fillStyle = "#ffffff";
-  ctx.font = "800 82px 'Fredoka', sans-serif";
+  ctx.font = "800 86px 'Fredoka', sans-serif";
   ctx.textAlign = "center";
-  ctx.fillText("Sherbo's Tower", headerContentCenterX, cardY + 132);
+  ctx.fillText("Sherbo's Tower", headerContentCenterX, heroFrameY + 154);
 
-  // 4. Hero Final Score Banner
+  // 4. Hero Final Score Banner (Pushed down by larger hero frame)
   const bannerX = cardX + 36;
-  const bannerY = cardY + 195;
+  const bannerY = heroFrameY + heroFrameH + 22; // 930
   const bannerW = cardW - 72; // 912
-  const bannerH = 210;
+  const bannerH = 196;
   const bannerR = 24;
 
   ctx.fillStyle = "#070c18";
@@ -666,12 +696,12 @@ function drawMobileScoreCard(
   ctx.fillStyle = "#ff8f3d";
   ctx.font = "800 22px 'Fredoka', sans-serif";
   ctx.textAlign = "left";
-  ctx.fillText("⚡ FINAL SCORE", bannerX + 32, bannerY + 44);
+  ctx.fillText("⚡ FINAL SCORE", bannerX + 32, bannerY + 42);
 
   const timePillW = 200;
   const timePillH = 40;
   const timePillX = bannerX + bannerW - timePillW - 28;
-  const timePillY = bannerY + 20;
+  const timePillY = bannerY + 18;
   ctx.fillStyle = "#0c1426";
   ctx.beginPath();
   ctx.roundRect(timePillX, timePillY, timePillW, timePillH, 999);
@@ -695,7 +725,7 @@ function drawMobileScoreCard(
   ctx.fillText(
     `${xpPoints.toLocaleString()} XP`,
     bannerX + 32,
-    bannerY + 128
+    bannerY + 120
   );
 
   ctx.fillStyle = "#cbd5e1";
@@ -704,7 +734,7 @@ function drawMobileScoreCard(
   ctx.fillText(
     `Includes +${speedBonus.toLocaleString()} XP Speed Bonus • ${firstTryCount} / ${towerConfig.numberOfCheckpoints} Combos`,
     bannerX + 32,
-    bannerY + 176
+    bannerY + 168
   );
 
   // 5. Four Tactile 3D Arcade Power-Block Stat Tiles (2x2 Grid) - Vibrant Navy Palette
@@ -761,11 +791,11 @@ function drawMobileScoreCard(
   ];
 
   const gridStartX = cardX + 36;
-  const gridStartY = cardY + 440;
+  const gridStartY = bannerY + bannerH + 22; // 1148
   const gapX = 24;
-  const gapY = 24;
+  const gapY = 20;
   const boxW = (cardW - 72 - gapX) / 2; // 444
-  const boxH = 230;
+  const boxH = 210;
   const boxR = 24;
 
   stats.forEach((st, i) => {
@@ -790,8 +820,8 @@ function drawMobileScoreCard(
     ctx.strokeStyle = st.border;
     ctx.stroke();
 
-    const iconBoxSize = 106;
-    const iconBoxX = bx + 24;
+    const iconBoxSize = 98;
+    const iconBoxX = bx + 22;
     const iconBoxY = by + (boxH - iconBoxSize) / 2;
     ctx.fillStyle = st.badgeBg;
     ctx.beginPath();
@@ -809,22 +839,22 @@ function drawMobileScoreCard(
       st.iconColor
     );
 
-    const textX = iconBoxX + iconBoxSize + 22;
+    const textX = iconBoxX + iconBoxSize + 20;
     ctx.fillStyle = "#ffffff";
-    ctx.font = "800 50px 'Fredoka', sans-serif";
+    ctx.font = "800 46px 'Fredoka', sans-serif";
     ctx.textAlign = "left";
-    ctx.fillText(st.val, textX, by + 104);
+    ctx.fillText(st.val, textX, by + 96);
 
     ctx.fillStyle = st.labelColor;
-    ctx.font = "700 24px 'Fredoka', sans-serif";
-    ctx.fillText(st.label, textX, by + 154);
+    ctx.font = "700 23px 'Fredoka', sans-serif";
+    ctx.fillText(st.label, textX, by + 144);
   });
 
   // 6. Branded Arcade Footer Frame (Enlarged & Vibrant)
   const footerW = 860;
-  const footerH = 80;
+  const footerH = 78;
   const footerX = cardX + (cardW - footerW) / 2;
-  const footerY = cardY + 1040;
+  const footerY = gridStartY + 2 * boxH + gapY + 22;
 
   ctx.fillStyle = "#050812";
   ctx.beginPath();
