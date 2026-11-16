@@ -1,11 +1,11 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Flag, Footprints, Zap, Timer, Volume2, VolumeX, Flame } from 'lucide-react';
+import { Flag, Zap, Timer, Volume2, VolumeX, Flame } from 'lucide-react';
 import { CheckpointStateItem } from '../hooks/useTowerGame';
 import { towerConfig, formatStopwatchTime } from '../data/towerConfig';
 import { sfx } from '../game/sfx';
 
 interface GameHUDProps {
-  currentStep: number;
+  currentStep?: number;
   completedCheckpointsCount: number;
   activeCheckpointNumber?: number | null;
   checkpoints?: CheckpointStateItem[];
@@ -20,7 +20,6 @@ interface FloatingGain {
 }
 
 export const GameHUD: React.FC<GameHUDProps> = ({
-  currentStep,
   completedCheckpointsCount,
   xpPoints,
   elapsedTime,
@@ -69,16 +68,6 @@ export const GameHUD: React.FC<GameHUDProps> = ({
         aria-label="Tower Progress HUD"
         data-testid="floating-top-hud"
       >
-        <div className="hud-stat-pill" data-testid="hud-step-counter">
-          <Footprints size={16} className="icon-cyan" />
-          <div>
-            <span className="stat-label">Tower Step</span>
-            <span className="stat-value">
-              {currentStep} / {towerConfig.totalSteps}
-            </span>
-          </div>
-        </div>
-
         <div className="hud-stat-pill" data-testid="hud-checkpoint-counter">
           <Flag size={16} className="icon-gold" />
           <div>
