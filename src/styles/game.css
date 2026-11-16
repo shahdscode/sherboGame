@@ -492,21 +492,20 @@ body,
 .grades-list {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 6px 8px;
+  gap: 8px;
   margin-top: 4px;
 }
 
 .grade-item {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   background: rgba(12, 20, 38, 0.72);
   border: 1.5px solid rgba(255, 255, 255, 0.1);
-  border-radius: 10px;
-  padding: 6px 8px;
+  border-radius: 12px;
+  padding: 8px 10px;
   box-sizing: border-box;
   min-width: 0;
-  overflow: hidden;
   transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
 }
 
@@ -571,14 +570,14 @@ body,
 
 .grade-badge {
   font-family: var(--font-display);
-  font-size: 0.88rem;
+  font-size: 0.95rem;
   font-weight: 800;
-  width: 30px;
-  height: 30px;
+  width: 34px;
+  height: 34px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 8px;
+  border-radius: 9px;
   border: 1.5px solid;
   letter-spacing: 0.3px;
   flex-shrink: 0;
@@ -627,39 +626,40 @@ body,
   justify-content: center;
   flex: 1;
   min-width: 0;
-  gap: 1px;
+  gap: 2px;
 }
 
 .grade-title-row {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 4px;
-  line-height: 1.15;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  line-height: 1.18;
   min-width: 0;
+  width: 100%;
 }
 
 .grade-rank-title {
   font-family: var(--font-display);
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   font-weight: 800;
   color: #ffffff;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  letter-spacing: 0.2px;
+  line-height: 1.2;
 }
 
 .grade-xp-req {
   font-family: var(--font-display);
-  font-size: 0.68rem;
+  font-size: 0.70rem;
   font-weight: 700;
   color: #ffcc00;
   background: rgba(255, 204, 0, 0.14);
   border: 1px solid rgba(255, 204, 0, 0.35);
-  padding: 1px 5px;
+  padding: 1px 6px;
   border-radius: 999px;
   white-space: nowrap;
-  flex-shrink: 0;
+  display: inline-block;
+  line-height: 1.2;
 }
 
 .grade-desc {
@@ -2370,6 +2370,26 @@ kbd {
     padding: 10px 8px;
     min-height: 44px;
   }
+  .grades-list {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+  }
+  .grade-item {
+    padding: 6px 7px;
+    gap: 6px;
+  }
+  .grade-badge {
+    width: 28px;
+    height: 28px;
+    font-size: 0.84rem;
+  }
+  .grade-rank-title {
+    font-size: 0.78rem;
+  }
+  .grade-xp-req {
+    font-size: 0.64rem;
+    padding: 1px 4px;
+  }
 }
 
 /* Mobile View (Landscape Orientation) */
@@ -2418,6 +2438,9 @@ kbd {
     padding: 6px 8px;
     font-size: 0.8rem;
     min-height: 34px;
+  }
+  .touch-controls-bar {
+    bottom: max(8px, env(safe-area-inset-bottom, 8px));
   }
 }
 
@@ -2569,9 +2592,9 @@ kbd {
   }
 
   .touch-controls-bar {
-    bottom: max(6px, env(safe-area-inset-bottom, 6px));
-    padding: 3px;
-    gap: 6px;
+    bottom: max(26px, calc(env(safe-area-inset-bottom, 0px) + 20px));
+    padding: 4px 6px;
+    gap: 8px;
   }
 
   .touch-control-hint {
@@ -2619,28 +2642,40 @@ kbd {
   }
 
   .grades-list {
-    grid-template-columns: repeat(3, 1fr);
-    gap: 5px 6px;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 7px 8px;
   }
 
   .grade-item {
-    padding: 5px 6px;
-    gap: 5px;
+    padding: 7px 9px;
+    gap: 8px;
+    border-radius: 10px;
   }
 
   .grade-badge {
-    width: 25px;
-    height: 25px;
-    font-size: 0.78rem;
+    width: 32px;
+    height: 32px;
+    font-size: 0.92rem;
+    border-radius: 8px;
+  }
+
+  .grade-title-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
   }
 
   .grade-rank-title {
-    font-size: 0.72rem;
+    font-size: 0.82rem;
+    font-weight: 800;
+    color: #ffffff;
+    line-height: 1.18;
+    white-space: normal;
   }
 
   .grade-xp-req {
-    font-size: 0.62rem;
-    padding: 1px 4px;
+    font-size: 0.68rem;
+    padding: 1px 5px;
   }
 
   .modal-card {
