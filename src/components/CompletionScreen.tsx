@@ -391,48 +391,50 @@ function drawMobileScoreCard(
   ctx.save();
   ctx.scale(scale, scale);
 
-  // 1. Warm background gradient matching game theme (#fdf8f2 -> #f8e7d6 -> #f2dac4)
+  // 1. Deep cosmic navy background gradient matching game theme
   const bgGrad = ctx.createLinearGradient(0, 0, 0, baseH);
-  bgGrad.addColorStop(0, "#fdf8f2");
-  bgGrad.addColorStop(0.38, "#f8e7d6");
-  bgGrad.addColorStop(1, "#f2dac4");
+  bgGrad.addColorStop(0, "#080c18");
+  bgGrad.addColorStop(0.45, "#0d162b");
+  bgGrad.addColorStop(1, "#121d38");
   ctx.fillStyle = bgGrad;
   ctx.fillRect(0, 0, baseW, baseH);
 
-  // Warm radial spotlight behind the summit & card
+  // Vibrant radial spotlight behind the summit & card
   const spotGrad = ctx.createRadialGradient(
     baseW / 2,
     620,
     60,
     baseW / 2,
     620,
-    800
+    850
   );
-  spotGrad.addColorStop(0, "rgba(238, 123, 60, 0.22)");
-  spotGrad.addColorStop(0.55, "rgba(63, 159, 155, 0.10)");
-  spotGrad.addColorStop(1, "rgba(248, 231, 214, 0)");
+  spotGrad.addColorStop(0, "rgba(255, 120, 40, 0.24)");
+  spotGrad.addColorStop(0.5, "rgba(0, 229, 255, 0.12)");
+  spotGrad.addColorStop(1, "rgba(18, 29, 56, 0)");
   ctx.fillStyle = spotGrad;
   ctx.fillRect(0, 0, baseW, baseH);
 
-  // Celebratory background confetti & starlight dots
+  // Celebratory background confetti & starlight dots in vibrant arcade colors
   const confettiPalette = [
-    "#ee7b3c",
-    "#3f9f9b",
-    "#f59e0b",
-    "#7e57d8",
+    "#ff7828",
+    "#ffcc00",
+    "#00e5ff",
+    "#c084fc",
     "#10b981",
-    "#e11d48",
+    "#ffffff",
   ];
-  for (let i = 0; i < 48; i++) {
+  for (let i = 0; i < 54; i++) {
     const seed = (i * 9301 + 49297) % 233280;
     const rx = (seed / 233280) * 1020 + 30;
     const ry = (((seed * 7) % 233280) / 233280) * 1860 + 30;
+    // Keep central live window view uncluttered
+    if (ry > 80 && ry < 590 && rx > 70 && rx < baseW - 70) continue;
     const col = confettiPalette[i % confettiPalette.length];
     ctx.save();
     ctx.translate(rx, ry);
     ctx.rotate((i * 0.45) % Math.PI);
     ctx.fillStyle = col;
-    ctx.globalAlpha = 0.22 + (i % 3) * 0.12;
+    ctx.globalAlpha = 0.35 + (i % 3) * 0.18;
     if (i % 3 === 0) {
       ctx.beginPath();
       ctx.arc(0, 0, 4 + (i % 4), 0, Math.PI * 2);
@@ -443,10 +445,10 @@ function drawMobileScoreCard(
     ctx.restore();
   }
 
-  // Outer decorative arcade frame with signature navy border
+  // Outer decorative arcade frame with signature vibrant flame border
   ctx.save();
-  ctx.strokeStyle = "#1b2a53";
-  ctx.lineWidth = 4;
+  ctx.strokeStyle = "#ff7828";
+  ctx.lineWidth = 3.5;
   ctx.beginPath();
   ctx.roundRect(22, 22, baseW - 44, baseH - 44, 38);
   ctx.stroke();
@@ -460,7 +462,7 @@ function drawMobileScoreCard(
   const winR = 26;
 
   // Window 3D shadow
-  ctx.fillStyle = "rgba(27, 42, 83, 0.22)";
+  ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
   ctx.beginPath();
   ctx.roundRect(winX, winY + 12, winW, winH, winR);
   ctx.fill();
@@ -490,51 +492,51 @@ function drawMobileScoreCard(
 
   // Subtle top & bottom vignette inside the game window for clean depth
   const winGrad = ctx.createLinearGradient(0, winY, 0, winY + winH);
-  winGrad.addColorStop(0, "rgba(27, 42, 83, 0.28)");
-  winGrad.addColorStop(0.18, "rgba(27, 42, 83, 0)");
-  winGrad.addColorStop(0.82, "rgba(27, 42, 83, 0)");
-  winGrad.addColorStop(1, "rgba(27, 42, 83, 0.40)");
+  winGrad.addColorStop(0, "rgba(10, 16, 32, 0.35)");
+  winGrad.addColorStop(0.18, "rgba(10, 16, 32, 0)");
+  winGrad.addColorStop(0.82, "rgba(10, 16, 32, 0)");
+  winGrad.addColorStop(1, "rgba(10, 16, 32, 0.45)");
   ctx.fillStyle = winGrad;
   ctx.fillRect(winX, winY, winW, winH);
   ctx.restore();
 
   // Window double arcade border
-  ctx.lineWidth = 6;
-  ctx.strokeStyle = "#1b2a53";
+  ctx.lineWidth = 5;
+  ctx.strokeStyle = "#0d162b";
   ctx.beginPath();
   ctx.roundRect(winX, winY, winW, winH, winR);
   ctx.stroke();
 
-  ctx.lineWidth = 2.5;
-  ctx.strokeStyle = "#ee7b3c";
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = "#ff7828";
   ctx.beginPath();
   ctx.roundRect(winX - 2, winY - 2, winW + 4, winH + 4, winR + 2);
   ctx.stroke();
 
   // Top floating badge pill on the Finish Line Window
-  const topBadgeW = 420;
-  const topBadgeH = 44;
+  const topBadgeW = 460;
+  const topBadgeH = 46;
   const topBadgeX = baseW / 2 - topBadgeW / 2;
   const topBadgeY = winY + 16;
 
-  ctx.fillStyle = "rgba(27, 42, 83, 0.94)";
+  ctx.fillStyle = "rgba(13, 22, 44, 0.95)";
   ctx.beginPath();
   ctx.roundRect(topBadgeX, topBadgeY, topBadgeW, topBadgeH, 999);
   ctx.fill();
   ctx.lineWidth = 2.5;
-  ctx.strokeStyle = "#ee7b3c";
+  ctx.strokeStyle = "#ff7828";
   ctx.stroke();
 
-  ctx.fillStyle = "#f8e7d6";
-  ctx.font = "700 17px 'Fredoka', sans-serif";
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "800 18px 'Fredoka', sans-serif";
   ctx.textAlign = "center";
   ctx.fillText(
     "★  SHERBO'S TOWER • FINISH LINE  ★",
     baseW / 2,
-    topBadgeY + 28
+    topBadgeY + 29
   );
 
-  // 3. Bottom Showcase: Harmonious Score Card perfectly filling the remaining space
+  // 3. Bottom Showcase: Harmonious Score Card perfectly filling the remaining space (Navy theme)
   const cardX = 48;
   const cardY = 660;
   const cardW = baseW - 96; // 984
@@ -542,29 +544,32 @@ function drawMobileScoreCard(
   const cardR = 32;
 
   // Card 3D solid bottom lip + drop shadow
-  ctx.fillStyle = "rgba(27, 42, 83, 0.28)";
+  ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
   ctx.beginPath();
   ctx.roundRect(cardX, cardY + 18, cardW, cardH, cardR);
   ctx.fill();
 
-  ctx.fillStyle = "#1b2a53";
+  ctx.fillStyle = "#060b18";
   ctx.beginPath();
   ctx.roundRect(cardX, cardY + 10, cardW, cardH, cardR);
   ctx.fill();
 
-  // Card body - crisp white matching game cards
-  ctx.fillStyle = "#ffffff";
+  // Card body - rich midnight navy matching game theme
+  const cardGrad = ctx.createLinearGradient(cardX, cardY, cardX, cardY + cardH);
+  cardGrad.addColorStop(0, "#14213d");
+  cardGrad.addColorStop(1, "#0d1629");
+  ctx.fillStyle = cardGrad;
   ctx.beginPath();
   ctx.roundRect(cardX, cardY, cardW, cardH, cardR);
   ctx.fill();
 
-  ctx.lineWidth = 4;
-  ctx.strokeStyle = "#1b2a53";
+  ctx.lineWidth = 4.5;
+  ctx.strokeStyle = "#ff7828";
   ctx.stroke();
 
-  // Inner subtle top highlight
+  // Inner subtle neon glow highlight
   ctx.save();
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.85)";
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.12)";
   ctx.lineWidth = 2;
   ctx.beginPath();
   ctx.roundRect(cardX + 4, cardY + 4, cardW - 8, cardH - 8, cardR - 3);
@@ -582,18 +587,18 @@ function drawMobileScoreCard(
       14,
       haloX,
       haloY,
-      105
+      115
     );
-    haloGrad.addColorStop(0, "rgba(238, 123, 60, 0.25)");
-    haloGrad.addColorStop(1, "rgba(238, 123, 60, 0)");
+    haloGrad.addColorStop(0, "rgba(255, 120, 40, 0.35)");
+    haloGrad.addColorStop(1, "rgba(255, 120, 40, 0)");
     ctx.fillStyle = haloGrad;
     ctx.beginPath();
-    ctx.arc(haloX, haloY, 105, 0, Math.PI * 2);
+    ctx.arc(haloX, haloY, 115, 0, Math.PI * 2);
     ctx.fill();
 
     const stickerSize = 192;
     ctx.save();
-    ctx.shadowColor = "rgba(27, 42, 83, 0.25)";
+    ctx.shadowColor = "rgba(0, 0, 0, 0.4)";
     ctx.shadowBlur = 18;
     ctx.shadowOffsetY = 6;
     ctx.drawImage(
@@ -610,28 +615,28 @@ function drawMobileScoreCard(
   const headerContentCenterX = cardX + 575;
 
   // 3 Stars centered
-  const starSpacing = 36;
+  const starSpacing = 42;
   const starsStartX = headerContentCenterX - starSpacing;
   for (let s = 0; s < 3; s++) {
     const sx = starsStartX + s * starSpacing;
-    const sy = cardY + 46;
+    const sy = cardY + 44;
     const earned = s < starCount;
     drawStar(
       ctx,
       sx,
       sy,
-      16,
-      7,
-      earned ? "#fbbf24" : "#e2d5c4",
-      earned ? "#b45309" : "#94a3b8"
+      18,
+      8,
+      earned ? "#ffb703" : "#202d4a",
+      earned ? "#ff8800" : "#141e33"
     );
   }
 
-  // Centered Title: "Sherbo's Tower" with larger, bold typography
-  ctx.fillStyle = "#1b2a53";
-  ctx.font = "700 62px 'Fredoka', sans-serif";
+  // Centered Title: "Sherbo's Tower" with significantly larger, bold vibrant typography
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "800 82px 'Fredoka', sans-serif";
   ctx.textAlign = "center";
-  ctx.fillText("Sherbo's Tower", headerContentCenterX, cardY + 126);
+  ctx.fillText("Sherbo's Tower", headerContentCenterX, cardY + 132);
 
   // 4. Hero Final Score Banner
   const bannerX = cardX + 36;
@@ -640,64 +645,72 @@ function drawMobileScoreCard(
   const bannerH = 210;
   const bannerR = 24;
 
-  ctx.fillStyle = "#b85720";
+  ctx.fillStyle = "#070c18";
   ctx.beginPath();
   ctx.roundRect(bannerX, bannerY + 8, bannerW, bannerH, bannerR);
   ctx.fill();
 
-  ctx.fillStyle = "#fff5eb";
+  const bannerGrad = ctx.createLinearGradient(
+    bannerX,
+    bannerY,
+    bannerX,
+    bannerY + bannerH
+  );
+  bannerGrad.addColorStop(0, "#1d2b4f");
+  bannerGrad.addColorStop(1, "#131d37");
+  ctx.fillStyle = bannerGrad;
   ctx.beginPath();
   ctx.roundRect(bannerX, bannerY, bannerW, bannerH, bannerR);
   ctx.fill();
   ctx.lineWidth = 3.5;
-  ctx.strokeStyle = "#ee7b3c";
+  ctx.strokeStyle = "#ff7828";
   ctx.stroke();
 
-  ctx.fillStyle = "#ee7b3c";
-  ctx.font = "700 20px 'Fredoka', sans-serif";
+  ctx.fillStyle = "#ff8f3d";
+  ctx.font = "800 22px 'Fredoka', sans-serif";
   ctx.textAlign = "left";
   ctx.fillText("⚡ FINAL SCORE", bannerX + 32, bannerY + 44);
 
-  const timePillW = 190;
-  const timePillH = 38;
+  const timePillW = 200;
+  const timePillH = 40;
   const timePillX = bannerX + bannerW - timePillW - 28;
-  const timePillY = bannerY + 22;
-  ctx.fillStyle = "#ffffff";
+  const timePillY = bannerY + 20;
+  ctx.fillStyle = "#0c1426";
   ctx.beginPath();
   ctx.roundRect(timePillX, timePillY, timePillW, timePillH, 999);
   ctx.fill();
-  ctx.lineWidth = 2;
-  ctx.strokeStyle = "#ee7b3c";
+  ctx.lineWidth = 2.5;
+  ctx.strokeStyle = "#00e5ff";
   ctx.stroke();
 
-  ctx.fillStyle = "#ee7b3c";
-  ctx.font = "700 20px 'Fredoka', sans-serif";
+  ctx.fillStyle = "#00e5ff";
+  ctx.font = "800 20px 'Fredoka', sans-serif";
   ctx.textAlign = "center";
   ctx.fillText(
     `⏱️ ${formatStopwatchTime(elapsedTime)}`,
     timePillX + timePillW / 2,
-    timePillY + 26
+    timePillY + 27
   );
 
-  ctx.fillStyle = "#1b2a53";
-  ctx.font = "700 68px 'Fredoka', sans-serif";
+  ctx.fillStyle = "#ffcc00";
+  ctx.font = "800 74px 'Fredoka', sans-serif";
   ctx.textAlign = "left";
   ctx.fillText(
     `${xpPoints.toLocaleString()} XP`,
     bannerX + 32,
-    bannerY + 126
+    bannerY + 128
   );
 
-  ctx.fillStyle = "#576582";
+  ctx.fillStyle = "#cbd5e1";
   ctx.font = "600 22px 'Fredoka', sans-serif";
   ctx.textAlign = "left";
   ctx.fillText(
     `Includes +${speedBonus.toLocaleString()} XP Speed Bonus • ${firstTryCount} / ${towerConfig.numberOfCheckpoints} Combos`,
     bannerX + 32,
-    bannerY + 174
+    bannerY + 176
   );
 
-  // 5. Four Tactile 3D Arcade Power-Block Stat Tiles (2x2 Grid)
+  // 5. Four Tactile 3D Arcade Power-Block Stat Tiles (2x2 Grid) - Vibrant Navy Palette
   const stats: Array<{
     type: "best" | "grade" | "time" | "combos";
     label: string;
@@ -705,38 +718,48 @@ function drawMobileScoreCard(
     border: string;
     lip: string;
     badgeBg: string;
+    iconColor: string;
+    labelColor: string;
   }> = [
     {
       type: "best",
       label: "Best Score",
       val: `${bestScore.toLocaleString()} XP`,
-      border: "#ee7b3c",
-      lip: "#b85720",
-      badgeBg: "#fff4ea",
+      border: "#ff7828",
+      lip: "#8f3a09",
+      badgeBg: "#29191c",
+      iconColor: "#ff944d",
+      labelColor: "#fdba74",
     },
     {
       type: "grade",
       label: "Letter Grade",
       val: `${tierConfig.letterGrade}`,
-      border: "#7e57d8",
-      lip: "#5733a8",
-      badgeBg: "#f3effd",
+      border: "#c084fc",
+      lip: "#6b21a8",
+      badgeBg: "#25173b",
+      iconColor: "#d8b4fe",
+      labelColor: "#e9d5ff",
     },
     {
       type: "time",
       label: "Total Time",
       val: `${formatStopwatchTime(elapsedTime)}`,
-      border: "#3f9f9b",
-      lip: "#286d6a",
-      badgeBg: "#e6f7f5",
+      border: "#00e5ff",
+      lip: "#006d7d",
+      badgeBg: "#0c2838",
+      iconColor: "#38bdf8",
+      labelColor: "#67e8f9",
     },
     {
       type: "combos",
       label: "1st-Try Combos",
       val: `${firstTryCount} / ${towerConfig.numberOfCheckpoints}`,
       border: "#10b981",
-      lip: "#047857",
-      badgeBg: "#ecfdf5",
+      lip: "#04563d",
+      badgeBg: "#0b2c22",
+      iconColor: "#34d399",
+      labelColor: "#6ee7b7",
     },
   ];
 
@@ -759,11 +782,14 @@ function drawMobileScoreCard(
     ctx.roundRect(bx, by + 8, boxW, boxH, boxR);
     ctx.fill();
 
-    ctx.fillStyle = "#ffffff";
+    const boxGrad = ctx.createLinearGradient(bx, by, bx, by + boxH);
+    boxGrad.addColorStop(0, "#192749");
+    boxGrad.addColorStop(1, "#111b33");
+    ctx.fillStyle = boxGrad;
     ctx.beginPath();
     ctx.roundRect(bx, by, boxW, boxH, boxR);
     ctx.fill();
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 3.5;
     ctx.strokeStyle = st.border;
     ctx.stroke();
 
@@ -783,38 +809,54 @@ function drawMobileScoreCard(
       st.type,
       iconBoxX + iconBoxSize / 2,
       iconBoxY + iconBoxSize / 2,
-      st.border
+      st.iconColor
     );
 
     const textX = iconBoxX + iconBoxSize + 22;
-    ctx.fillStyle = "#1b2a53";
-    ctx.font = "700 48px 'Fredoka', sans-serif";
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "800 50px 'Fredoka', sans-serif";
     ctx.textAlign = "left";
     ctx.fillText(st.val, textX, by + 104);
 
-    ctx.fillStyle = "#576582";
-    ctx.font = "600 24px 'Fredoka', sans-serif";
+    ctx.fillStyle = st.labelColor;
+    ctx.font = "700 24px 'Fredoka', sans-serif";
     ctx.fillText(st.label, textX, by + 154);
   });
 
-  // 6. Branded Arcade Footer Pill
-  const footerW = 620;
-  const footerH = 58;
+  // 6. Branded Arcade Footer Frame (Enlarged & Vibrant)
+  const footerW = 860;
+  const footerH = 80;
   const footerX = cardX + (cardW - footerW) / 2;
-  const footerY = cardY + 1045;
+  const footerY = cardY + 1040;
 
-  ctx.fillStyle = "#1b2a53";
+  ctx.fillStyle = "#050812";
+  ctx.beginPath();
+  ctx.roundRect(footerX, footerY + 6, footerW, footerH, 999);
+  ctx.fill();
+
+  const footerGrad = ctx.createLinearGradient(
+    footerX,
+    footerY,
+    footerX,
+    footerY + footerH
+  );
+  footerGrad.addColorStop(0, "#1a294f");
+  footerGrad.addColorStop(1, "#0d1730");
+  ctx.fillStyle = footerGrad;
   ctx.beginPath();
   ctx.roundRect(footerX, footerY, footerW, footerH, 999);
   ctx.fill();
+  ctx.lineWidth = 3.5;
+  ctx.strokeStyle = "#ff7828";
+  ctx.stroke();
 
-  ctx.fillStyle = "#f8e7d6";
-  ctx.font = "700 22px 'Fredoka', sans-serif";
+  ctx.fillStyle = "#fde047";
+  ctx.font = "800 30px 'Fredoka', sans-serif";
   ctx.textAlign = "center";
   ctx.fillText(
     "🏆  SHERBENI ACADEMY  •  SHERBO'S TOWER",
     baseW / 2,
-    footerY + 36
+    footerY + 50
   );
 
   ctx.restore();

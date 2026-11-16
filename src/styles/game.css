@@ -1195,10 +1195,10 @@ kbd {
   overscroll-behavior: contain;
   padding: 14px 16px;
   gap: 8px;
-  background: #f8e7d6;
-  border: 2.5px solid #1b2a53;
+  background: #0f1830;
+  border: 2.5px solid #ff7828;
   border-radius: 20px;
-  box-shadow: 0 7px 0 #1b2a53, 0 18px 42px rgba(27, 42, 83, 0.34);
+  box-shadow: 0 7px 0 #070c18, 0 18px 42px rgba(0, 0, 0, 0.6);
 }
 
 .completion-side-card::-webkit-scrollbar {
@@ -1210,7 +1210,7 @@ kbd {
 }
 
 .completion-side-card::-webkit-scrollbar-thumb {
-  background: rgba(27, 42, 83, 0.25);
+  background: rgba(255, 120, 40, 0.35);
   border-radius: 999px;
 }
 
@@ -1229,11 +1229,11 @@ kbd {
   display: flex;
   align-items: center;
   gap: 12px;
-  background: #ffffff;
-  border: 2px solid #1b2a53;
+  background: #172445;
+  border: 2px solid #ff7828;
   border-radius: 16px;
   padding: 10px 14px;
-  box-shadow: 0 4px 0 rgba(27, 42, 83, 0.14);
+  box-shadow: 0 4px 0 #090e1c;
 }
 
 .completion-sticker-wrap {
@@ -1380,23 +1380,23 @@ kbd {
 
 
 
-/* 4 Performance Result Themes */
+/* 4 Performance Result Themes - Vibrant Navy Arcade */
 
 /* 1. Legendary Celebration (Perfect Run) */
 .completion-side-card.theme-legendary {
-  background: #f8e7d6;
-  border-color: #1b2a53;
-  box-shadow: 0 8px 0 #1b2a53, 0 18px 42px rgba(27, 42, 83, 0.34);
+  background: #0f1830;
+  border-color: #ff7828;
+  box-shadow: 0 8px 0 #070c18, 0 18px 42px rgba(0, 0, 0, 0.6);
 }
 
 .theme-legendary .completion-hero-banner {
-  background: #ffffff;
-  border-color: #1b2a53;
-  box-shadow: 0 4px 0 rgba(27, 42, 83, 0.14);
+  background: #172445;
+  border-color: #ff7828;
+  box-shadow: 0 4px 0 #090e1c;
 }
 
 .theme-legendary .completion-title {
-  color: #1b2a53;
+  color: #ffffff;
 }
 
 .theme-legendary .climber-rank-badge {
@@ -1407,7 +1407,7 @@ kbd {
 }
 
 .theme-legendary .sherbo-speech-bubble {
-  background: #2d184d;
+  background: #1a274c;
   border-color: #facc15;
   box-shadow: 0 2px 0 rgba(0, 0, 0, 0.35);
 }
@@ -1417,7 +1417,7 @@ kbd {
 }
 
 .theme-legendary .sherbo-speech-bubble::after {
-  border-right-color: #2d184d;
+  border-right-color: #1a274c;
 }
 
 .theme-legendary .sherbo-quote-text {
@@ -1425,67 +1425,67 @@ kbd {
 }
 
 .theme-legendary .xp-reward-banner {
-  background: #fff5eb;
-  border-color: #ee7b3c;
-  box-shadow: 0 4px 0 #b85720;
+  background: #172445;
+  border-color: #ff7828;
+  box-shadow: 0 4px 0 #090e1c;
 }
 
 .theme-legendary .xp-banner-title {
-  color: #ee7b3c;
+  color: #ff9d42;
 }
 
 .theme-legendary .xp-banner-score {
-  color: #1b2a53;
+  color: #ffcc00;
 }
 
 .theme-legendary .xp-banner-subtext {
-  color: #576582;
+  color: #94a3b8;
 }
 
 .theme-legendary .xp-banner-pct-pill {
-  background: #ffffff;
-  border-color: #ee7b3c;
-  color: #ee7b3c;
+  background: #0c1426;
+  border-color: #00e5ff;
+  color: #00e5ff;
 }
 
 .theme-legendary .stat-box {
-  background: #ffffff;
-  box-shadow: 0 4px 0 rgba(27, 42, 83, 0.14);
+  background: #152243;
+  box-shadow: 0 4px 0 #0a1020;
 }
 
 .theme-legendary .stat-box-val {
-  color: #1b2a53;
+  color: #ffffff;
 }
 
 .theme-legendary .stat-box-label {
-  color: #576582;
+  color: #94a3b8;
 }
 
 .theme-legendary .play-again-btn {
-  background: linear-gradient(180deg, #f58e54 0%, #ee7b3c 100%);
+  background: linear-gradient(180deg, #ff8e4d 0%, #ff6b1a 100%);
   color: #ffffff;
-  box-shadow: 0 4px 0 #b85720;
+  box-shadow: 0 4px 0 #b84400;
 }
 
 .theme-legendary .play-again-btn:hover {
-  filter: brightness(1.05);
+  filter: brightness(1.1);
 }
 
 /* 2. Gold Achievement (Good Performance) */
 .completion-side-card.theme-gold {
-  background: #f8e7d6;
-  border-color: #1b2a53;
-  box-shadow: 0 8px 0 #1b2a53, 0 18px 42px rgba(27, 42, 83, 0.34);
+  background: #0f1830;
+  border-color: #ff7828;
+  box-shadow: 0 8px 0 #070c18, 0 18px 42px rgba(0, 0, 0, 0.6);
 }
 
 .theme-gold .completion-hero-banner {
-  background: #ffffff;
-  border-color: #1b2a53;
-  box-shadow: 0 4px 0 rgba(27, 42, 83, 0.14);
+  background: #172445;
+  border-color: #ff7828;
+  box-shadow: 0 4px 0 #090e1c;
 }
 
 .theme-gold .completion-title {
-  color: #1b2a53;
+  color: #ffffff;
 }
 
 .theme-gold .climber-rank-badge {
@@ -1496,40 +1496,40 @@ kbd {
 }
 
 .theme-gold .xp-reward-banner {
-  background: #ffffff;
-  border-color: #ee7b3c;
-  box-shadow: 0 4px 0 #b85720;
+  background: #172445;
+  border-color: #ff7828;
+  box-shadow: 0 4px 0 #090e1c;
 }
 
 .theme-gold .xp-banner-title {
-  color: #ee7b3c;
+  color: #ff9d42;
 }
 
 .theme-gold .xp-banner-score {
-  color: #1b2a53;
+  color: #ffcc00;
 }
 
 .theme-gold .play-again-btn {
-  background: linear-gradient(180deg, #f58e54 0%, #ee7b3c 100%);
+  background: linear-gradient(180deg, #ff8e4d 0%, #ff6b1a 100%);
   color: #ffffff;
-  box-shadow: 0 4px 0 #b85720;
+  box-shadow: 0 4px 0 #b84400;
 }
 
 /* 3. Silver Achievement (Average Performance) */
 .completion-side-card.theme-silver {
-  background: #f8e7d6;
-  border-color: #1b2a53;
-  box-shadow: 0 8px 0 #1b2a53, 0 18px 42px rgba(27, 42, 83, 0.34);
+  background: #0f1830;
+  border-color: #ff7828;
+  box-shadow: 0 8px 0 #070c18, 0 18px 42px rgba(0, 0, 0, 0.6);
 }
 
 .theme-silver .completion-hero-banner {
-  background: #ffffff;
-  border-color: #1b2a53;
-  box-shadow: 0 4px 0 rgba(27, 42, 83, 0.14);
+  background: #172445;
+  border-color: #ff7828;
+  box-shadow: 0 4px 0 #090e1c;
 }
 
 .theme-silver .completion-title {
-  color: #1b2a53;
+  color: #ffffff;
 }
 
 .theme-silver .climber-rank-badge {
@@ -1540,40 +1540,40 @@ kbd {
 }
 
 .theme-silver .xp-reward-banner {
-  background: #ffffff;
-  border-color: #ee7b3c;
-  box-shadow: 0 4px 0 #b85720;
+  background: #172445;
+  border-color: #ff7828;
+  box-shadow: 0 4px 0 #090e1c;
 }
 
 .theme-silver .xp-banner-title {
-  color: #ee7b3c;
+  color: #ff9d42;
 }
 
 .theme-silver .xp-banner-score {
-  color: #1b2a53;
+  color: #ffcc00;
 }
 
 .theme-silver .play-again-btn {
-  background: linear-gradient(180deg, #f58e54 0%, #ee7b3c 100%);
+  background: linear-gradient(180deg, #ff8e4d 0%, #ff6b1a 100%);
   color: #ffffff;
-  box-shadow: 0 4px 0 #b85720;
+  box-shadow: 0 4px 0 #b84400;
 }
 
 /* 4. Encouraging Comeback Screen (Needs Improvement) */
 .completion-side-card.theme-comeback {
-  background: #f8e7d6;
-  border-color: #1b2a53;
-  box-shadow: 0 8px 0 #1b2a53, 0 18px 42px rgba(27, 42, 83, 0.34);
+  background: #0f1830;
+  border-color: #ff7828;
+  box-shadow: 0 8px 0 #070c18, 0 18px 42px rgba(0, 0, 0, 0.6);
 }
 
 .theme-comeback .completion-hero-banner {
-  background: #ffffff;
-  border-color: #1b2a53;
-  box-shadow: 0 4px 0 rgba(27, 42, 83, 0.14);
+  background: #172445;
+  border-color: #ff7828;
+  box-shadow: 0 4px 0 #090e1c;
 }
 
 .theme-comeback .completion-title {
-  color: #1b2a53;
+  color: #ffffff;
 }
 
 .theme-comeback .climber-rank-badge {
@@ -1584,23 +1584,23 @@ kbd {
 }
 
 .theme-comeback .xp-reward-banner {
-  background: #ffffff;
-  border-color: #ee7b3c;
-  box-shadow: 0 4px 0 #b85720;
+  background: #172445;
+  border-color: #ff7828;
+  box-shadow: 0 4px 0 #090e1c;
 }
 
 .theme-comeback .xp-banner-title {
-  color: #ee7b3c;
+  color: #ff9d42;
 }
 
 .theme-comeback .xp-banner-score {
-  color: #1b2a53;
+  color: #ffcc00;
 }
 
 .theme-comeback .play-again-btn {
-  background: linear-gradient(180deg, #f58e54 0%, #ee7b3c 100%);
+  background: linear-gradient(180deg, #ff8e4d 0%, #ff6b1a 100%);
   color: #ffffff;
-  box-shadow: 0 4px 0 #b85720;
+  box-shadow: 0 4px 0 #b84400;
 }
 
 .theme-comeback .play-again-btn:hover {
@@ -1685,13 +1685,14 @@ kbd {
 
 .completion-title {
   font-family: var(--font-display);
-  font-size: 1.62rem;
+  font-size: 1.85rem;
   font-weight: 800;
   text-align: center;
-  color: #1b2a53;
+  color: #ffffff;
   margin: 0;
   line-height: 1.15;
   width: 100%;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
 }
 
 .stats-summary-grid {
@@ -1701,9 +1702,9 @@ kbd {
 }
 
 .stat-box {
-  background: #ffffff;
-  border: 2px solid #1b2a53;
-  box-shadow: 0 4px 0 #1b2a53;
+  background: #152243;
+  border: 2px solid #ff7828;
+  box-shadow: 0 4px 0 #0a1020;
   border-radius: 14px;
   padding: 8px 10px;
   display: flex;
@@ -1714,53 +1715,53 @@ kbd {
 }
 
 .stat-box-teal {
-  border-color: #3f9f9b;
-  box-shadow: 0 4px 0 #286d6a;
+  border-color: #00e5ff;
+  box-shadow: 0 4px 0 #00778a;
 }
 
 .stat-box-emerald {
   border-color: #10b981;
-  box-shadow: 0 4px 0 #047857;
+  box-shadow: 0 4px 0 #04563d;
 }
 
 .stat-box-orange {
-  border-color: #ee7b3c;
-  box-shadow: 0 4px 0 #b85720;
+  border-color: #ff7828;
+  box-shadow: 0 4px 0 #8f3a09;
 }
 
 .stat-box-violet {
-  border-color: #7e57d8;
-  box-shadow: 0 4px 0 #5733a8;
+  border-color: #c084fc;
+  box-shadow: 0 4px 0 #6b21a8;
 }
 
 .stat-box-val {
   font-family: var(--font-display);
-  font-size: 1.15rem;
-  font-weight: 700;
-  color: #1b2a53;
+  font-size: 1.18rem;
+  font-weight: 800;
+  color: #ffffff;
 }
 
 .stat-box-grade {
-  font-size: 1.35rem;
+  font-size: 1.38rem;
   letter-spacing: 0.8px;
 }
 
 .stat-box-label {
   font-size: 0.74rem;
   font-weight: 600;
-  color: #576582;
+  color: #94a3b8;
 }
 
 .xp-reward-banner {
   display: flex;
   flex-direction: column;
   gap: 5px;
-  background: #ffffff;
-  border: 2px solid #ee7b3c;
-  box-shadow: 0 4px 0 #b85720;
+  background: #172445;
+  border: 2px solid #ff7828;
+  box-shadow: 0 4px 0 #090e1c;
   border-radius: 14px;
   padding: 10px 14px;
-  color: #1b2a53;
+  color: #ffffff;
 }
 
 .xp-banner-top {
@@ -1781,16 +1782,16 @@ kbd {
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.4px;
-  color: #b85720;
+  color: #ff9d42;
 }
 
 .xp-banner-pct-pill {
   font-family: var(--font-display);
   font-size: 0.74rem;
   font-weight: 700;
-  color: #ee7b3c;
-  background: #fff4ea;
-  border: 1.5px solid #ee7b3c;
+  color: #00e5ff;
+  background: #0c1426;
+  border: 1.5px solid #00e5ff;
   padding: 1px 8px;
   border-radius: 999px;
 }
@@ -1799,7 +1800,7 @@ kbd {
   font-family: var(--font-display);
   font-size: 1.25rem;
   font-weight: 800;
-  color: #ee7b3c;
+  color: #ffcc00;
   line-height: 1.15;
 }
 
@@ -1807,7 +1808,7 @@ kbd {
   font-family: var(--font-display);
   font-size: 0.76rem;
   font-weight: 600;
-  color: #576582;
+  color: #94a3b8;
   margin-top: 2px;
 }
 
@@ -1923,7 +1924,7 @@ kbd {
     height: 66px;
   }
   .completion-title {
-    font-size: 1.48rem;
+    font-size: 1.68rem;
   }
   .xp-reward-banner {
     padding: 10px 14px;
@@ -1982,7 +1983,7 @@ kbd {
     height: 56px;
   }
   .completion-title {
-    font-size: 1.32rem;
+    font-size: 1.45rem;
   }
   .xp-banner-score {
     font-size: 1.4rem;
@@ -2035,7 +2036,7 @@ kbd {
     height: 72px;
   }
   .completion-title {
-    font-size: 1.54rem;
+    font-size: 1.76rem;
     text-align: center;
   }
   .xp-reward-banner {
@@ -2095,7 +2096,7 @@ kbd {
     height: 58px;
   }
   .completion-title {
-    font-size: 1.34rem;
+    font-size: 1.48rem;
   }
   .xp-banner-score {
     font-size: 1.45rem;
