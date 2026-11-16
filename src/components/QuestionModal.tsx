@@ -371,14 +371,6 @@ export const QuestionModal: React.FC<QuestionModalProps> = ({
                     <span className="option-text">
                       {renderFormattedMathText(optionText)}
                     </span>
-                    {isSelected && !isSolvedRight && (
-                      <span
-                        className="option-selected-badge"
-                        data-testid="option-selected-badge"
-                      >
-                        ✓ Selected
-                      </span>
-                    )}
                     {isWrongTried && (
                       <span className="option-penalty-badge">
                         Incorrect
@@ -462,7 +454,7 @@ export const QuestionModal: React.FC<QuestionModalProps> = ({
                   <span>
                     {feedback.selectedOptionIndex === null
                       ? 'Pick a Power Stone'
-                      : `Confirm Choice (${OPTION_LETTERS[feedback.selectedOptionIndex]})`}
+                      : 'Confirm Answer'}
                   </span>
                 </button>
               ) : (
