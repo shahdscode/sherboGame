@@ -2439,6 +2439,9 @@ kbd {
     font-size: 0.8rem;
     min-height: 34px;
   }
+  .touch-controls-bar {
+    bottom: max(8px, env(safe-area-inset-bottom, 8px));
+  }
 }
 
 /* Utility Icon Colors matching vibrant arcade theme */
@@ -2589,9 +2592,9 @@ kbd {
   }
 
   .touch-controls-bar {
-    bottom: max(6px, env(safe-area-inset-bottom, 6px));
-    padding: 3px;
-    gap: 6px;
+    bottom: max(26px, calc(env(safe-area-inset-bottom, 0px) + 20px));
+    padding: 4px 6px;
+    gap: 8px;
   }
 
   .touch-control-hint {
