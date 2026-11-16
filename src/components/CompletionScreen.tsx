@@ -1038,18 +1038,22 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
       const offscreenCanvas = document.createElement("canvas");
       offscreenCanvas.width = gifW;
       offscreenCanvas.height = gifH;
-      const offCtx = offscreenCanvas.getContext("2d");
+      const offCtx = offscreenCanvas.getContext("2d", { willReadFrequently: true });
       if (!offCtx) return;
 
+      let lastValidFrame: HTMLImageElement | null = null;
       const numFrames = 10;
       for (let i = 0; i < numFrames; i++) {
         // false = character keeps actively dancing!
         const frame = await captureGameFrame(false);
+        if (frame) lastValidFrame = frame;
+        const frameToDraw = frame || lastValidFrame;
+
         drawMobileScoreCard(
           offCtx,
           gifW,
           gifH,
-          frame,
+          frameToDraw,
           stickerImg,
           summitRatioY,
           playerRatioX,

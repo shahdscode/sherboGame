@@ -199,7 +199,6 @@ class LZWEncoder {
   private clearCode: number;
   private eofCode: number;
   private codeSize: number;
-  private maxCode: number;
   private table: Map<number, number> = new Map();
   private nextCode: number;
 
@@ -208,8 +207,7 @@ class LZWEncoder {
     this.clearCode = 1 << initCodeSize; // 256
     this.eofCode = this.clearCode + 1;  // 257
     this.codeSize = initCodeSize + 1;   // 9
-    this.maxCode = (1 << this.codeSize) - 1;
-    this.nextCode = this.clearCode + 2;
+    this.nextCode = this.clearCode + 2; // 258
   }
 
   private writeBits(code: number) {
@@ -233,7 +231,6 @@ class LZWEncoder {
   private resetTable() {
     this.table.clear();
     this.codeSize = this.initCodeSize + 1;
-    this.maxCode = (1 << this.codeSize) - 1;
     this.nextCode = this.clearCode + 2;
   }
 
@@ -265,9 +262,9 @@ class LZWEncoder {
 
         if (this.nextCode < 4096) {
           this.table.set(key, this.nextCode++);
-          if (this.nextCode > this.maxCode && this.codeSize < 12) {
+          // In GIF LZW: codeSize increases when nextCode reaches (1 << codeSize) + 1
+          if (this.nextCode === (1 << this.codeSize) + 1 && this.codeSize < 12) {
             this.codeSize++;
-            this.maxCode = (1 << this.codeSize) - 1;
           }
         } else {
           // Table is full: emit clear code and reset
@@ -362,8 +359,6 @@ export class GifEncoder {
     bytes.push(0x03, 0x01, 0x00, 0x00, 0x00); // Sub-block: loop count 0 (infinite) + terminator
 
     // 5. Frames
-    const lzw = new LZWEncoder(8);
-
     for (const frame of this.frames) {
       // Graphic Control Extension
       const delayUnits = Math.max(2, Math.round(frame.delayMs / 10)); // in 1/100ths of second
@@ -385,6 +380,7 @@ export class GifEncoder {
       bytes.push(0x08);
 
       // Quantize and map pixels
+      const lzw = new LZWEncoder(8);
       const indexed = mapPixelsToPalette(frame.data, palette);
       const compressed = lzw.encode(indexed);
       for (let i = 0; i < compressed.length; i++) {
