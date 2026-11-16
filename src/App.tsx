@@ -76,12 +76,12 @@ export const App: React.FC = () => {
 
       {showCompletion && (
         <CompletionScreen
-          completedCheckpointsCount={completedCheckpointsCount || 5}
-          totalAttempts={totalAttempts || 5}
-          firstTryCount={firstTryCount || 5}
-          xpPoints={xpPoints || 3650}
-          elapsedTime={elapsedTime || 124000}
-          speedBonus={speedBonus || 500}
+          completedCheckpointsCount={completedCheckpointsCount}
+          totalAttempts={totalAttempts}
+          firstTryCount={firstTryCount}
+          xpPoints={xpPoints}
+          elapsedTime={elapsedTime}
+          speedBonus={speedBonus}
           scoringState={scoringState}
           onPlayAgain={restartGame}
         />
