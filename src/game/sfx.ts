@@ -104,11 +104,14 @@ function tone(
 
 let activeAudioElement: HTMLAudioElement | null = null;
 const audioCache = new Map<string, HTMLAudioElement>();
+const AUDIO_CACHE_BUSTER = Date.now();
 
 function getAudioElement(relativePath: string): HTMLAudioElement {
   let el = audioCache.get(relativePath);
   if (!el) {
-    el = new Audio(relativePath);
+    const separator = relativePath.includes('?') ? '&' : '?';
+    const busterUrl = `${relativePath}${separator}v=${AUDIO_CACHE_BUSTER}`;
+    el = new Audio(busterUrl);
     el.preload = 'auto';
     audioCache.set(relativePath, el);
   }
