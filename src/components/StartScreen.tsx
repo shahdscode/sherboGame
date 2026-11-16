@@ -65,7 +65,7 @@ export const StartScreen: React.FC<StartScreenProps> = ({
         </div>
 
         <div className="info-grid">
-          <div className="info-box">
+          <div className="info-box info-box-rules">
             <div className="info-box-header">
               <Flag size={18} className="icon-gold" />
               <h3>Tower Rules</h3>
@@ -76,7 +76,7 @@ export const StartScreen: React.FC<StartScreenProps> = ({
             </p>
           </div>
 
-          <div className="info-box">
+          <div className="info-box info-box-controls">
             <div className="info-box-header">
               <Gamepad2 size={18} className="icon-cyan" />
               <h3>Controls</h3>
