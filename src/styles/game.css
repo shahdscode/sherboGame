@@ -307,11 +307,27 @@ body,
 
 /* Start / Instructions Modal Card (Matching Final Card Deep Navy Theme) */
 .modal-card.start-modal-card {
+  max-width: min(760px, calc(100vw - 28px));
+  max-height: min(94dvh, calc(100dvh - 24px));
   background: linear-gradient(180deg, #14213d 0%, #0d1629 100%);
   border: 2.5px solid #ff7828;
   border-radius: 24px;
   box-shadow: 0 8px 0 #070c18, 0 24px 55px rgba(0, 0, 0, 0.7);
   color: #ffffff;
+}
+
+.start-modal-card::-webkit-scrollbar {
+  width: 6px;
+}
+
+.start-modal-card::-webkit-scrollbar-track {
+  background: rgba(13, 22, 41, 0.5);
+  border-radius: 999px;
+}
+
+.start-modal-card::-webkit-scrollbar-thumb {
+  background: #ff7828;
+  border-radius: 999px;
 }
 
 /* Start Screen Hero Banner (Matching Final Card Banner) */
@@ -475,9 +491,15 @@ body,
 
 .grades-list {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 8px;
   margin-top: 4px;
+}
+
+@media (max-width: 768px) and (min-width: 541px) {
+  .grades-list {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 .grade-item {
