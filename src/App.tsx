@@ -22,7 +22,6 @@ export const App: React.FC = () => {
     elapsedTime,
     speedBonus,
     scoringState,
-    dismissNotification,
     sceneReady,
     loadProgress,
     loadFailed,
@@ -50,8 +49,6 @@ export const App: React.FC = () => {
         xpPoints={xpPoints}
         elapsedTime={elapsedTime}
         currentStreak={scoringState?.currentStreak ?? 0}
-        notifications={scoringState?.recentNotifications ?? []}
-        onDismissNotification={dismissNotification}
       />
 
       {gameState === 'INTRO' && <StartScreen

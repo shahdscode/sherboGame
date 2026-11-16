@@ -3,7 +3,6 @@ import { Flag, Footprints, Zap, Compass, Timer, Volume2, VolumeX, Flame } from '
 import { CheckpointStateItem } from '../hooks/useTowerGame';
 import { towerConfig, formatStopwatchTime } from '../data/towerConfig';
 import { sfx } from '../game/sfx';
-import { ScoreNotification } from '../game/scoring';
 
 interface GameHUDProps {
   currentStep: number;
@@ -13,8 +12,6 @@ interface GameHUDProps {
   xpPoints: number;
   elapsedTime: number;
   currentStreak?: number;
-  notifications?: ScoreNotification[];
-  onDismissNotification?: (id: string) => void;
 }
 
 interface FloatingGain {
@@ -30,8 +27,6 @@ export const GameHUD: React.FC<GameHUDProps> = ({
   xpPoints,
   elapsedTime,
   currentStreak = 0,
-  notifications = [],
-  onDismissNotification,
 }) => {
   const [muted, setMutedState] = useState<boolean>(() => sfx.isMuted());
   const [floatingGains, setFloatingGains] = useState<FloatingGain[]>([]);
@@ -59,16 +54,6 @@ export const GameHUD: React.FC<GameHUDProps> = ({
     }
     prevXpRef.current = xpPoints;
   }, [xpPoints]);
-
-  // Auto-dismiss notifications after 3.2s
-  useEffect(() => {
-    if (!notifications.length || !onDismissNotification) return;
-    const latest = notifications[notifications.length - 1];
-    const timer = window.setTimeout(() => {
-      onDismissNotification(latest.id);
-    }, 3200);
-    return () => window.clearTimeout(timer);
-  }, [notifications, onDismissNotification]);
 
   const toggleSound = () => {
     const next = !muted;
@@ -169,31 +154,6 @@ export const GameHUD: React.FC<GameHUDProps> = ({
           )}
         </button>
       </header>
-
-      {/* Floating Milestone & Achievement Toast Deck */}
-      {notifications.length > 0 && (
-        <div className="hud-notification-deck" aria-live="polite" data-testid="hud-notification-deck">
-          {notifications.slice(-2).map((notif) => (
-            <div
-              key={notif.id}
-              className={`hud-notification-banner notif-${notif.type}`}
-              onClick={() => onDismissNotification?.(notif.id)}
-              title="Click to dismiss"
-            >
-              <div className="notif-icon">
-                {notif.type === 'streak' ? '🔥' : notif.type === 'achievement' ? '🏆' : notif.type === 'summit' ? '👑' : '⚡'}
-              </div>
-              <div className="notif-body">
-                <div className="notif-title">{notif.title}</div>
-                {notif.subtitle && <div className="notif-subtitle">{notif.subtitle}</div>}
-              </div>
-              {notif.xpEarned > 0 && (
-                <div className="notif-xp-pill">+{notif.xpEarned} XP</div>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
     </>
   );
 };
