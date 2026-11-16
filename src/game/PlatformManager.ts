@@ -818,18 +818,18 @@ export class PlatformManager {
     const centerX = towerWidth / 2;
 
     const sectionOffsets: number[][] = [
-      // Section 1 (4 steps before Checkpoint 1)
-      [-140, 20, 155, -25],
-      // Section 2 (7 steps before Checkpoint 2)
-      [140, -15, -155, 10, 160, -30, -145],
-      // Section 3 (10 steps before Checkpoint 3)
-      [-135, 30, 150, -20, -155, 25, 145, -40, -140, 35],
-      // Section 4 (13 steps before Checkpoint 4)
-      [140, -30, -150, 20, 155, -25, -145, 35, 150, -20, -155, 30, 140],
-      // Section 5 (16 steps before Checkpoint 5)
-      [-145, 25, 150, -30, -140, 35, 155, -20, -150, 25, 145, -35, -140, 30, 155, -25],
-      // Section 6 (19 steps before Summit)
-      [145, -25, -150, 30, 140, -35, -155, 20, 150, -25, -145, 35, 140, -30, -155, 25, 150, -20, -140],
+      // Section 1 (4 steps before Checkpoint 1): Curves leftward then ascends right
+      [-110, -60, 120, 170],
+      // Section 2 (7 steps before Checkpoint 2): Sweeping asymmetric S-curve
+      [130, 40, -120, -165, -75, 70, 150],
+      // Section 3 (10 steps before Checkpoint 3): Ascending diagonal run, side clusters, stepping stones
+      [-130, -30, 60, 160, 120, -20, -150, -110, 30, 140],
+      // Section 4 (13 steps before Checkpoint 4): Wall climbs, center pivots, and varied hop spans
+      [90, 170, 130, -10, -140, -180, -100, 40, 150, 80, -60, -160, -40],
+      // Section 5 (16 steps before Checkpoint 5): Organic winding path with clustered elevations
+      [-120, -170, -90, 20, 130, 180, 110, -30, -140, -80, 50, 160, 120, 10, -110, -165],
+      // Section 6 (19 steps before Summit): Grand multi-arc ascent breaking all zig-zag predictability
+      [140, 180, 90, -40, -150, -185, -100, 30, 145, 175, 95, -25, -135, -175, -85, 45, 155, 110, -20],
     ];
 
     for (let step = 1; step <= totalSteps; step++) {
