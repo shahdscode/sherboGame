@@ -498,6 +498,25 @@ export class Player {
     return this.currentPose;
   }
 
+  /**
+   * Freezes the character on a clean, crisp, static victory hero pose (for static picture export)
+   * or resumes the lively celebratory dance (for gameplay and animated GIF export).
+   */
+  public setStaticVictoryFrame(isStatic: boolean): void {
+    if (!this.visualSprite) return;
+    if (isStatic) {
+      this.visualSprite.anims.pause();
+      const frameObj = actionFrame('victory', 0);
+      this.visualSprite.setTexture(frameObj.key, frameObj.frame);
+    } else {
+      if (this.currentPose === 'victory') {
+        this.visualSprite.play('anim-victory', true);
+      } else {
+        this.visualSprite.anims.resume();
+      }
+    }
+  }
+
   public setTouchInput(input: TouchInputState): void {
     this.touchInput = { ...input };
   }

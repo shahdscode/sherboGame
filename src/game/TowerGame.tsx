@@ -60,17 +60,25 @@ export function getSummitViewRatios(): { summitRatioY: number; playerRatioX: num
   }
 }
 
-export function captureGameFrame(): Promise<HTMLImageElement | null> {
+export function captureGameFrame(staticPose: boolean = false): Promise<HTMLImageElement | null> {
   return new Promise((resolve) => {
     const game = activeGame;
     if (!game || !game.renderer) {
       resolve(null);
       return;
     }
+    const scene = game.scene.getScene('TowerScene') as TowerScene | null;
+    if (staticPose && scene?.player) {
+      scene.player.setStaticVictoryFrame(true);
+    }
+
     let settled = false;
     const finish = (img: HTMLImageElement | null) => {
       if (settled) return;
       settled = true;
+      if (staticPose && scene?.player) {
+        scene.player.setStaticVictoryFrame(false);
+      }
       resolve(img);
     };
     const timeoutId = window.setTimeout(() => finish(null), 2000);
