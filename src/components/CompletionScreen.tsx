@@ -5,14 +5,12 @@ import {
   RotateCcw,
   Timer,
   Zap,
-  Sparkles,
   Download,
   Award,
 } from "lucide-react";
 import { towerConfig, formatStopwatchTime } from "../data/towerConfig";
 import { getPerformanceGrade, ScoringState } from "../game/scoring";
 import { captureGameFrame, getSummitViewRatios } from "../game/TowerGame";
-import { GifEncoder } from "../game/gifEncoder";
 import { sfx } from "../game/sfx";
 
 export interface CompletionScreenProps {
@@ -344,6 +342,30 @@ export function getPerformanceTier(
   };
 }
 
+const BEST_SCORE_STORAGE_KEY = "sherbo_tower_player_best_score";
+
+function getStoredPlayerBestScore(currentXp: number): number {
+  try {
+    const stored = localStorage.getItem(BEST_SCORE_STORAGE_KEY);
+    if (stored) {
+      const parsed = parseInt(stored, 10);
+      if (!isNaN(parsed) && parsed > 0) {
+        return Math.max(parsed, currentXp);
+      }
+    }
+    const legacy = localStorage.getItem("sherbo_tower_best_score");
+    if (legacy) {
+      const legacyParsed = parseInt(legacy, 10);
+      if (!isNaN(legacyParsed) && legacyParsed > 0 && legacyParsed !== 3650) {
+        return Math.max(legacyParsed, currentXp);
+      }
+    }
+    return currentXp;
+  } catch {
+    return currentXp;
+  }
+}
+
 /**
  * Draws the 9:16 mobile frame score card onto a canvas context.
  * Standard base resolution is 1080 x 1920, scaled smoothly if canvas width differs.
@@ -371,41 +393,48 @@ function drawMobileScoreCard(
   ctx.save();
   ctx.scale(scale, scale);
 
-  // 1. Rich deep-space arcade background gradient
+  // 1. Warm background gradient matching game theme (#fdf8f2 -> #f8e7d6 -> #f2dac4)
   const bgGrad = ctx.createLinearGradient(0, 0, 0, baseH);
-  bgGrad.addColorStop(0, "#182850");
-  bgGrad.addColorStop(0.5, "#0f1a36");
-  bgGrad.addColorStop(1, "#091022");
+  bgGrad.addColorStop(0, "#fdf8f2");
+  bgGrad.addColorStop(0.38, "#f8e7d6");
+  bgGrad.addColorStop(1, "#f2dac4");
   ctx.fillStyle = bgGrad;
   ctx.fillRect(0, 0, baseW, baseH);
 
   // Warm radial spotlight behind the summit & card
   const spotGrad = ctx.createRadialGradient(
     baseW / 2,
-    720,
-    80,
+    620,
+    60,
     baseW / 2,
-    720,
-    820
+    620,
+    800
   );
-  spotGrad.addColorStop(0, "rgba(238, 123, 60, 0.28)");
-  spotGrad.addColorStop(0.55, "rgba(63, 159, 155, 0.12)");
-  spotGrad.addColorStop(1, "rgba(9, 16, 34, 0)");
+  spotGrad.addColorStop(0, "rgba(238, 123, 60, 0.22)");
+  spotGrad.addColorStop(0.55, "rgba(63, 159, 155, 0.10)");
+  spotGrad.addColorStop(1, "rgba(248, 231, 214, 0)");
   ctx.fillStyle = spotGrad;
   ctx.fillRect(0, 0, baseW, baseH);
 
   // Celebratory background confetti & starlight dots
-  const confettiPalette = tierConfig.confettiColors;
+  const confettiPalette = [
+    "#ee7b3c",
+    "#3f9f9b",
+    "#f59e0b",
+    "#7e57d8",
+    "#10b981",
+    "#e11d48",
+  ];
   for (let i = 0; i < 48; i++) {
     const seed = (i * 9301 + 49297) % 233280;
-    const rx = ((seed / 233280) * 1020) + 30;
+    const rx = (seed / 233280) * 1020 + 30;
     const ry = (((seed * 7) % 233280) / 233280) * 1860 + 30;
     const col = confettiPalette[i % confettiPalette.length];
     ctx.save();
     ctx.translate(rx, ry);
     ctx.rotate((i * 0.45) % Math.PI);
     ctx.fillStyle = col;
-    ctx.globalAlpha = 0.28 + (i % 3) * 0.14;
+    ctx.globalAlpha = 0.22 + (i % 3) * 0.12;
     if (i % 3 === 0) {
       ctx.beginPath();
       ctx.arc(0, 0, 4 + (i % 4), 0, Math.PI * 2);
@@ -416,29 +445,29 @@ function drawMobileScoreCard(
     ctx.restore();
   }
 
-  // Outer decorative arcade frame
+  // Outer decorative arcade frame with signature navy border
   ctx.save();
-  ctx.strokeStyle = tierConfig.accentColor;
-  ctx.lineWidth = 3;
+  ctx.strokeStyle = "#1b2a53";
+  ctx.lineWidth = 4;
   ctx.beginPath();
   ctx.roundRect(22, 22, baseW - 44, baseH - 44, 38);
   ctx.stroke();
   ctx.restore();
 
-  // 2. Top Showcase: Framed Live Summit Scene Window (Taller & Zoomed In!)
+  // 2. Top Showcase: Framed Live Finish Line Scene (Focused exclusively on finish line + character)
   const winX = 48;
-  const winY = 46;
+  const winY = 48;
   const winW = baseW - 96; // 984
-  const winH = 910;
+  const winH = 600;
   const winR = 28;
 
   // Window 3D shadow
-  ctx.fillStyle = "#070c1a";
+  ctx.fillStyle = "rgba(27, 42, 83, 0.22)";
   ctx.beginPath();
   ctx.roundRect(winX, winY + 12, winW, winH, winR);
   ctx.fill();
 
-  // Clip and draw the live summit scene centered and zoomed in on character & summit
+  // Clip and draw the live summit scene centered and zoomed in on character & finish line
   ctx.save();
   ctx.beginPath();
   ctx.roundRect(winX, winY, winW, winH, winR);
@@ -447,10 +476,10 @@ function drawMobileScoreCard(
   if (frame) {
     const fw = frame.naturalWidth || frame.width;
     const fh = frame.naturalHeight || frame.height;
-    const targetAspect = winW / winH; // 984 / 910 ≈ 1.08
+    const targetAspect = winW / winH; // 984 / 600 = 1.64
 
-    // Zoom factor: 2.15x for a prominent, cinematic view of the character & summit
-    const zoom = 2.15;
+    // Zoom factor: 2.45x for a tight, focused view of the finish line & celebrating character
+    const zoom = 2.45;
     let srcW = fw / zoom;
     let srcH = srcW / targetAspect;
     if (srcH > fh) {
@@ -459,26 +488,26 @@ function drawMobileScoreCard(
     }
 
     const finishLinePxY = summitRatioY * fh;
-    const desiredFinishRatioInWin = 0.68;
+    const desiredFinishRatioInWin = 0.62;
     const rawSrcY = finishLinePxY - srcH * desiredFinishRatioInWin;
     const srcY = Math.max(0, Math.min(fh - srcH, rawSrcY));
 
     const playerPxX = playerRatioX * fw;
-    const rawSrcX = playerPxX - srcW * 0.46;
+    const rawSrcX = playerPxX - srcW * 0.48;
     const srcX = Math.max(0, Math.min(fw - srcW, rawSrcX));
 
     ctx.drawImage(frame, srcX, srcY, srcW, srcH, winX, winY, winW, winH);
   } else {
-    ctx.fillStyle = "#0e172f";
+    ctx.fillStyle = "#e8dfd3";
     ctx.fillRect(winX, winY, winW, winH);
   }
 
-  // Subtle top & bottom gradient vignette inside the game window for depth
+  // Subtle top & bottom vignette inside the game window for clean depth
   const winGrad = ctx.createLinearGradient(0, winY, 0, winY + winH);
-  winGrad.addColorStop(0, "rgba(13, 23, 48, 0.40)");
-  winGrad.addColorStop(0.18, "rgba(13, 23, 48, 0)");
-  winGrad.addColorStop(0.82, "rgba(13, 23, 48, 0)");
-  winGrad.addColorStop(1, "rgba(13, 23, 48, 0.55)");
+  winGrad.addColorStop(0, "rgba(27, 42, 83, 0.32)");
+  winGrad.addColorStop(0.2, "rgba(27, 42, 83, 0)");
+  winGrad.addColorStop(0.8, "rgba(27, 42, 83, 0)");
+  winGrad.addColorStop(1, "rgba(27, 42, 83, 0.45)");
   ctx.fillStyle = winGrad;
   ctx.fillRect(winX, winY, winW, winH);
   ctx.restore();
@@ -491,14 +520,14 @@ function drawMobileScoreCard(
   ctx.stroke();
 
   ctx.lineWidth = 2.5;
-  ctx.strokeStyle = tierConfig.secondaryAccent;
+  ctx.strokeStyle = "#ee7b3c";
   ctx.beginPath();
   ctx.roundRect(winX - 2, winY - 2, winW + 4, winH + 4, winR + 2);
   ctx.stroke();
 
-  // Top floating badge pill on the Summit Window
-  const topBadgeW = 390;
-  const topBadgeH = 42;
+  // Top floating badge pill on the Finish Line Window
+  const topBadgeW = 420;
+  const topBadgeH = 44;
   const topBadgeX = baseW / 2 - topBadgeW / 2;
   const topBadgeY = winY + 16;
 
@@ -507,23 +536,27 @@ function drawMobileScoreCard(
   ctx.roundRect(topBadgeX, topBadgeY, topBadgeW, topBadgeH, 999);
   ctx.fill();
   ctx.lineWidth = 2.5;
-  ctx.strokeStyle = tierConfig.secondaryAccent;
+  ctx.strokeStyle = "#ee7b3c";
   ctx.stroke();
 
-  ctx.fillStyle = tierConfig.secondaryAccent;
-  ctx.font = "700 16px 'Fredoka', sans-serif";
+  ctx.fillStyle = "#f8e7d6";
+  ctx.font = "700 17px 'Fredoka', sans-serif";
   ctx.textAlign = "center";
-  ctx.fillText(`★  ${tierConfig.title} • STEP ${towerConfig.totalSteps}  ★`, baseW / 2, topBadgeY + 27);
+  ctx.fillText(
+    "★  SHERBO'S TOWER • FINISH LINE  ★",
+    baseW / 2,
+    topBadgeY + 28
+  );
 
-  // 3. Bottom Showcase: Tactile 3D Arcade Score Card
+  // 3. Bottom Showcase: Score Card fitting the remaining screen space
   const cardX = 48;
-  const cardY = 982;
+  const cardY = 684;
   const cardW = baseW - 96; // 984
-  const cardH = 890;
+  const cardH = 1188; // Card extends from 684 to 1872, leaving 48px bottom margin
   const cardR = 32;
 
   // Card 3D solid bottom lip + drop shadow
-  ctx.fillStyle = "rgba(5, 10, 22, 0.55)";
+  ctx.fillStyle = "rgba(27, 42, 83, 0.28)";
   ctx.beginPath();
   ctx.roundRect(cardX, cardY + 18, cardW, cardH, cardR);
   ctx.fill();
@@ -533,113 +566,117 @@ function drawMobileScoreCard(
   ctx.roundRect(cardX, cardY + 10, cardW, cardH, cardR);
   ctx.fill();
 
-  // Card body
-  ctx.fillStyle = "#f8e7d6";
+  // Card body - crisp white matching game cards
+  ctx.fillStyle = "#ffffff";
   ctx.beginPath();
   ctx.roundRect(cardX, cardY, cardW, cardH, cardR);
   ctx.fill();
 
   ctx.lineWidth = 4;
-  ctx.strokeStyle = tierConfig.accentColor;
+  ctx.strokeStyle = "#1b2a53";
   ctx.stroke();
 
   // Inner subtle top highlight
   ctx.save();
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.65)";
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.85)";
   ctx.lineWidth = 2;
   ctx.beginPath();
   ctx.roundRect(cardX + 4, cardY + 4, cardW - 8, cardH - 8, cardR - 3);
   ctx.stroke();
   ctx.restore();
 
-  // Header Row: Celebratory Sherbo Sticker + Stars + Title + Subtitle
-  const textStartX = cardX + 288;
+  // Header Row: Celebratory Sherbo Sticker + 3 Stars + Centered Title "Sherbo's Tower"
+  const haloX = cardX + 118;
+  const haloY = cardY + 86;
 
   if (stickerImg) {
-    const haloX = cardX + 152;
-    const haloY = cardY + 86;
-    const haloGrad = ctx.createRadialGradient(haloX, haloY, 12, haloX, haloY, 105);
-    haloGrad.addColorStop(0, "rgba(238, 123, 60, 0.32)");
+    const haloGrad = ctx.createRadialGradient(
+      haloX,
+      haloY,
+      12,
+      haloX,
+      haloY,
+      95
+    );
+    haloGrad.addColorStop(0, "rgba(238, 123, 60, 0.25)");
     haloGrad.addColorStop(1, "rgba(238, 123, 60, 0)");
     ctx.fillStyle = haloGrad;
     ctx.beginPath();
-    ctx.arc(haloX, haloY, 105, 0, Math.PI * 2);
+    ctx.arc(haloX, haloY, 95, 0, Math.PI * 2);
     ctx.fill();
 
-    const stickerSize = 196;
+    const stickerSize = 168;
     ctx.save();
-    ctx.shadowColor = "rgba(27, 42, 83, 0.28)";
-    ctx.shadowBlur = 18;
-    ctx.shadowOffsetY = 8;
+    ctx.shadowColor = "rgba(27, 42, 83, 0.25)";
+    ctx.shadowBlur = 16;
+    ctx.shadowOffsetY = 6;
     ctx.drawImage(
       stickerImg,
       haloX - stickerSize / 2,
-      cardY - 26,
+      cardY - 8,
       stickerSize,
       stickerSize
     );
     ctx.restore();
   }
 
-  // Top Row: 3 Stars on left
-  const starSpacing = 28;
+  // Header content: 3 Stars + "Sherbo's Tower" centered in header area
+  const headerContentCenterX = cardX + 575;
+
+  // 3 Stars centered
+  const starSpacing = 32;
+  const starsStartX = headerContentCenterX - starSpacing;
   for (let s = 0; s < 3; s++) {
-    const sx = textStartX + s * starSpacing + 14;
-    const sy = cardY + 38;
+    const sx = starsStartX + s * starSpacing;
+    const sy = cardY + 44;
     const earned = s < starCount;
     drawStar(
       ctx,
       sx,
       sy,
-      13,
-      5.8,
+      14,
+      6.2,
       earned ? "#fbbf24" : "#e2d5c4",
       earned ? "#b45309" : "#94a3b8"
     );
   }
 
-  // Title: Hero Headline
+  // Centered Title: "Sherbo's Tower"
   ctx.fillStyle = "#1b2a53";
-  ctx.font = "700 46px 'Fredoka', sans-serif";
-  ctx.textAlign = "left";
-  ctx.fillText(tierConfig.heroHeadline, textStartX, cardY + 98);
-
-  // Subtitle
-  ctx.fillStyle = "#576582";
-  ctx.font = "600 20px 'Fredoka', sans-serif";
-  ctx.textAlign = "left";
-  ctx.fillText(tierConfig.subtitle, textStartX, cardY + 134);
+  ctx.font = "700 48px 'Fredoka', sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText("Sherbo's Tower", headerContentCenterX, cardY + 112);
 
   // 4. Hero Final Score Banner
   const bannerX = cardX + 36;
   const bannerY = cardY + 176;
   const bannerW = cardW - 72; // 912
-  const bannerH = 176;
+  const bannerH = 192;
   const bannerR = 24;
 
-  ctx.fillStyle = tierConfig.accentColor;
+  ctx.fillStyle = "#b85720";
   ctx.beginPath();
   ctx.roundRect(bannerX, bannerY + 7, bannerW, bannerH, bannerR);
   ctx.fill();
 
-  ctx.fillStyle = tierConfig.scoreBannerBg;
+  ctx.fillStyle = "#fff5eb";
   ctx.beginPath();
   ctx.roundRect(bannerX, bannerY, bannerW, bannerH, bannerR);
   ctx.fill();
   ctx.lineWidth = 3.5;
-  ctx.strokeStyle = tierConfig.accentColor;
+  ctx.strokeStyle = "#ee7b3c";
   ctx.stroke();
 
-  ctx.fillStyle = tierConfig.accentColor;
-  ctx.font = "700 18px 'Fredoka', sans-serif";
+  ctx.fillStyle = "#ee7b3c";
+  ctx.font = "700 19px 'Fredoka', sans-serif";
   ctx.textAlign = "left";
-  ctx.fillText("⚡ FINAL SCORE", bannerX + 32, bannerY + 38);
+  ctx.fillText("⚡ FINAL SCORE", bannerX + 32, bannerY + 40);
 
   const timePillW = 180;
   const timePillH = 34;
   const timePillX = bannerX + bannerW - timePillW - 28;
-  const timePillY = bannerY + 18;
-  ctx.fillStyle = "#fff4ea";
+  const timePillY = bannerY + 20;
+  ctx.fillStyle = "#ffffff";
   ctx.beginPath();
   ctx.roundRect(timePillX, timePillY, timePillW, timePillH, 999);
   ctx.fill();
@@ -650,15 +687,19 @@ function drawMobileScoreCard(
   ctx.fillStyle = "#ee7b3c";
   ctx.font = "700 18px 'Fredoka', sans-serif";
   ctx.textAlign = "center";
-  ctx.fillText(`⏱️ ${formatStopwatchTime(elapsedTime)}`, timePillX + timePillW / 2, timePillY + 23);
+  ctx.fillText(
+    `⏱️ ${formatStopwatchTime(elapsedTime)}`,
+    timePillX + timePillW / 2,
+    timePillY + 23
+  );
 
-  ctx.fillStyle = tierConfig.accentColor;
-  ctx.font = "700 60px 'Fredoka', sans-serif";
+  ctx.fillStyle = "#1b2a53";
+  ctx.font = "700 64px 'Fredoka', sans-serif";
   ctx.textAlign = "left";
   ctx.fillText(
     `${xpPoints.toLocaleString()} XP`,
     bannerX + 32,
-    bannerY + 104
+    bannerY + 114
   );
 
   ctx.fillStyle = "#576582";
@@ -667,7 +708,7 @@ function drawMobileScoreCard(
   ctx.fillText(
     `Includes +${speedBonus.toLocaleString()} XP Speed Bonus • ${firstTryCount} / ${towerConfig.numberOfCheckpoints} Combos`,
     bannerX + 32,
-    bannerY + 146
+    bannerY + 158
   );
 
   // 5. Four Tactile 3D Arcade Power-Block Stat Tiles (2x2 Grid)
@@ -714,11 +755,11 @@ function drawMobileScoreCard(
   ];
 
   const gridStartX = cardX + 36;
-  const gridStartY = cardY + 380;
+  const gridStartY = cardY + 404;
   const gapX = 24;
-  const gapY = 22;
+  const gapY = 24;
   const boxW = (cardW - 72 - gapX) / 2; // 444
-  const boxH = 168;
+  const boxH = 184;
   const boxR = 24;
 
   stats.forEach((st, i) => {
@@ -740,7 +781,7 @@ function drawMobileScoreCard(
     ctx.strokeStyle = st.border;
     ctx.stroke();
 
-    const iconBoxSize = 88;
+    const iconBoxSize = 92;
     const iconBoxX = bx + 22;
     const iconBoxY = by + (boxH - iconBoxSize) / 2;
     ctx.fillStyle = st.badgeBg;
@@ -761,20 +802,20 @@ function drawMobileScoreCard(
 
     const textX = iconBoxX + iconBoxSize + 22;
     ctx.fillStyle = "#1b2a53";
-    ctx.font = "700 40px 'Fredoka', sans-serif";
+    ctx.font = "700 42px 'Fredoka', sans-serif";
     ctx.textAlign = "left";
-    ctx.fillText(st.val, textX, by + 72);
+    ctx.fillText(st.val, textX, by + 78);
 
     ctx.fillStyle = "#576582";
     ctx.font = "600 22px 'Fredoka', sans-serif";
-    ctx.fillText(st.label, textX, by + 114);
+    ctx.fillText(st.label, textX, by + 122);
   });
 
   // 6. Branded Arcade Footer Pill
   const footerW = 560;
   const footerH = 48;
   const footerX = cardX + (cardW - footerW) / 2;
-  const footerY = cardY + cardH - 72;
+  const footerY = cardY + cardH - 74;
 
   ctx.fillStyle = "#1b2a53";
   ctx.beginPath();
@@ -803,7 +844,6 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
   onPlayAgain,
 }) => {
   const [isExporting, setIsExporting] = useState(false);
-  const [isExportingGif, setIsExportingGif] = useState(false);
   const tierConfig = useMemo(
     () => getPerformanceTier(xpPoints, firstTryCount, elapsedTime),
     [xpPoints, firstTryCount, elapsedTime]
@@ -811,23 +851,16 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
   const starCount = tierConfig.stars;
 
   const [bestScore, setBestScore] = useState<number>(() => {
-    try {
-      const saved = localStorage.getItem("sherbo_tower_best_score");
-      const parsed = saved ? parseInt(saved, 10) : 0;
-      return Math.max(parsed, xpPoints);
-    } catch {
-      return xpPoints;
-    }
+    return getStoredPlayerBestScore(xpPoints);
   });
 
   useEffect(() => {
     try {
-      const saved = localStorage.getItem("sherbo_tower_best_score");
-      const prev = saved ? parseInt(saved, 10) : 0;
-      if (xpPoints > prev) {
-        localStorage.setItem("sherbo_tower_best_score", xpPoints.toString());
-        setBestScore(xpPoints);
-      }
+      if (xpPoints <= 0) return;
+      const currentStored = getStoredPlayerBestScore(xpPoints);
+      const newBest = Math.max(currentStored, xpPoints);
+      localStorage.setItem(BEST_SCORE_STORAGE_KEY, newBest.toString());
+      setBestScore(newBest);
     } catch {
       // Ignore localStorage errors
     }
@@ -946,7 +979,7 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
 
   // Save as static Picture (captures static hero pose, not moving character)
   const handleSaveScore = async () => {
-    if (isExporting || isExportingGif) return;
+    if (isExporting) return;
     setIsExporting(true);
 
     try {
@@ -1022,91 +1055,6 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
     }
   };
 
-  // Save as animated GIF (captures character dancing!)
-  const handleSaveGif = async () => {
-    if (isExporting || isExportingGif) return;
-    setIsExportingGif(true);
-
-    try {
-      const stickerImg = await loadImage(tierConfig.stickerSrc);
-      const { summitRatioY, playerRatioX } = getSummitViewRatios();
-
-      const gifW = 540;
-      const gifH = 960;
-      const gifEncoder = new GifEncoder(gifW, gifH);
-
-      const offscreenCanvas = document.createElement("canvas");
-      offscreenCanvas.width = gifW;
-      offscreenCanvas.height = gifH;
-      const offCtx = offscreenCanvas.getContext("2d", { willReadFrequently: true });
-      if (!offCtx) return;
-
-      let lastValidFrame: HTMLImageElement | null = null;
-      const numFrames = 10;
-      for (let i = 0; i < numFrames; i++) {
-        // false = character keeps actively dancing!
-        const frame = await captureGameFrame(false);
-        if (frame) lastValidFrame = frame;
-        const frameToDraw = frame || lastValidFrame;
-
-        drawMobileScoreCard(
-          offCtx,
-          gifW,
-          gifH,
-          frameToDraw,
-          stickerImg,
-          summitRatioY,
-          playerRatioX,
-          tierConfig,
-          xpPoints,
-          elapsedTime,
-          speedBonus,
-          firstTryCount,
-          bestScore,
-          starCount
-        );
-        const imgData = offCtx.getImageData(0, 0, gifW, gifH);
-        gifEncoder.addFrame(imgData, 100);
-        await new Promise((r) => setTimeout(r, 90));
-      }
-
-      const gifBytes = gifEncoder.render();
-      const blob = new Blob([gifBytes], { type: "image/gif" });
-      const fileName = `sherbos-tower-score-${xpPoints}xp.gif`;
-
-      const isTouchDevice =
-        !!window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
-      if (isTouchDevice && typeof navigator.share === "function") {
-        try {
-          const file = new File([blob], fileName, { type: "image/gif" });
-          if (!navigator.canShare || navigator.canShare({ files: [file] })) {
-            await navigator.share({
-              files: [file],
-              title: "Sherbo's Tower Victory",
-              text: `I scored ${xpPoints.toLocaleString()} XP in ${formatStopwatchTime(elapsedTime)} on Sherbo's Tower!`,
-            });
-            return;
-          }
-        } catch (shareErr) {
-          if ((shareErr as DOMException)?.name === "AbortError") return;
-        }
-      }
-
-      const objectUrl = URL.createObjectURL(blob);
-      const downloadLink = document.createElement("a");
-      downloadLink.download = fileName;
-      downloadLink.href = objectUrl;
-      document.body.appendChild(downloadLink);
-      downloadLink.click();
-      document.body.removeChild(downloadLink);
-      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 4000);
-    } catch (err) {
-      console.error("Failed to export animated score GIF:", err);
-    } finally {
-      setIsExportingGif(false);
-    }
-  };
-
   return (
     <div
       className={`completion-side-wrapper ${tierConfig.themeClass}`}
@@ -1168,7 +1116,7 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
             {displayXp.toLocaleString()} XP
           </div>
           <div className="xp-banner-subtext">
-            Includes +{speedBonus.toLocaleString()} XP Speed Bonus • {firstTryCount} / {towerConfig.numberOfCheckpoints} Combos
+            Includes +${speedBonus.toLocaleString()} XP Speed Bonus • {firstTryCount} / {towerConfig.numberOfCheckpoints} Combos
           </div>
         </div>
 
@@ -1217,35 +1165,22 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
         </div>
 
         <div className="completion-actions-row">
-          <div className="save-buttons-group">
-            <button
-              type="button"
-              className="primary-cta-btn save-score-btn"
-              onClick={handleSaveScore}
-              disabled={isExporting || isExportingGif}
-              data-testid="save-score-btn"
-            >
-              <Download size={18} />
-              <span>{isExporting ? "Saving..." : "Save Picture"}</span>
-            </button>
-
-            <button
-              type="button"
-              className="primary-cta-btn save-gif-btn"
-              onClick={handleSaveGif}
-              disabled={isExporting || isExportingGif}
-              data-testid="save-gif-btn"
-            >
-              <Sparkles size={18} />
-              <span>{isExportingGif ? "Creating..." : "Save GIF"}</span>
-            </button>
-          </div>
+          <button
+            type="button"
+            className="primary-cta-btn save-score-btn"
+            onClick={handleSaveScore}
+            disabled={isExporting}
+            data-testid="save-score-btn"
+          >
+            <Download size={18} />
+            <span>{isExporting ? "Saving..." : "Save Score"}</span>
+          </button>
 
           <button
             type="button"
             className="secondary-cta-btn play-again-btn"
             onClick={onPlayAgain}
-            disabled={isExporting || isExportingGif}
+            disabled={isExporting}
             data-testid="play-again-btn"
           >
             <RotateCcw size={18} />
