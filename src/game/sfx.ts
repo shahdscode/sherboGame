@@ -199,7 +199,7 @@ export const sfx = {
     tone(784, 0.18, 'triangle', 0.2, undefined, 0.1);
   },
   correct(): void {
-    // Sound effect removed per user request
+    playAudioFile('/sounds/HAHA.mp3', 0.95);
   },
   /**
    * Mistake voice lines:
@@ -215,9 +215,9 @@ export const sfx = {
     lastMistakeSound = picked;
     playAudioFile(picked, 0.95);
   },
-  /** Warm the cache for the wrong-answer voice lines (call from a user gesture). */
+  /** Warm the cache for voice lines (call from a user gesture). */
   preloadVoices(): void {
-    preloadAudioFiles(MISTAKE_SOUNDS);
+    preloadAudioFiles([...MISTAKE_SOUNDS, '/sounds/HAHA.mp3']);
   },
   unlockGate(): void {
     tone(300, 0.25, 'triangle', 0.22, 900);
