@@ -116,6 +116,7 @@ function tone(
  *    power and clarity is dedicated to the voice line.
  * ------------------------------------------------------------------------ */
 export const BGM_PATH = '/sounds/bgm.m4a';
+const AUDIO_CACHE_BUSTER = Date.now();
 export const BGM_DESKTOP_NORMAL_VOLUME = 0.14;
 export const BGM_DESKTOP_DUCKED_VOLUME = 0.055;
 export const BGM_MOBILE_NORMAL_VOLUME = 0.08;
@@ -302,7 +303,6 @@ if (typeof document !== 'undefined') {
 
 let activeAudioElement: HTMLAudioElement | null = null;
 const audioCache = new Map<string, HTMLAudioElement>();
-const AUDIO_CACHE_BUSTER = Date.now();
 
 function getAudioElement(relativePath: string): HTMLAudioElement {
   let el = audioCache.get(relativePath);
