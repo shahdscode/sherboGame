@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { CheckpointQuestion, towerConfig } from '../data/towerConfig';
 import { QuestionAttemptFeedback } from '../hooks/useTowerGame';
+import { sfx } from '../game/sfx';
 
 interface QuestionModalProps {
   question: CheckpointQuestion;
@@ -189,6 +190,14 @@ export const QuestionModal: React.FC<QuestionModalProps> = ({
   const isCorrect = feedback.status === 'correct';
   const isIncorrect = feedback.status === 'incorrect';
   const isReview = feedback.status === 'review';
+
+  // Duck background music while question is open so options and voice clips are crystal clear
+  useEffect(() => {
+    sfx.duckMusic(true);
+    return () => {
+      sfx.duckMusic(false);
+    };
+  }, []);
 
   // Free clue: the student can reveal the question's hint whenever they want
   const [hintVisible, setHintVisible] = useState(false);
