@@ -163,6 +163,94 @@ export function parseQuestionBank(data: any): CheckpointQuestion[] {
 export const defaultQuestionBank: CheckpointQuestion[] = parseQuestionBank(defaultQuestionsData);
 
 /**
+ * Returns all questions belonging to a specific checkpoint.
+ */
+export function getCheckpointPool(
+  bank: CheckpointQuestion[] = defaultQuestionBank,
+  checkpointNumber: number
+): CheckpointQuestion[] {
+  const pool = bank.filter((q) => q.checkpointNumber === checkpointNumber);
+  return pool.length > 0 ? pool : [createFallbackQuestion(checkpointNumber)];
+}
+
+/**
+ * Fisher-Yates shuffle returning a new shuffled array.
+ */
+export function shuffleArray<T>(items: T[], rng: () => number = Math.random): T[] {
+  const arr = [...items];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+/**
+ * Creates a shuffled cycle of a checkpoint's questions, avoiding `avoidFirstId`
+ * as the first item whenever multiple questions exist.
+ */
+export function createCheckpointCycle(
+  pool: CheckpointQuestion[],
+  avoidFirstId?: string,
+  rng: () => number = Math.random
+): CheckpointQuestion[] {
+  if (pool.length <= 1) return [...pool];
+  const shuffled = shuffleArray(pool, rng);
+  if (avoidFirstId && shuffled[0].id === avoidFirstId) {
+    const swapIdx = 1 + Math.floor(rng() * (shuffled.length - 1));
+    [shuffled[0], shuffled[swapIdx]] = [shuffled[swapIdx], shuffled[0]];
+  }
+  return shuffled;
+}
+
+export interface CheckpointRotationState {
+  queue: CheckpointQuestion[];
+  currentIndex: number;
+  lastShownId?: string;
+}
+
+/**
+ * Initializes a randomized 3-question rotation for a checkpoint.
+ */
+export function initCheckpointRotation(
+  pool: CheckpointQuestion[],
+  rng: () => number = Math.random
+): CheckpointRotationState {
+  const queue = createCheckpointCycle(pool, undefined, rng);
+  return {
+    queue,
+    currentIndex: 0,
+    lastShownId: queue[0]?.id,
+  };
+}
+
+/**
+ * Advances to the next question in the checkpoint rotation.
+ * Once all questions in the cycle are attempted, reshuffles the pool
+ * while avoiding showing the same question twice consecutively.
+ */
+export function advanceCheckpointRotation(
+  state: CheckpointRotationState,
+  pool: CheckpointQuestion[],
+  rng: () => number = Math.random
+): CheckpointRotationState {
+  const nextIdx = state.currentIndex + 1;
+  if (nextIdx < state.queue.length) {
+    return {
+      queue: state.queue,
+      currentIndex: nextIdx,
+      lastShownId: state.queue[nextIdx].id,
+    };
+  }
+  const newQueue = createCheckpointCycle(pool, state.lastShownId, rng);
+  return {
+    queue: newQueue,
+    currentIndex: 0,
+    lastShownId: newQueue[0]?.id,
+  };
+}
+
+/**
  * Selects 1 question per checkpoint (Checkpoints 1 through 5) from the question bank.
  * If multiple questions exist for a checkpoint, one is randomly selected to give variety on every run.
  */

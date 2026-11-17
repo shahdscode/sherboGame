@@ -12,6 +12,10 @@ import {
   defaultQuestionBank,
   selectSessionQuestions,
   fetchQuestionsFromPublic,
+  getCheckpointPool,
+  initCheckpointRotation,
+  advanceCheckpointRotation,
+  CheckpointRotationState,
 } from '../data/questionBank';
 import {
   notifyPlatformGameCompleted,
@@ -51,9 +55,9 @@ export interface QuestionAttemptFeedback {
 
 export function getPenaltyForMistakes(mistakes: number): number {
   if (mistakes <= 0) return 0;
-  if (mistakes === 1) return 100;
-  if (mistakes === 2) return 200;
-  return 250;
+  if (mistakes === 1) return 50;
+  if (mistakes === 2) return 200; // 50 + 150
+  return 500; // 3rd+ mistake: 0 XP remaining for the checkpoint
 }
 
 export function getQuestionXpForMistakes(mistakes: number): number {
@@ -70,9 +74,13 @@ export function useTowerGame(
       ? customQuestions
       : selectSessionQuestions(defaultQuestionBank)
   );
+  const customQuestionsRef = useRef<CheckpointQuestion[] | undefined>(customQuestions);
+  const [checkpointRotation, setCheckpointRotation] =
+    useState<CheckpointRotationState | null>(null);
 
   // Sync if customQuestions prop changes
   useEffect(() => {
+    customQuestionsRef.current = customQuestions;
     if (customQuestions && customQuestions.length > 0) {
       setSessionQuestions(customQuestions);
     }
@@ -189,6 +197,14 @@ export function useTowerGame(
         setGameState('CHECKPOINT_REACHED');
         isSubmittingRef.current = false;
         questionStartTimeRef.current = Date.now();
+
+        // Initialize randomized question rotation for this checkpoint's 3-question pool
+        const activeBank =
+          customQuestionsRef.current && customQuestionsRef.current.length > 0
+            ? customQuestionsRef.current
+            : questionBankRef.current;
+        const pool = getCheckpointPool(activeBank, checkpointNumber);
+        setCheckpointRotation(initCheckpointRotation(pool));
 
         // Check if gate was already attempted/solved
         const currentGateAttempts =
@@ -330,7 +346,9 @@ export function useTowerGame(
 
   const activeQuestion: CheckpointQuestion | null =
     activeCheckpointNumber !== null
-      ? sessionQuestions.find((q) => q.checkpointNumber === activeCheckpointNumber) ||
+      ? (checkpointRotation &&
+          checkpointRotation.queue[checkpointRotation.currentIndex]) ||
+        sessionQuestions.find((q) => q.checkpointNumber === activeCheckpointNumber) ||
         sessionQuestions[activeCheckpointNumber - 1] ||
         null
       : null;
@@ -416,10 +434,7 @@ export function useTowerGame(
           })
         );
       } else {
-        const newWrongIndices = feedback.wrongOptionIndices.includes(chosen)
-          ? feedback.wrongOptionIndices
-          : [...feedback.wrongOptionIndices, chosen];
-        const mistakeNumber = newWrongIndices.length;
+        const mistakeNumber = feedback.attemptsForCurrentQuestion + 1;
 
         // Play custom voice line based on mistake count (1st mistake vs 2nd/3rd)
         sfx.wrong(mistakeNumber);
@@ -434,22 +449,33 @@ export function useTowerGame(
         setScoringState(updatedScoring);
         setTotalAttempts(updatedScoring.totalAttempts);
 
-        setFeedback((prev) => ({
+        // Advance to the next question in this checkpoint's 3-question rotation
+        const activeBank =
+          customQuestionsRef.current && customQuestionsRef.current.length > 0
+            ? customQuestionsRef.current
+            : questionBankRef.current;
+        const pool = getCheckpointPool(activeBank, activeCheckpointNumber);
+        setCheckpointRotation((prev) =>
+          prev ? advanceCheckpointRotation(prev, pool) : initCheckpointRotation(pool)
+        );
+        questionStartTimeRef.current = Date.now();
+
+        const penaltyApplied =
+          mistakeNumber === 1 ? 50 : mistakeNumber === 2 ? 150 : 0;
+
+        setFeedback({
           status: 'incorrect',
-          // Clear the selection so the student must deliberately pick another stone
+          // Clear the selection and previous wrong indices so the next question is fresh
           selectedOptionIndex: null,
-          wrongOptionIndices: newWrongIndices,
+          wrongOptionIndices: [],
           earnedXp: null,
-          currentLoss: null,
+          currentLoss: penaltyApplied,
           potentialXp: result.potentialXp,
-          wrongPenalties: {
-            ...prev.wrongPenalties,
-            [chosen]: 1,
-          },
-          hint: activeQuestion.hint,
+          wrongPenalties: {},
+          hint: null,
           explanation: null,
           attemptsForCurrentQuestion: newAttemptNum,
-        }));
+        });
       }
     },
     [activeCheckpointNumber, activeQuestion, feedback]
@@ -488,6 +514,7 @@ export function useTowerGame(
     sfx.click();
     const cpNum = activeCheckpointNumber;
     setActiveCheckpointNumber(null);
+    setCheckpointRotation(null);
     setGameState('UNLOCK_NEXT_SECTION');
     gameEvents.emit('cmd:unlock-section', { checkpointNumber: cpNum });
   }, [activeCheckpointNumber, feedback.status]);
@@ -502,6 +529,7 @@ export function useTowerGame(
     setHighestStep(0);
     setUnlockedSteps(towerConfig.checkpointSteps[0]);
     setActiveCheckpointNumber(null);
+    setCheckpointRotation(null);
     setTotalAttempts(0);
     setFirstTryCount(0);
     setXpPoints(0);

@@ -6,10 +6,10 @@
  *
  * Components:
  * 1. Question XP (Max 2,500 XP across 5 gates):
- *    - Attempt 1: 500 XP
- *    - Attempt 2: 400 XP
- *    - Attempt 3: 300 XP
- *    - Attempt 4+: 250 XP
+ *    - Attempt 1 (0 mistakes): 500 XP
+ *    - Attempt 2 (1st mistake -50 XP): 450 XP
+ *    - Attempt 3 (2nd mistake -150 XP): 300 XP
+ *    - Attempt 4+ (3rd+ mistake): 0 XP for the checkpoint
  *    - Points awarded once per gate upon solving.
  *    - Wrong attempts never deduct previously earned XP.
  * 2. Streak XP (Max 400 XP):
@@ -138,9 +138,9 @@ export function getPerformanceGrade(totalXp: number): PerformanceGradeInfo {
  */
 export function calculateGateQuestionXp(attempts: number): number {
   if (attempts <= 1) return 500;
-  if (attempts === 2) return 400;
-  if (attempts === 3) return 300;
-  return 250;
+  if (attempts === 2) return 450; // 1st mistake: -50 XP
+  if (attempts === 3) return 300; // 2nd mistake: -150 XP
+  return 0; // 3rd+ mistake: 0 XP for the checkpoint
 }
 
 /**
@@ -280,7 +280,7 @@ export class ScoringEngine {
    */
   public recordIncorrectAttempt(gateNumber: number): { potentialXp: number; attemptNumber: number } {
     if (this.state.gateSolved[gateNumber]) {
-      return { potentialXp: this.state.gateQuestionXp[gateNumber] || 250, attemptNumber: this.state.gateAttempts[gateNumber] || 1 };
+      return { potentialXp: this.state.gateQuestionXp[gateNumber] ?? 0, attemptNumber: this.state.gateAttempts[gateNumber] || 1 };
     }
 
     const currentAttempts = (this.state.gateAttempts[gateNumber] || 0) + 1;
@@ -348,7 +348,11 @@ export class ScoringEngine {
     this.pushNotification({
       type: 'xp',
       title: isFirstTry ? `Gate ${gateNumber} Cracked!` : `Gate ${gateNumber} Solved!`,
-      subtitle: isFirstTry ? 'First Try Precision (+500 XP)' : `Attempt ${currentGateAttempts} (+${questionXp} XP)`,
+      subtitle: isFirstTry
+        ? 'First Try Precision (+500 XP)'
+        : questionXp === 0
+          ? 'Completed after 3+ mistakes (0 XP for gate)'
+          : `Attempt ${currentGateAttempts} (+${questionXp} XP)`,
       xpEarned: questionXp,
     });
 

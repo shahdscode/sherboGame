@@ -17,12 +17,12 @@ console.log('Running comprehensive Scoring Engine tests...\n');
 
 // 1. Question XP calculation tests
 console.log('Testing calculateGateQuestionXp:');
-assert(calculateGateQuestionXp(1) === 500, 'Attempt 1 must award 500 XP');
-assert(calculateGateQuestionXp(2) === 400, 'Attempt 2 must award 400 XP');
-assert(calculateGateQuestionXp(3) === 300, 'Attempt 3 must award 300 XP');
-assert(calculateGateQuestionXp(4) === 250, 'Attempt 4 must award 250 XP');
-assert(calculateGateQuestionXp(5) === 250, 'Attempt 5 must award 250 XP');
-assert(calculateGateQuestionXp(10) === 250, 'Attempt 10 must award 250 XP floor');
+assert(calculateGateQuestionXp(1) === 500, 'Attempt 1 (0 mistakes) must award 500 XP');
+assert(calculateGateQuestionXp(2) === 450, 'Attempt 2 (1st mistake -50) must award 450 XP');
+assert(calculateGateQuestionXp(3) === 300, 'Attempt 3 (2nd mistake -150) must award 300 XP');
+assert(calculateGateQuestionXp(4) === 0, 'Attempt 4 (3rd mistake) must award 0 XP for checkpoint');
+assert(calculateGateQuestionXp(5) === 0, 'Attempt 5 must award 0 XP for checkpoint');
+assert(calculateGateQuestionXp(10) === 0, 'Attempt 10 must award 0 XP for checkpoint');
 console.log('✓ Question XP values verified.');
 
 // 2. Speed XP calculation tests
@@ -78,14 +78,14 @@ console.log('✓ TEST 1 passed.');
 console.log('\nTesting TEST 2 - STRONG RUN (120s):');
 const eng2 = new ScoringEngine();
 eng2.recordCorrectAnswer(1, 6.0); // 500
-eng2.recordIncorrectAttempt(2);   // mistake
-eng2.recordCorrectAnswer(2, 6.0); // 400
+eng2.recordIncorrectAttempt(2);   // 1st mistake (-50)
+eng2.recordCorrectAnswer(2, 6.0); // 450
 eng2.recordCorrectAnswer(3, 6.0); // 500, post mistake #1
 eng2.recordCorrectAnswer(4, 6.0); // 500, post mistake #2 -> unlocks PHOENIX_COMEBACK
 eng2.recordCorrectAnswer(5, 6.0); // 500
 eng2.recordSummitCompletion(120, 5);
 const st2 = eng2.getState();
-assert(sumQuestionXp(st2.gateQuestionXp) === 2400, 'Question XP must be 2400');
+assert(sumQuestionXp(st2.gateQuestionXp) === 2450, 'Question XP must be 2450');
 assert(st2.speedXp === 450, 'Speed XP must be 450');
 assert(st2.summitXp === 300, 'Summit XP must be 300');
 assert(st2.unlockedAchievements.includes('PHOENIX_COMEBACK'), 'Phoenix Comeback must be unlocked');
@@ -130,21 +130,34 @@ const sum2 = eng5.recordSummitCompletion(50, 1);
 assert(sum2.summitXpEarned === 0, 'Duplicate summit completion must earn 0');
 console.log('✓ TEST 5 passed.');
 
-// 9. Negative deductions test:
-console.log('\nTesting No-Negative-Deduction rule:');
+// 9. Negative deductions, 3rd mistake zero-XP rule, and independent checkpoint counters:
+console.log('\nTesting 3rd-Mistake Zero-XP rule and independent checkpoint counters:');
 const eng6 = new ScoringEngine();
 eng6.recordCorrectAnswer(1, 10.0); // +500
 const scoreAfterGate1 = eng6.getState().totalXp;
 assert(scoreAfterGate1 === 500, 'Initial score is 500');
-// Now 5 wrong attempts at gate 2:
-for (let i = 0; i < 5; i++) {
-  eng6.recordIncorrectAttempt(2);
-}
+
+// Gate 2: 1st mistake (-50 -> 450 potential), 2nd mistake (-150 -> 300 potential), 3rd+ mistakes (0 potential)
+const g2m1 = eng6.recordIncorrectAttempt(2);
+assert(g2m1.potentialXp === 450, 'After 1st mistake, potential XP must be 450');
+const g2m2 = eng6.recordIncorrectAttempt(2);
+assert(g2m2.potentialXp === 300, 'After 2nd mistake, potential XP must be 300');
+const g2m3 = eng6.recordIncorrectAttempt(2);
+assert(g2m3.potentialXp === 0, 'After 3rd mistake, potential XP must be 0');
+const g2m4 = eng6.recordIncorrectAttempt(2);
+assert(g2m4.potentialXp === 0, 'After 4th mistake, potential XP remains 0');
 assert(eng6.getState().totalXp === scoreAfterGate1, 'Total XP must NEVER decrease from mistakes');
-// Eventually solves gate 2 on 6th attempt:
+
+// Eventually solves gate 2 on 5th attempt -> receives 0 XP for gate 2, but gate 2 is marked solved!
 const solveGate2 = eng6.recordCorrectAnswer(2, 10.0);
-assert(solveGate2.questionXpEarned === 250, 'Minimum floor of 250 XP guaranteed');
-assert(eng6.getState().totalXp === 750, 'Total XP after floor is 750');
-console.log('✓ No-Negative-Deductions and Floor verified.');
+assert(solveGate2.questionXpEarned === 0, 'Correct answer after 3rd mistake must award 0 XP for checkpoint');
+assert(eng6.getState().gateSolved[2] === true, 'Gate 2 must still be marked solved to allow progression');
+assert(eng6.getState().totalXp === 500, 'Total XP remains 500');
+
+// Gate 3 starts with a fresh 0-mistake counter and awards full 500 XP on 1st try!
+const solveGate3 = eng6.recordCorrectAnswer(3, 10.0);
+assert(solveGate3.questionXpEarned === 500, 'New checkpoint must reset mistake counter and award 500 XP');
+assert(eng6.getState().totalXp === 1000, 'Total XP after gate 3 is 1000');
+console.log('✓ 3rd-Mistake Zero-XP rule, no negative deductions, and independent counters verified.');
 
 console.log('\nALL TESTS PASSED SUCCESSFULLY! 🎉');

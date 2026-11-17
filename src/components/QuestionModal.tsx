@@ -167,15 +167,15 @@ export const QuestionModal: React.FC<QuestionModalProps> = ({
     }
   }, [characterImgSrc]);
 
-  const mistakeCount = feedback.wrongOptionIndices.length;
+  const mistakeCount = feedback.attemptsForCurrentQuestion;
   const characterMoodTag = isCorrect
     ? 'GATE UNLOCKED!'
     : mistakeCount === 1
-      ? 'TRY ANOTHER STONE! (400 XP Bounty)'
+      ? 'NEXT QUESTION! (450 XP Bounty)'
       : mistakeCount === 2
         ? 'KEEP TRYING! (300 XP Bounty)'
         : mistakeCount >= 3
-          ? 'CRACK THE CODE! (250 XP Floor)'
+          ? 'SOLVE TO ADVANCE! (0 XP Gate)'
           : 'CRACK THE CODE!';
 
   const currentPotentialXp =
@@ -420,14 +420,14 @@ export const QuestionModal: React.FC<QuestionModalProps> = ({
                 <div className="feedback-title">
                   <ShieldAlert size={18} />
                   <span>
-                    {feedback.wrongOptionIndices.length === 1 && (
-                      <>1st Try Missed! Next attempt solves for <strong>+400 XP</strong>. Pick another glowing stone.</>
+                    {mistakeCount === 1 && (
+                      <>Incorrect! <strong>−50 XP</strong> penalty. Solve this next question for <strong>+450 XP</strong>!</>
                     )}
-                    {feedback.wrongOptionIndices.length === 2 && (
-                      <>2nd Try Missed! Next attempt solves for <strong>+300 XP</strong>. Pick another glowing stone.</>
+                    {mistakeCount === 2 && (
+                      <>Incorrect! <strong>−150 XP</strong> penalty. Solve this next question for <strong>+300 XP</strong>!</>
                     )}
-                    {feedback.wrongOptionIndices.length >= 3 && (
-                      <>Keep going! Guaranteed <strong>+250 XP floor</strong> once cracked. You got this!</>
+                    {mistakeCount >= 3 && (
+                      <>3+ mistakes — this checkpoint now awards <strong>0 XP</strong>, but solve a question to advance!</>
                     )}
                   </span>
                 </div>

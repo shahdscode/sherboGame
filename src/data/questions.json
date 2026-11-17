@@ -2,116 +2,232 @@
   {
     "id": "cp1-q1",
     "checkpointNumber": 1,
-    "title": "Multiplier Lock",
-    "prompt": "Crack the gate code! What multiplier (r) powers each stone to the next?",
-    "sequence": ["3", "6", "12", "24", "48"],
-    "options": ["r = 2", "r = 3", "r = 4", "r = 6"],
+    "title": "Idea 1 • Question 1",
+    "prompt": "If the sequence A, −3, 9, B, … is a geometric sequence, find the common ratio (r) and the values of A and B.",
+    "sequence": ["A", "−3", "9", "B", "…"],
+    "options": [
+      "r = −3, A = 1, B = −27",
+      "r = 3, A = −1, B = 27",
+      "r = −3, A = −1, B = 27",
+      "r = −1/3, A = 9, B = −3"
+    ],
     "correctAnswer": 0,
-    "hint": "Divide any stone by the stone right before it (6 ÷ 3 or 12 ÷ 6).",
-    "explanation": "Every step doubles the stone before it (3 × 2 = 6, 6 × 2 = 12) — multiplier r = 2!"
+    "hint": "Divide 9 by −3 to find the common ratio r, then work backward for A and forward for B.",
+    "explanation": "r = 9 ÷ (−3) = −3, so A = (−3) ÷ (−3) = 1 and B = 9 × (−3) = −27."
   },
   {
     "id": "cp1-q2",
     "checkpointNumber": 1,
-    "title": "Rune Doubling Gate",
-    "prompt": "The ancient stone power doubles with every platform. If the first stone has power 7, what is the power of the 3rd stone?",
-    "sequence": ["7", "14", "?"],
-    "options": ["21", "28", "35", "49"],
+    "title": "Idea 1 • Question 2",
+    "prompt": "If the sequence A, 1/3, 1/9, B, … is a geometric sequence, find the common ratio (r) and the values of A and B.",
+    "sequence": ["A", "1/3", "1/9", "B", "…"],
+    "options": [
+      "r = 3, A = 1/9, B = 1/3",
+      "r = 1/3, A = 1, B = 1/27",
+      "r = 1/3, A = 1/9, B = 1/27",
+      "r = −1/3, A = −1, B = −1/27"
+    ],
     "correctAnswer": 1,
-    "hint": "Double the second stone: 14 × 2.",
-    "explanation": "Starting at 7: 7 × 2 = 14, then 14 × 2 = 28!"
+    "hint": "Divide (1/9) by (1/3) to find r.",
+    "explanation": "r = (1/9) ÷ (1/3) = 1/3, so A = (1/3) ÷ (1/3) = 1 and B = (1/9) × (1/3) = 1/27."
+  },
+  {
+    "id": "cp1-q3",
+    "checkpointNumber": 1,
+    "title": "Idea 1 • Question 3",
+    "prompt": "If the sequence A, −1/4, 1/8, B, … is a geometric sequence, find the common ratio (r) and the values of A and B.",
+    "sequence": ["A", "−1/4", "1/8", "B", "…"],
+    "options": [
+      "r = 1/2, A = −1/2, B = 1/16",
+      "r = −2, A = 1/8, B = −1/4",
+      "r = −1/2, A = 1/2, B = −1/16",
+      "r = −1/2, A = −1/2, B = 1/16"
+    ],
+    "correctAnswer": 2,
+    "hint": "Divide (1/8) by (−1/4) to find r, watching the signs carefully.",
+    "explanation": "r = (1/8) ÷ (−1/4) = −1/2, so A = (−1/4) ÷ (−1/2) = 1/2 and B = (1/8) × (−1/2) = −1/16."
   },
   {
     "id": "cp2-q1",
     "checkpointNumber": 2,
-    "title": "Missing Power Stone",
-    "prompt": "Power up the next platform! Which number belongs on the [ ? ] stone?",
-    "sequence": ["5", "15", "45", "135", "?"],
-    "options": ["270", "395", "405", "675"],
-    "correctAnswer": 2,
-    "hint": "Each stone triples (× 3). Multiply 135 by 3 to power the next stone!",
-    "explanation": "The pattern triples every step (r = 3), so 135 × 3 = 405 unlocks the gate!"
+    "title": "Idea 2 • Question 4",
+    "prompt": "In an increasing geometric sequence, if a₁ + a₃ = 17 and a₂ = 4, then find a₅.",
+    "options": [
+      "64",
+      "16",
+      "1024",
+      "256"
+    ],
+    "correctAnswer": 3,
+    "hint": "Express a₁ = a₂/r and a₃ = a₂·r, then solve 4/r + 4r = 17 for r > 1.",
+    "explanation": "4/r + 4r = 17 gives 4r² − 17r + 4 = 0, so r = 4 (increasing) and a₁ = 1. Thus a₅ = 1 · 4⁴ = 256."
   },
   {
     "id": "cp2-q2",
     "checkpointNumber": 2,
-    "title": "Quad Rune Pulse",
-    "prompt": "Each platform multiplies energy by 4. Find the missing number in the sequence!",
-    "sequence": ["2", "8", "32", "?"],
-    "options": ["64", "96", "128", "256"],
+    "title": "Idea 2 • Question 5",
+    "prompt": "In an increasing geometric sequence, if a₁ + a₃ = 10 and a₂ = 3, then find a₅.",
+    "options": [
+      "27",
+      "81",
+      "243",
+      "9"
+    ],
+    "correctAnswer": 1,
+    "hint": "Substitute a₁ = 3/r and a₃ = 3r into a₁ + a₃ = 10, picking r > 1.",
+    "explanation": "3/r + 3r = 10 gives 3r² − 10r + 3 = 0, so r = 3 (increasing) and a₁ = 1. Thus a₅ = 1 · 3⁴ = 81."
+  },
+  {
+    "id": "cp2-q3",
+    "checkpointNumber": 2,
+    "title": "Idea 2 • Question 6",
+    "prompt": "In an increasing geometric sequence, if a₁ + a₃ = 26 and a₂ = 5, then find a₄.",
+    "options": [
+      "25",
+      "625",
+      "125",
+      "50"
+    ],
     "correctAnswer": 2,
-    "hint": "Multiply 32 by 4.",
-    "explanation": "32 × 4 = 128 activates the energy gate!"
+    "hint": "Solve 5/r + 5r = 26 for r > 1, then compute a₄ = a₁ · r³.",
+    "explanation": "5/r + 5r = 26 gives 5r² − 26r + 5 = 0, so r = 5 (increasing) and a₁ = 1. Thus a₄ = 1 · 5³ = 125."
   },
   {
     "id": "cp3-q1",
     "checkpointNumber": 3,
-    "title": "Shrinking Spell",
-    "prompt": "Each stone halves in power! What value unlocks the 6th stone [ ? ]?",
-    "sequence": ["160", "80", "40", "20", "10", "?"],
-    "options": ["10", "5", "2.5", "0"],
-    "correctAnswer": 1,
-    "hint": "Every jump divides by 2 (× ½). Cut 10 in half one more time!",
-    "explanation": "Halving at each step gives 20 → 10 on the 5th stone, and 10 ÷ 2 = 5 on the 6th!"
+    "title": "Idea 3 • Question 7",
+    "prompt": "When the 3 numbers a, b, 2 form an arithmetic sequence in this order, and a, 2, b form a geometric sequence in this order, find the values of a and b.",
+    "options": [
+      "a = 2, b = 2 or a = −4, b = −1",
+      "a = 2, b = −2 or a = 4, b = −1",
+      "a = −2, b = 2 or a = 4, b = 1",
+      "a = 1, b = 2 or a = −4, b = 1"
+    ],
+    "correctAnswer": 0,
+    "hint": "Use 2b = a + 2 for the arithmetic sequence and ab = 2² = 4 for the geometric sequence.",
+    "explanation": "From a = 2b − 2 and ab = 4, we get (2b − 2)b = 4 → b² − b − 2 = 0, so b = 2 (a = 2) or b = −1 (a = −4)."
   },
   {
     "id": "cp3-q2",
     "checkpointNumber": 3,
-    "title": "Thirds Chamber",
-    "prompt": "Energy is dividing by 3 at each chamber. What is the value of the next stone?",
-    "sequence": ["81", "27", "9", "?"],
-    "options": ["1", "3", "6", "0"],
+    "title": "Idea 3 • Question 8",
+    "prompt": "When the 3 numbers a, b, 6 form an arithmetic sequence in this order, and a, 6, b form a geometric sequence in this order, find the values of a and b.",
+    "options": [
+      "a = 6, b = −6 or a = 12, b = −3",
+      "a = 6, b = 6 or a = −12, b = −3",
+      "a = −6, b = 6 or a = 12, b = 3",
+      "a = 3, b = 6 or a = −12, b = 3"
+    ],
     "correctAnswer": 1,
-    "hint": "Divide 9 by 3.",
-    "explanation": "9 ÷ 3 = 3 unlocks the pathway!"
+    "hint": "Use 2b = a + 6 and ab = 6² = 36.",
+    "explanation": "From a = 2b − 6 and ab = 36, we get b² − 3b − 18 = 0, so b = 6 (a = 6) or b = −3 (a = −12)."
+  },
+  {
+    "id": "cp3-q3",
+    "checkpointNumber": 3,
+    "title": "Idea 3 • Question 9",
+    "prompt": "When the 3 numbers a, b, 8 form an arithmetic sequence in this order, and a, 8, b form a geometric sequence in this order, find the values of a and b.",
+    "options": [
+      "a = 8, b = −8 or a = 16, b = −4",
+      "a = −8, b = 8 or a = 16, b = 4",
+      "a = 8, b = 8 or a = −16, b = −4",
+      "a = 4, b = 8 or a = −16, b = 4"
+    ],
+    "correctAnswer": 2,
+    "hint": "Use 2b = a + 8 and ab = 8² = 64.",
+    "explanation": "From a = 2b − 8 and ab = 64, we get b² − 4b − 32 = 0, so b = 8 (a = 8) or b = −4 (a = −16)."
   },
   {
     "id": "cp4-q1",
     "checkpointNumber": 4,
-    "title": "Master Rune Formula",
-    "prompt": "Forge the nth-stone spell (aₙ) when the 1st stone is a₁ = 4 and multiplier is r = 3:",
-    "sequence": ["a₁ = 4", "× 3", "12", "× 3", "36", "aₙ = ?"],
+    "title": "Idea 4 • Question 10",
+    "prompt": "Find the sum (Sₙ) from the first term to the n-th term of the following geometric sequence: 4, −12, 36, −108, …",
+    "sequence": ["4", "−12", "36", "−108", "…"],
     "options": [
-      "aₙ = 4 + 3(n - 1)",
-      "aₙ = 3 · 4^(n - 1)",
-      "aₙ = 4 · 3^(n - 1)",
-      "aₙ = (4 · 3)^(n - 1)"
+      "Sₙ = 1 + (3)^n",
+      "Sₙ = 1 − (−3)^n",
+      "Sₙ = (−3)^n − 1",
+      "Sₙ = 1 − (3)^n"
     ],
-    "correctAnswer": 2,
-    "hint": "Use the geometric rune rule: aₙ = (first stone a₁) · r^(n - 1).",
-    "explanation": "Starting at a₁ = 4 and multiplying by r = 3 each step gives aₙ = 4 · 3^(n - 1)!"
+    "correctAnswer": 1,
+    "hint": "Use Sₙ = a(1 − r^n) / (1 − r) with a = 4 and r = −3.",
+    "explanation": "Sₙ = 4(1 − (−3)^n) / (1 − (−3)) = 4(1 − (−3)^n) / 4 = 1 − (−3)^n."
   },
   {
     "id": "cp4-q2",
     "checkpointNumber": 4,
-    "title": "Fifth Term Arcana",
-    "prompt": "For a sequence where the first stone a₁ = 2 and multiplier r = 5, what is the 4th stone (a₄)?",
-    "sequence": ["a₁ = 2", "r = 5", "a₄ = ?"],
-    "options": ["125", "250", "500", "1000"],
-    "correctAnswer": 1,
-    "hint": "Calculate a₄ = 2 × 5³ = 2 × 125.",
-    "explanation": "a₄ = 2 × 5^(4-1) = 2 × 125 = 250!"
+    "title": "Idea 4 • Question 11",
+    "prompt": "Find the sum (Sₙ) from the first term to the n-th term of the following geometric sequence: 3, −6, 12, −24, …",
+    "sequence": ["3", "−6", "12", "−24", "…"],
+    "options": [
+      "Sₙ = 1 + (−2)^n",
+      "Sₙ = 1 − (2)^n",
+      "Sₙ = 1 − (−2)^n",
+      "Sₙ = (−2)^n − 1"
+    ],
+    "correctAnswer": 2,
+    "hint": "Use Sₙ = a(1 − r^n) / (1 − r) with a = 3 and r = −2.",
+    "explanation": "Sₙ = 3(1 − (−2)^n) / (1 − (−2)) = 3(1 − (−2)^n) / 3 = 1 − (−2)^n."
+  },
+  {
+    "id": "cp4-q3",
+    "checkpointNumber": 4,
+    "title": "Idea 4 • Question 12",
+    "prompt": "Find the sum (Sₙ) from the first term to the n-th term of the following geometric sequence: 5, −20, 80, −320, …",
+    "sequence": ["5", "−20", "80", "−320", "…"],
+    "options": [
+      "Sₙ = 1 − (−4)^n",
+      "Sₙ = 1 − (4)^n",
+      "Sₙ = (−4)^n − 1",
+      "Sₙ = 1 + (4)^n"
+    ],
+    "correctAnswer": 0,
+    "hint": "Use Sₙ = a(1 − r^n) / (1 − r) with a = 5 and r = −4.",
+    "explanation": "Sₙ = 5(1 − (−4)^n) / (1 − (−4)) = 5(1 − (−4)^n) / 5 = 1 − (−4)^n."
   },
   {
     "id": "cp5-q1",
     "checkpointNumber": 5,
-    "title": "Flip-Sign Boss Gate",
-    "prompt": "Watch the signs flip! What number lands on the 5th stone [ ? ]?",
-    "sequence": ["2", "-6", "18", "-54", "?"],
-    "options": ["-162", "108", "162", "-108"],
-    "correctAnswer": 2,
-    "hint": "Multiply by -3 each time! Remember: a negative times a negative turns positive.",
-    "explanation": "The multiplier is r = -3, so (-54) × (-3) = +162 smashes the final gate!"
+    "title": "Idea 5 • Question 13",
+    "prompt": "A geometric sequence with positive terms has its second term equal to 8, and the sum of its first three terms is 42. Find the possible values for the first term (a) and the common ratio (r).",
+    "options": [
+      "a = 2, r = 4 or a = 32, r = 1/4",
+      "a = 4, r = 2 or a = 16, r = 1/2",
+      "a = 2, r = 4 or a = 24, r = 1/4",
+      "a = 3, r = 4 or a = 32, r = 1/3"
+    ],
+    "correctAnswer": 0,
+    "hint": "Since ar = 8, write a = 8/r and solve 8/r + 8 + 8r = 42.",
+    "explanation": "8/r + 8r = 34 → 4r² − 17r + 4 = 0 → r = 4 (a = 2) or r = 1/4 (a = 32)."
   },
   {
     "id": "cp5-q2",
     "checkpointNumber": 5,
-    "title": "Summit Sign Inversion",
-    "prompt": "The Summit Gate flips signs with each jump: 5, -10, 20, -40... What is the next term?",
-    "sequence": ["5", "-10", "20", "-40", "?"],
-    "options": ["-80", "60", "80", "-60"],
-    "correctAnswer": 2,
-    "hint": "Multiply -40 by -2. A negative times a negative gives a positive!",
-    "explanation": "(-40) × (-2) = +80 breaks the summit ward!"
+    "title": "Idea 5 • Question 14",
+    "prompt": "A geometric sequence with positive terms has its second term equal to 6, and the sum of its first three terms is 26. Find the possible values for the first term (a) and the common ratio (r).",
+    "options": [
+      "a = 3, r = 2 or a = 12, r = 1/2",
+      "a = 2, r = 3 or a = 18, r = 1/3",
+      "a = 2, r = 3 or a = 12, r = 1/3",
+      "a = 6, r = 3 or a = 18, r = 1/2"
+    ],
+    "correctAnswer": 1,
+    "hint": "Since ar = 6, write a = 6/r and solve 6/r + 6 + 6r = 26.",
+    "explanation": "6/r + 6r = 20 → 3r² − 10r + 3 = 0 → r = 3 (a = 2) or r = 1/3 (a = 18)."
+  },
+  {
+    "id": "cp5-q3",
+    "checkpointNumber": 5,
+    "title": "Idea 5 • Question 15",
+    "prompt": "A geometric sequence with positive terms has its second term equal to 10, and the sum of its first three terms is 62. Find the possible values for the first term (a) and the common ratio (r).",
+    "options": [
+      "a = 2, r = 5 or a = 25, r = 1/5",
+      "a = 5, r = 2 or a = 50, r = 1/5",
+      "a = 2, r = 5 or a = 40, r = 1/4",
+      "a = 2, r = 5 or a = 50, r = 1/5"
+    ],
+    "correctAnswer": 3,
+    "hint": "Since ar = 10, write a = 10/r and solve 10/r + 10 + 10r = 62.",
+    "explanation": "10/r + 10r = 52 → 5r² − 26r + 5 = 0 → r = 5 (a = 2) or r = 1/5 (a = 50)."
   }
 ]

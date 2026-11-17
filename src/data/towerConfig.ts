@@ -97,9 +97,9 @@ export const towerConfig: TowerConfigRuntime = {
   },
   rewards: {
     xpPerCheckpoint: 500,
-    penalty1stMistake: 100,
-    penalty2ndMistake: 200,
-    penalty3rdMistake: 250,
+    penalty1stMistake: 50,
+    penalty2ndMistake: 150,
+    penalty3rdMistake: 500,
     firstTryBonusXp: 0,
     summitBonusXp: 300,
     maxSpeedBonus: 600,

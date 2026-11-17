@@ -9,19 +9,32 @@ import {
   selectSessionQuestions,
   parseQuestionBank,
   normalizeQuestion,
+  getCheckpointPool,
+  initCheckpointRotation,
+  advanceCheckpointRotation,
 } from './questionBank.ts';
 
 console.log('Running Question Bank unit tests...');
 
-// 1. Verify defaultQuestionBank loaded from src/data/questions.json
+// 1. Verify defaultQuestionBank loaded from src/data/questions.json (all 15 PDF questions)
 assert(Array.isArray(defaultQuestionBank), 'defaultQuestionBank should be an array');
-assert(defaultQuestionBank.length >= 5, 'defaultQuestionBank should have at least 5 questions');
+assert(defaultQuestionBank.length === 15, `defaultQuestionBank must have exactly 15 questions (found ${defaultQuestionBank.length})`);
 
 for (let cp = 1; cp <= 5; cp++) {
-  const count = defaultQuestionBank.filter((q) => q.checkpointNumber === cp).length;
-  assert(count >= 1, `Checkpoint ${cp} must have at least 1 question in bank (found ${count})`);
+  const pool = getCheckpointPool(defaultQuestionBank, cp);
+  assert(pool.length === 3, `Checkpoint ${cp} must have exactly 3 questions (found ${pool.length})`);
+  assert(pool.every((q) => q.checkpointNumber === cp), `Checkpoint ${cp} pool must only contain checkpoint ${cp} questions`);
 }
-console.log('✓ Default question bank loaded successfully with all 5 checkpoints.');
+
+// Verify exact model answers from Model Answer PDF: 1:a(0), 2:b(1), 3:c(2), 4:d(3), 5:b(1), 6:c(2), 7:a(0), 8:b(1), 9:c(2), 10:b(1), 11:c(2), 12:a(0), 13:a(0), 14:b(1), 15:d(3)
+const expectedAnswers = [0, 1, 2, 3, 1, 2, 0, 1, 2, 1, 2, 0, 0, 1, 3];
+defaultQuestionBank.forEach((q, idx) => {
+  assert(
+    q.correctAnswer === expectedAnswers[idx],
+    `Question ${idx + 1} (${q.id}) expected correctAnswer ${expectedAnswers[idx]}, got ${q.correctAnswer}`
+  );
+});
+console.log('✓ All 15 PDF questions and Model Answers verified across 5 checkpoints (3 per checkpoint).');
 
 // 2. Test selectSessionQuestions
 const session = selectSessionQuestions(defaultQuestionBank);
@@ -95,5 +108,27 @@ assert(sessionWithFallbacks[0].id === 'only-cp1');
 assert(sessionWithFallbacks[1].checkpointNumber === 2);
 assert(sessionWithFallbacks[4].checkpointNumber === 5);
 console.log('✓ Forgiving parser and fallback logic verified.');
+
+// 6. Test 3-question rotation, reshuffling, indefinite repetition, and no consecutive repeats
+for (let cp = 1; cp <= 5; cp++) {
+  const pool = getCheckpointPool(defaultQuestionBank, cp);
+  let rot = initCheckpointRotation(pool);
+  let previousId: string | undefined;
+
+  // Simulate 12 consecutive wrong attempts (4 full cycles of 3 questions)
+  for (let cycle = 0; cycle < 4; cycle++) {
+    const seenInCycle = new Set<string>();
+    for (let step = 0; step < 3; step++) {
+      const current = rot.queue[rot.currentIndex];
+      assert(current.checkpointNumber === cp, `Must stay in checkpoint ${cp}`);
+      assert(current.id !== previousId, `Must never show same question twice consecutively (${current.id})`);
+      seenInCycle.add(current.id);
+      previousId = current.id;
+      rot = advanceCheckpointRotation(rot, pool);
+    }
+    assert(seenInCycle.size === 3, `All 3 questions must be shown once before repeating in cycle ${cycle}`);
+  }
+}
+console.log('✓ 3-question rotation, reshuffling, indefinite retry, and no-consecutive-repeat verified.');
 
 console.log('ALL QUESTION BANK TESTS PASSED! 🎉');
