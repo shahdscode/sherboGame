@@ -89,8 +89,6 @@ body,
   background: rgba(27, 42, 83, 0.95);
   border: 2px solid rgba(238, 123, 60, 0.55);
   box-shadow: 0 8px 24px rgba(27, 42, 83, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.18);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
   width: max-content;
   max-width: calc(100vw - 16px);
   pointer-events: auto;
@@ -194,8 +192,6 @@ body,
   padding: 6px 14px;
   border-radius: 999px;
   border: 1.5px solid rgba(27, 42, 83, 0.3);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
   font-weight: 700;
   text-align: center;
   white-space: nowrap;

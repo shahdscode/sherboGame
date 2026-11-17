@@ -63,6 +63,18 @@ const POSE_TEXTURE_MAP: Record<CharacterPose, string> = {
   victory: 'char-victory',
 };
 
+interface DustParticle {
+  sprite: Phaser.GameObjects.Image;
+  active: boolean;
+  age: number;
+  duration: number;
+  vx: number;
+  vy: number;
+  startScale: number;
+  peakScale: number;
+  baseAlpha: number;
+}
+
 export class Player {
   private scene: Phaser.Scene;
   private config: TowerConfigRuntime;
@@ -99,6 +111,8 @@ export class Player {
   private squash: number = 0;
   /** Y of the surface last stood on — the shadow stays there while airborne. */
   private lastGroundY: number = 0;
+  private dustPool: DustParticle[] = [];
+  private dustCursor: number = 0;
 
   public static preloadAssets(scene: Phaser.Scene): void {
     // 1. Extracted 2x HD character sheet animation frames
@@ -127,6 +141,7 @@ export class Player {
     this.createPhysicsPlaceholderTexture();
     this.createAnimations();
     this.createSprite();
+    this.createDustPool();
     this.setupKeyboard();
   }
 
@@ -407,13 +422,44 @@ export class Player {
     }
   }
 
+  private createDustPool(): void {
+    if (!this.scene.textures.exists('tex-dust-puff')) {
+      const g = this.scene.make.graphics({ x: 0, y: 0 }, false);
+      g.fillStyle(0xffffff, 1);
+      g.fillCircle(8, 8, 8);
+      g.generateTexture('tex-dust-puff', 16, 16);
+      g.destroy();
+    }
+    this.dustPool = [];
+    for (let i = 0; i < 24; i++) {
+      const sprite = this.scene.add
+        .image(0, 0, 'tex-dust-puff')
+        .setDepth(21)
+        .setVisible(false);
+      this.dustPool.push({
+        sprite,
+        active: false,
+        age: 0,
+        duration: 300,
+        vx: 0,
+        vy: 0,
+        startScale: 0.4,
+        peakScale: 1,
+        baseAlpha: 0.85,
+      });
+    }
+  }
+
   private spawnDustPuff(count: number = 5, isRun: boolean = false): void {
-    if (!this.sprite || !this.scene) return;
+    if (!this.sprite || !this.scene || this.dustPool.length === 0) return;
     const footY = this.sprite.y + this.config.player.height / 2 - 2;
     const footX = this.sprite.x;
     const palette = this.getSmokePaletteForAltitude(footY);
 
     for (let i = 0; i < count; i++) {
+      const p = this.dustPool[this.dustCursor];
+      this.dustCursor = (this.dustCursor + 1) % this.dustPool.length;
+
       const color =
         palette.colors[Phaser.Math.Between(0, palette.colors.length - 1)];
 
@@ -422,52 +468,57 @@ export class Player {
         : (i % 2 === 0 ? -1 : 1);
 
       const spreadDist = isRun
-        ? Phaser.Math.Between(6, 18)
-        : Phaser.Math.Between(8, 28);
-      const spreadX = dir * spreadDist;
-
-      const baseR = isRun
-        ? Phaser.Math.FloatBetween(2.8, 4.6)
-        : Phaser.Math.FloatBetween(4.2, 7.5);
-      const r = baseR * palette.scaleMultiplier;
-
-      const puff = this.scene.add
-        .circle(
-          footX + Phaser.Math.Between(-6, 6),
-          footY + Phaser.Math.Between(-2, 2),
-          r,
-          color,
-          palette.alpha
-        )
-        .setDepth(21);
-
-      puff.setScale(0.5);
-
+        ? Phaser.Math.Between(8, 22)
+        : Phaser.Math.Between(10, 34);
       const duration = isRun
         ? Phaser.Math.Between(220, 280)
         : Phaser.Math.Between(340, 420);
 
-      this.scene.tweens.add({
-        targets: puff,
-        x: puff.x + spreadX,
-        y: footY - (isRun ? Phaser.Math.Between(2, 8) : Phaser.Math.Between(6, 18)),
-        scale: isRun ? 0.9 : 1.2,
-        duration: duration * 0.38,
-        ease: 'Quad.easeOut',
-        onComplete: () => {
-          if (!puff.active) return;
-          this.scene.tweens.add({
-            targets: puff,
-            x: puff.x + spreadX * 0.35,
-            y: puff.y - (isRun ? 3 : 8),
-            scale: 0.15,
-            alpha: 0,
-            duration: duration * 0.62,
-            ease: 'Cubic.easeIn',
-            onComplete: () => puff.destroy(),
-          });
-        },
-      });
+      const baseR = isRun
+        ? Phaser.Math.FloatBetween(0.35, 0.58)
+        : Phaser.Math.FloatBetween(0.52, 0.94);
+
+      p.active = true;
+      p.age = 0;
+      p.duration = duration;
+      p.vx = (dir * spreadDist) / (duration * 0.001);
+      p.vy = -(isRun ? Phaser.Math.Between(5, 11) : Phaser.Math.Between(14, 26)) / (duration * 0.001);
+      p.startScale = baseR * 0.5 * palette.scaleMultiplier;
+      p.peakScale = baseR * (isRun ? 0.95 : 1.2) * palette.scaleMultiplier;
+      p.baseAlpha = palette.alpha;
+
+      p.sprite
+        .setPosition(footX + Phaser.Math.Between(-6, 6), footY + Phaser.Math.Between(-2, 2))
+        .setTint(color)
+        .setScale(p.startScale)
+        .setAlpha(p.baseAlpha)
+        .setVisible(true);
+    }
+  }
+
+  private updateDustPool(delta: number): void {
+    const dt = delta * 0.001;
+    for (let i = 0; i < this.dustPool.length; i++) {
+      const p = this.dustPool[i];
+      if (!p.active) continue;
+      p.age += delta;
+      if (p.age >= p.duration) {
+        p.active = false;
+        p.sprite.setVisible(false);
+        continue;
+      }
+      const t = p.age / p.duration;
+      p.sprite.x += p.vx * dt * (1 - t * 0.65);
+      p.sprite.y += p.vy * dt * (1 - t * 0.5);
+      if (t < 0.38) {
+        const k = t / 0.38;
+        p.sprite.setScale(p.startScale + (p.peakScale - p.startScale) * k);
+        p.sprite.setAlpha(p.baseAlpha);
+      } else {
+        const k = (t - 0.38) / 0.62;
+        p.sprite.setScale(p.peakScale * (1 - k * 0.8));
+        p.sprite.setAlpha(p.baseAlpha * (1 - k));
+      }
     }
   }
 
@@ -599,6 +650,7 @@ export class Player {
    * @param onIce true while standing on an ice platform (slippery movement)
    */
   public update(delta: number, canControl: boolean, onIce: boolean = false): void {
+    this.updateDustPool(delta);
     const body = this.sprite.body as Phaser.Physics.Arcade.Body;
     if (!body || !body.enable) {
       this.syncVisualPosition();
