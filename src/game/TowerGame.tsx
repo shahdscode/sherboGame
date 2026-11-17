@@ -21,7 +21,8 @@ const getViewport = () => {
   const vv = typeof window !== 'undefined' ? window.visualViewport : null;
   const w = Math.max(320, Math.round(vv?.width ?? window.innerWidth));
   const h = Math.max(320, Math.round(vv?.height ?? window.innerHeight));
-  const deviceDpr = Math.min(Math.max(window.devicePixelRatio || 1, 1), MAX_RENDER_DPR);
+  const maxDpr = w * h > 900_000 ? 1.5 : 1.75;
+  const deviceDpr = Math.min(Math.max(window.devicePixelRatio || 1, 1), maxDpr);
   const dpr = Math.max(MIN_RENDER_DPR, deviceDpr * qualityScale);
   return { w, h, dpr };
 };
@@ -244,6 +245,7 @@ export const TowerGame: React.FC = () => {
           antialias: true,
           pixelArt: false,
           roundPixels: false,
+          powerPreference: 'high-performance',
         },
         fps: {
           target: 60,
@@ -254,6 +256,7 @@ export const TowerGame: React.FC = () => {
           arcade: {
             gravity: { x: 0, y: 0 },
             debug: false,
+            useTree: false,
           },
         },
         input: {

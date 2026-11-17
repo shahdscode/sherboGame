@@ -39,7 +39,8 @@ export class WavingFlag {
   private windSpeed: number;
   private phaseOffset: number;
   private isSummit: boolean;
-  private segments: number = 18;
+  private segments: number = 12;
+  private lastRenderTime: number = -100;
 
   constructor(options: WavingFlagOptions) {
     this.x = options.x;
@@ -80,6 +81,8 @@ export class WavingFlag {
   }
 
   public update(timeMs: number): void {
+    if (timeMs - this.lastRenderTime < 32) return;
+    this.lastRenderTime = timeMs;
     this.render(timeMs);
   }
 

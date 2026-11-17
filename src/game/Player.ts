@@ -509,22 +509,10 @@ export class Player {
       this.visualSprite.setFlipX(false);
       this.visualSprite.play(randomCelebration, true);
     } else {
-      this.visualSprite.stop();
-      const texKey = POSE_TEXTURE_MAP[pose] || 'char-question';
-      if (this.scene.textures.exists(texKey)) {
-        this.visualSprite.setTexture(texKey);
-      }
-      // 512x512 stickers scaled to 0.24 ≈ 122px in-world height
-      this.visualSprite.setScale(0.24);
-      this.visualSprite.setOrigin(0.5, 0.84);
+      this.visualSprite.setScale(this.baseScale);
+      this.visualSprite.setOrigin(0.5, 0.96);
       this.visualSprite.setFlipX(false);
-      this.scene.tweens.add({
-        targets: this.visualSprite,
-        scaleX: 0.27,
-        scaleY: 0.27,
-        duration: 160,
-        yoyo: true,
-      });
+      this.visualSprite.play('anim-idle', true);
     }
   }
 

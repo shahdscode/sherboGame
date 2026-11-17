@@ -11,7 +11,7 @@ import { sfx } from './sfx';
 /** Super-sampling factor for procedural textures so platforms stay razor-sharp when zoomed in. */
 const TEX_SCALE = 2;
 /** High-DPI resolution multiplier for Phaser in-world text labels. */
-const TEXT_RES = 3;
+const TEXT_RES = 2;
 
 /**
  * Platform behaviours. Each tower section introduces new ones, so the climb gets
@@ -146,6 +146,7 @@ interface CheckpointDoor {
   lightRays: Phaser.GameObjects.Graphics;
   lockIcon: Phaser.GameObjects.Text;
   glow: Phaser.GameObjects.Arc;
+  lockY: number;
   isUnlocked: boolean;
 }
 
@@ -154,6 +155,8 @@ export class PlatformManager {
   private config: TowerConfigRuntime;
   private staticGroup: Phaser.Physics.Arcade.StaticGroup;
   private platforms: Map<number, PlatformData> = new Map();
+  private movingPlatforms: PlatformData[] = [];
+  private crumblePlatforms: PlatformData[] = [];
   private checkpointDoors: Map<number, CheckpointDoor> = new Map();
   private ceilingBarrier!: Phaser.Physics.Arcade.Sprite;
   private unlockedSection: number = 1;
@@ -203,6 +206,8 @@ export class PlatformManager {
     this.wavingFlags.forEach((flag) => flag.destroy());
     this.wavingFlags = [];
     this.flagSteps = [];
+    this.movingPlatforms = [];
+    this.crumblePlatforms = [];
     this.spriteToPlatform.clear();
     this.clouds.forEach((cloud) => cloud.container.destroy());
     this.clouds = [];
@@ -1373,7 +1378,7 @@ export class PlatformManager {
         this.flagSteps.push(step);
 
         const cpSign = this.scene.add
-          .text(flagX - 8, y - 46, `🔑 ${gateTitle}`, {
+          .text(centerX + 52, y - 48, `🔑 ${gateTitle}`, {
             fontFamily: '"Fredoka", sans-serif',
             fontSize: '14px',
             color: '#ffffff',
@@ -1384,7 +1389,7 @@ export class PlatformManager {
             fontStyle: 'bold',
           })
           .setResolution(TEXT_RES)
-          .setOrigin(1, 0.5)
+          .setOrigin(0, 0.5)
           .setDepth(6);
 
         decorations.push(flagAura, pole, poleShine, finial, finialSparkle, flag.getGameObject(), cpSign);
@@ -1495,6 +1500,8 @@ export class PlatformManager {
 
       this.platforms.set(step, platformData);
       this.spriteToPlatform.set(sprite, platformData);
+      if (kind === 'moving') this.movingPlatforms.push(platformData);
+      if (kind === 'crumble') this.crumblePlatforms.push(platformData);
       this.applyPlatformLockState(platformData, isInitiallyUnlocked, false);
     }
   }
@@ -1633,19 +1640,11 @@ export class PlatformManager {
     doorRight.strokeCircle(5, doorTopY + doorH * 0.52, 4);
 
     // 5. Central Pulsing Lock Core
-    const glow = this.scene.add.circle(0, doorTopY + doorH * 0.52, 22, 0xee7b3c, 0.45);
-    this.scene.tweens.add({
-      targets: glow,
-      scale: { from: 0.85, to: 1.3 },
-      alpha: { from: 0.3, to: 0.7 },
-      duration: 800,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut',
-    });
+    const lockY = doorTopY + doorH * 0.52;
+    const glow = this.scene.add.circle(0, lockY, 22, 0xee7b3c, 0.45);
 
     const lockIcon = this.scene.add
-      .text(0, doorTopY + doorH * 0.52, '🔒', {
+      .text(0, lockY, '🔒', {
         fontSize: '24px',
       })
       .setResolution(TEXT_RES)
@@ -1663,6 +1662,7 @@ export class PlatformManager {
       lightRays,
       lockIcon,
       glow,
+      lockY,
       isUnlocked: false,
     };
   }
@@ -1805,7 +1805,7 @@ export class PlatformManager {
       // Floating unlocked badge rise and fade
       this.scene.tweens.add({
         targets: door.lockIcon,
-        y: door.lockIcon.y - 32,
+        y: door.lockY - 32,
         scale: 1.4,
         alpha: 0,
         duration: 650,
@@ -1860,13 +1860,20 @@ export class PlatformManager {
 
     // Reset all doors back to locked state
     this.checkpointDoors.forEach((door) => {
+      this.scene.tweens.killTweensOf([
+        door.lockIcon,
+        door.glow,
+        door.doorLeft,
+        door.doorRight,
+        door.lightRays,
+      ]);
       door.isUnlocked = false;
       door.lockIcon.setText('🔒');
-      door.lockIcon.setAlpha(1).setScale(1);
+      door.lockIcon.setPosition(0, door.lockY).setAlpha(1).setScale(1);
       door.doorLeft.setScale(1, 1).setAlpha(1).setX(0);
       door.doorRight.setScale(1, 1).setAlpha(1).setX(0);
       door.lightRays.setAlpha(0);
-      door.glow.setScale(1).setAlpha(0.45).setFillStyle(0xee7b3c, 0.45);
+      door.glow.setPosition(0, door.lockY).setScale(1).setAlpha(0.45).setFillStyle(0xee7b3c, 0.45);
     });
 
     const barrierY = this.getBarrierYForSection(1);
@@ -1894,45 +1901,46 @@ export class PlatformManager {
 
     if (worldRunning) {
       this.moveClock += delta * 0.001;
-      this.platforms.forEach((p) => {
-        if (!p.unlocked) return;
 
-        // Moving platforms (only the ones near the screen need updating)
-        if (p.kind === 'moving' && p.y > top - 200 && p.y < bottom + 200) {
-          const nx = p.baseX + Math.sin(this.moveClock * p.moveSpeed + p.movePhase) * p.moveAmp;
-          const dx = nx - p.x;
-          this.setPlatformX(p, nx);
-          if (standingOn === p) carryDx = dx;
-        }
+      // Moving platforms (pre-filtered list, only update ones near the screen)
+      for (let i = 0; i < this.movingPlatforms.length; i++) {
+        const p = this.movingPlatforms[i];
+        if (!p.unlocked || p.y <= top - 200 || p.y >= bottom + 200) continue;
+        const nx = p.baseX + Math.sin(this.moveClock * p.moveSpeed + p.movePhase) * p.moveAmp;
+        const dx = nx - p.x;
+        this.setPlatformX(p, nx);
+        if (standingOn === p) carryDx = dx;
+      }
 
-        // Crumbling platforms
-        if (p.kind === 'crumble' && p.crumbleState !== 0) {
-          p.crumbleTimer -= delta;
-          if (p.crumbleState === 1) {
-            // Shake harder as it is about to give way
-            const k = 1 - Math.max(0, p.crumbleTimer) / p.crumbleDelay;
-            p.sprite.x = p.x + Math.sin(time * 0.09) * (1 + k * 2.5);
-            p.sprite.setAngle(Math.sin(time * 0.07) * k * 2);
-            if (p.crumbleTimer <= 0) {
-              p.crumbleState = 2;
-              p.crumbleTimer = 2400;
-              (p.sprite.body as Phaser.Physics.Arcade.StaticBody).enable = false;
-              p.decorations.forEach((d: any) => d.setVisible?.(false));
-              sfx.crumbleFall();
-              this.scene.tweens.add({
-                targets: p.sprite,
-                y: p.y + 90,
-                alpha: 0,
-                angle: p.stepNumber % 2 === 0 ? 14 : -14,
-                duration: 420,
-                ease: 'Quad.easeIn',
-              });
-            }
-          } else if (p.crumbleTimer <= 0) {
-            this.restoreCrumbled(p, true);
+      // Crumbling platforms (pre-filtered list)
+      for (let i = 0; i < this.crumblePlatforms.length; i++) {
+        const p = this.crumblePlatforms[i];
+        if (!p.unlocked || p.crumbleState === 0) continue;
+        p.crumbleTimer -= delta;
+        if (p.crumbleState === 1) {
+          // Shake harder as it is about to give way
+          const k = 1 - Math.max(0, p.crumbleTimer) / p.crumbleDelay;
+          p.sprite.x = p.x + Math.sin(time * 0.09) * (1 + k * 2.5);
+          p.sprite.setAngle(Math.sin(time * 0.07) * k * 2);
+          if (p.crumbleTimer <= 0) {
+            p.crumbleState = 2;
+            p.crumbleTimer = 2400;
+            (p.sprite.body as Phaser.Physics.Arcade.StaticBody).enable = false;
+            p.decorations.forEach((d: any) => d.setVisible?.(false));
+            sfx.crumbleFall();
+            this.scene.tweens.add({
+              targets: p.sprite,
+              y: p.y + 90,
+              alpha: 0,
+              angle: p.stepNumber % 2 === 0 ? 14 : -14,
+              duration: 420,
+              ease: 'Quad.easeIn',
+            });
           }
+        } else if (p.crumbleTimer <= 0) {
+          this.restoreCrumbled(p, true);
         }
-      });
+      }
     }
 
     // Gentle coin bobbing (visible coins only)
@@ -1952,15 +1960,20 @@ export class PlatformManager {
       if (onScreen) this.wavingFlags[i].update(time);
     }
 
+    const pulse = 0.5 + 0.5 * Math.sin(time * 0.004);
     this.checkpointDoors.forEach((door, checkpointNumber) => {
       const cpStep = this.config.checkpointSteps[checkpointNumber - 1];
       const platform = this.platforms.get(cpStep);
-      door.container.setVisible(
-        !!platform && platform.unlocked && platform.y > top && platform.y < bottom
-      );
+      const visible =
+        !!platform && platform.unlocked && platform.y > top && platform.y < bottom;
+      door.container.setVisible(visible);
+      if (visible && !door.isUnlocked) {
+        door.glow.setScale(0.88 + pulse * 0.35);
+        door.glow.setAlpha(0.32 + pulse * 0.35);
+      }
     });
 
-    // 2. Update drifting clouds across the tower
+    // 2. Update drifting clouds across the tower (only move display objects on-screen)
     const dt = delta * 0.001;
     const minX = -140;
     const maxX = this.config.towerWidth + 140;
@@ -1972,7 +1985,9 @@ export class PlatformManager {
       if (c.x > maxX) {
         c.x -= span;
       }
-      c.container.setX(c.x + c.offsetX);
+      if (c.y > top && c.y < bottom) {
+        c.container.setX(c.x + c.offsetX);
+      }
     }
 
     return carryDx;

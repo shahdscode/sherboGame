@@ -233,8 +233,8 @@ export class TowerScene extends Phaser.Scene {
       if (this.isCompleted || this.isLandingSequence) return;
       this.isLandingSequence = true;
 
-      // Allow 850ms so player sees the character land, dust puffs rise, and land animation complete
-      this.time.delayedCall(850, () => {
+      // Brief landing beat before celebrating victory
+      this.time.delayedCall(400, () => {
         this.handleSummitCompletion();
         this.isLandingSequence = false;
       });
@@ -251,8 +251,8 @@ export class TowerScene extends Phaser.Scene {
       if (this.isPausedAtCheckpoint || this.isLandingSequence) return;
       this.isLandingSequence = true;
 
-      // Allow 800ms so the user clearly sees the character touch down, land, and settle into idle
-      this.time.delayedCall(800, () => {
+      // Trigger checkpoint promptly upon landing so the gate lock feels responsive
+      this.time.delayedCall(180, () => {
         this.triggerCheckpointPause(
           cpResult.checkpointNumber!,
           matchedPlatform.stepNumber
