@@ -103,100 +103,45 @@ function tone(
 }
 
 /* --------------------------------------------------------------------------
- * Background music — generated live with the Web Audio API (no audio files to
- * download, nothing to license). A soft, looping arpeggio over four warm chords.
- * Each tower section nudges the tempo up and adds a sparkle layer.
+ * Background music — looping /sounds/bgm.m4a at a gentle volume so game SFX
+ * (jump, coins, springs) stay clearly audible, and ducked even lower while
+ * answering a question so answer voice lines stand out.
  * ------------------------------------------------------------------------ */
-const MUSIC_VOLUME = 0.5;
-// C maj7 – A min7 – F maj7 – G6 (frequencies in Hz)
-const MUSIC_CHORDS: number[][] = [
-  [261.63, 329.63, 392.0, 493.88],
-  [220.0, 261.63, 329.63, 392.0],
-  [174.61, 220.0, 261.63, 329.63],
-  [196.0, 246.94, 293.66, 329.63],
-];
-const MUSIC_PATTERN = [0, 2, 1, 3, 2, 1, 3, 2]; // chord-tone order across one bar of 8th notes
+const BGM_PATH = '/sounds/bgm.m4a';
+const BGM_NORMAL_VOLUME = 0.14;
+const BGM_DUCKED_VOLUME = 0.035;
 
-let musicGain: GainNode | null = null;
-let musicTimer: number | null = null;
-let musicNextTime = 0;
-let musicStep = 0;
-let musicLevel = 1;
+let bgmAudio: HTMLAudioElement | null = null;
+let bgmStarted = false;
 let musicDucked = false;
 
-function musicTargetVolume(): number {
-  if (muted) return 0;
-  return MUSIC_VOLUME * (musicDucked ? 0.35 : 1);
+function getBgmAudio(): HTMLAudioElement | null {
+  if (typeof window === 'undefined') return null;
+  if (!bgmAudio) {
+    bgmAudio = getAudioElement(BGM_PATH);
+    bgmAudio.loop = true;
+    bgmAudio.preload = 'auto';
+  }
+  return bgmAudio;
 }
 
 function applyMusicVolume(): void {
-  if (!musicGain || !ctx) return;
-  try {
-    musicGain.gain.cancelScheduledValues(ctx.currentTime);
-    musicGain.gain.setTargetAtTime(musicTargetVolume(), ctx.currentTime, 0.25);
-  } catch {
-    /* ignore */
-  }
+  const el = bgmAudio;
+  if (!el) return;
+  el.muted = muted;
+  el.volume = muted ? 0 : musicDucked ? BGM_DUCKED_VOLUME : BGM_NORMAL_VOLUME;
 }
 
-function musicNote(freq: number, start: number, duration: number, type: Wave, volume: number): void {
-  if (!ctx || !musicGain) return;
-  const osc = ctx.createOscillator();
-  const gain = ctx.createGain();
-  osc.type = type;
-  osc.frequency.setValueAtTime(freq, start);
-  gain.gain.setValueAtTime(0, start);
-  gain.gain.linearRampToValueAtTime(volume, start + 0.02);
-  gain.gain.linearRampToValueAtTime(0, start + duration);
-  osc.connect(gain).connect(musicGain);
-  osc.start(start);
-  osc.stop(start + duration + 0.05);
-}
-
-function scheduleMusic(): void {
-  const ac = ctx;
-  if (!ac || !musicGain) return;
-  // Nothing is scheduled while the tab is hidden or the sound is muted
-  if (document.hidden || muted || ac.state !== 'running') {
-    musicNextTime = 0;
-    return;
-  }
-  if (musicNextTime < ac.currentTime) musicNextTime = ac.currentTime + 0.06;
-
-  const bpm = 84 + musicLevel * 5; // 89 bpm at the base … 114 bpm near the summit
-  const stepDur = 60 / bpm / 2; // 8th notes
-
-  while (musicNextTime < ac.currentTime + 0.4) {
-    const bar = Math.floor(musicStep / 8);
-    const inBar = musicStep % 8;
-    const chord = MUSIC_CHORDS[bar % MUSIC_CHORDS.length];
-    const t = musicNextTime;
-
-    // Arpeggio (the tune)
-    musicNote(chord[MUSIC_PATTERN[inBar]] * 2, t, stepDur * 1.7, 'triangle', 0.075);
-
-    // Soft pad + bass at the start of every bar
-    if (inBar === 0) {
-      const barDur = stepDur * 8;
-      musicNote(chord[0], t, barDur * 0.98, 'sine', 0.06);
-      musicNote(chord[2], t, barDur * 0.98, 'sine', 0.04);
-      musicNote(chord[0] / 2, t, barDur * 0.5, 'triangle', 0.09);
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', () => {
+    if (!bgmAudio || !bgmStarted) return;
+    if (document.hidden) {
+      bgmAudio.pause();
+    } else if (!muted) {
+      applyMusicVolume();
+      void bgmAudio.play().catch(() => {});
     }
-    if (inBar === 4) {
-      musicNote(chord[0] / 2, t, stepDur * 3.5, 'triangle', 0.07);
-    }
-    // Sparkle layer from section 3 upwards
-    if (musicLevel >= 3 && (inBar === 2 || inBar === 6)) {
-      musicNote(chord[3] * 4, t, stepDur * 1.2, 'sine', 0.028);
-    }
-    // Light off-beat pulse for the last two sections
-    if (musicLevel >= 5 && inBar % 2 === 1) {
-      musicNote(chord[1] * 2, t, stepDur * 0.5, 'triangle', 0.03);
-    }
-
-    musicNextTime += stepDur;
-    musicStep += 1;
-  }
+  });
 }
 
 let activeAudioElement: HTMLAudioElement | null = null;
@@ -308,42 +253,31 @@ export const sfx = {
     tone(300, 0.3, 'triangle', 0.2, 110);
   },
   /** Start (or restart) the looping background music. Must follow a user gesture. */
-  startMusic(level: number = 1): void {
-    const ac = audio();
-    if (!ac) return;
-    musicLevel = Math.max(1, Math.min(6, level));
+  startMusic(_level: number = 1): void {
+    const el = getBgmAudio();
+    if (!el) return;
+    bgmStarted = true;
     musicDucked = false;
-    if (!musicGain) {
-      musicGain = ac.createGain();
-      musicGain.gain.value = 0;
-      musicGain.connect(ac.destination);
-    }
-    musicStep = 0;
-    musicNextTime = 0;
     applyMusicVolume();
-    if (musicTimer === null && typeof window !== 'undefined') {
-      musicTimer = window.setInterval(scheduleMusic, 120);
+    if (el.paused) {
+      el.currentTime = 0;
+    }
+    if (!muted) {
+      void el.play().catch(() => {});
     }
   },
   stopMusic(): void {
-    if (musicTimer !== null) {
-      window.clearInterval(musicTimer);
-      musicTimer = null;
-    }
-    if (musicGain && ctx) {
-      try {
-        musicGain.gain.cancelScheduledValues(ctx.currentTime);
-        musicGain.gain.setTargetAtTime(0, ctx.currentTime, 0.3);
-      } catch {
-        /* ignore */
-      }
+    bgmStarted = false;
+    if (bgmAudio) {
+      bgmAudio.pause();
+      bgmAudio.currentTime = 0;
     }
   },
-  /** Higher tower sections play slightly faster with extra layers. */
-  setMusicLevel(level: number): void {
-    musicLevel = Math.max(1, Math.min(6, level));
+  /** Kept for section-change compatibility. */
+  setMusicLevel(_level: number): void {
+    /* background track plays continuously */
   },
-  /** Lower the music while a question is open so the student can think. */
+  /** Lower the music while a question is open so answer SFX stand out clearly. */
   duckMusic(ducked: boolean): void {
     musicDucked = ducked;
     applyMusicVolume();
@@ -369,9 +303,9 @@ export const sfx = {
     lastMistakeSound = picked;
     playAudioFile(picked, 0.95);
   },
-  /** Warm the cache for voice lines (call from a user gesture). */
+  /** Warm the cache for voice lines and background music (call from a user gesture). */
   preloadVoices(): void {
-    preloadAudioFiles([...MISTAKE_SOUNDS, '/sounds/HAHA.mp3']);
+    preloadAudioFiles([...MISTAKE_SOUNDS, '/sounds/HAHA.mp3', BGM_PATH]);
   },
   unlockGate(): void {
     tone(300, 0.25, 'triangle', 0.22, 900);
@@ -397,6 +331,9 @@ export const sfx = {
       /* ignore */
     }
     applyMusicVolume();
+    if (!value && bgmStarted && bgmAudio && bgmAudio.paused) {
+      void bgmAudio.play().catch(() => {});
+    }
     muteListeners.forEach((fn) => fn(value));
   },
   onMuteChange(fn: (m: boolean) => void): () => void {
