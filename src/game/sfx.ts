@@ -151,6 +151,18 @@ function playAudioFile(relativePath: string, volume = 0.85): void {
   }
 }
 
+const MISTAKE_SOUNDS = [
+  '/sounds/ehheeeee.mp3',
+  '/sounds/enta ghaby.mp3',
+  '/sounds/khatar khatar khatar.mp3',
+  '/sounds/matgawdshhhh.mp3',
+  '/sounds/msh hashaga3ak.mp3',
+  '/sounds/tahzeer tahzeer tahzeer.mp3',
+  '/sounds/wana bahes enk aabet.mp3',
+];
+
+let lastMistakeSound: string | null = null;
+
 export const sfx = {
   /** Call from any touch / click gesture to immediately unlock audio on iOS and Android. */
   unlock(): void {
@@ -191,35 +203,21 @@ export const sfx = {
   },
   /**
    * Mistake voice lines:
-   * - 1st mistake: random pick from ["ehheeeee.mp3", "msh hashaga3ak.mp3"]
-   * - 2nd mistake: "matgawdshhhh.mp3"
-   * - 3rd mistake: random pick from ["enta ghaby.mp3", "wana bahes enk aabet.mp3"]
+   * Picks randomly from all audio files in public/sounds/ for any mistake,
+   * avoiding playing the same file twice in a row.
    */
-  wrong(mistakeNumber: number = 1): void {
-    if (mistakeNumber <= 1) {
-      const sounds1 = ['/sounds/ehheeeee.mp3', '/sounds/msh hashaga3ak.mp3'];
-      const picked = sounds1[Math.floor(Math.random() * sounds1.length)];
-      playAudioFile(picked, 0.95);
-    } else if (mistakeNumber === 2) {
-      playAudioFile('/sounds/matgawdshhhh.mp3', 0.95);
-    } else {
-      const sounds3 = [
-        '/sounds/enta ghaby.mp3',
-        '/sounds/wana bahes enk aabet.mp3',
-      ];
-      const picked = sounds3[Math.floor(Math.random() * sounds3.length)];
-      playAudioFile(picked, 0.95);
-    }
+  wrong(_mistakeNumber: number = 1): void {
+    const candidates =
+      MISTAKE_SOUNDS.length > 1 && lastMistakeSound
+        ? MISTAKE_SOUNDS.filter((s) => s !== lastMistakeSound)
+        : MISTAKE_SOUNDS;
+    const picked = candidates[Math.floor(Math.random() * candidates.length)];
+    lastMistakeSound = picked;
+    playAudioFile(picked, 0.95);
   },
   /** Warm the cache for the wrong-answer voice lines (call from a user gesture). */
   preloadVoices(): void {
-    preloadAudioFiles([
-      '/sounds/ehheeeee.mp3',
-      '/sounds/msh hashaga3ak.mp3',
-      '/sounds/matgawdshhhh.mp3',
-      '/sounds/enta ghaby.mp3',
-      '/sounds/wana bahes enk aabet.mp3',
-    ]);
+    preloadAudioFiles(MISTAKE_SOUNDS);
   },
   unlockGate(): void {
     tone(300, 0.25, 'triangle', 0.22, 900);
