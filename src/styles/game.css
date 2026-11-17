@@ -2651,9 +2651,10 @@ kbd {
   }
 
   .touch-controls-bar {
-    bottom: max(26px, calc(env(safe-area-inset-bottom, 0px) + 20px));
-    padding: 4px 6px;
-    gap: 8px;
+    bottom: max(24px, calc(env(safe-area-inset-bottom, 0px) + 18px));
+    width: min(460px, calc(100vw - 28px));
+    padding: 6px 10px;
+    gap: 12px;
   }
 
   .touch-control-hint {
@@ -2661,20 +2662,20 @@ kbd {
   }
 
   .touch-dpad {
-    gap: 6px;
+    gap: 10px;
   }
 
   .touch-btn {
-    min-width: 74px;
-    height: 46px;
-    font-size: 0.92rem;
-    padding: 0 10px;
-    gap: 4px;
-    border-radius: 12px;
+    min-width: 76px;
+    height: 50px;
+    font-size: 0.94rem;
+    padding: 0 12px;
+    gap: 6px;
+    border-radius: 14px;
   }
 
   .touch-jump-btn {
-    min-width: 94px;
+    min-width: 98px;
   }
 
   .start-hero-banner {
@@ -3234,32 +3235,14 @@ body {
    Game upgrade: controls, clue button, review banner, device overlays
    ========================================================================== */
 
-/* Touch devices: large, thumb-friendly controls */
-@media (pointer: coarse) {
-  .touch-controls-bar {
-    padding: 4px 8px;
-  }
-
+@media (max-width: 380px) {
   .touch-btn {
-    min-width: 84px;
-    height: 66px;
-    font-size: 1rem;
-    border-radius: 18px;
+    min-width: 68px;
+    padding: 0 10px;
   }
 
   .touch-jump-btn {
-    min-width: 118px;
-  }
-}
-
-@media (pointer: coarse) and (max-width: 380px) {
-  .touch-btn {
-    min-width: 74px;
-    padding: 0 8px;
-  }
-
-  .touch-jump-btn {
-    min-width: 100px;
+    min-width: 88px;
   }
 }
 
