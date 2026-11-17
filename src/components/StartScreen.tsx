@@ -48,7 +48,7 @@ export const StartScreen: React.FC<StartScreenProps> = ({
         <div className="start-hero-banner">
           <div className="start-hero-sticker-wrap">
             <img
-              src="/stickers/climbing-figure.webp"
+              src="/stickers/main-sticker.png"
               alt="Sherbo Climber"
               className="start-hero-sticker"
               width={512}

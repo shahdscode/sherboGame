@@ -237,8 +237,7 @@ export const QuestionModal: React.FC<QuestionModalProps> = ({
 
   useEffect(() => {
     const urls = [
-      '/stickers/question.webp',
-      '/stickers/retry.webp',
+      '/stickers/main-sticker.png',
       celebrationSticker,
     ];
     urls.forEach((url) => {
@@ -250,9 +249,7 @@ export const QuestionModal: React.FC<QuestionModalProps> = ({
   // Determine which sticker character to display
   const characterImgSrc = isCorrect
     ? celebrationSticker
-    : isIncorrect
-      ? '/stickers/retry.webp'
-      : '/stickers/question.webp';
+    : '/stickers/main-sticker.png';
 
   const characterImgAlt = isCorrect
     ? 'Good Job Character'

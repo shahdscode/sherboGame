@@ -111,10 +111,10 @@ export class Player {
       spacing: 4,
     });
 
-    // 3. Checkpoint & feedback stickers (512x512 WebP)
-    scene.load.image('char-question', '/stickers/question.webp');
-    scene.load.image('char-retry', '/stickers/retry.webp');
-    scene.load.image('char-goodjob', '/stickers/goodjob.webp');
+    // 3. Checkpoint & feedback stickers
+    scene.load.image('char-question', '/stickers/main-sticker.png');
+    scene.load.image('char-retry', '/stickers/main-sticker.png');
+    scene.load.image('char-goodjob', '/stickers/main-sticker.png');
   }
 
   constructor(scene: Phaser.Scene, config: TowerConfigRuntime) {
