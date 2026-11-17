@@ -2862,19 +2862,19 @@ kbd {
   }
 
   .sticker-halo {
-    padding: 0;
+    padding: 3px;
   }
 
   .question-character-sticker-large {
-    width: 44px;
-    height: 44px;
-    min-width: 44px;
-    min-height: 44px;
+    width: clamp(82px, 12.5vh, 104px);
+    height: clamp(82px, 12.5vh, 104px);
+    min-width: 82px;
+    min-height: 82px;
   }
 
   .sticker-mood-pill {
-    font-size: 0.70rem;
-    padding: 2px 9px;
+    font-size: 0.74rem;
+    padding: 3px 10px;
     letter-spacing: 0.2px;
   }
 
@@ -2900,8 +2900,8 @@ kbd {
   }
 
   .question-title {
-    font-size: 0.90rem;
-    line-height: 1.18;
+    font-size: 0.96rem;
+    line-height: 1.2;
   }
 
   .step-milestone-tag {
@@ -2910,8 +2910,8 @@ kbd {
   }
 
   .question-prompt {
-    font-size: 0.80rem;
-    line-height: 1.28;
+    font-size: 0.94rem;
+    line-height: 1.32;
   }
 
   .sequence-stones-track {
