@@ -427,10 +427,15 @@ export const QuestionModal: React.FC<QuestionModalProps> = ({
           <div className="modal-card question-modal-card">
             {/* Comic Speech Bubble from Sherbo */}
             <div className="sherbo-speech-bubble">
-              <div className="speech-header-row">
-                <h2 id="question-modal-heading" className="question-title">
-                  {question.title}
-                </h2>
+              <div
+                className="speech-header-row"
+                style={!question.title ? { justifyContent: 'flex-end' } : undefined}
+              >
+                {question.title && (
+                  <h2 id="question-modal-heading" className="question-title">
+                    {question.title}
+                  </h2>
+                )}
                 <span className="step-milestone-tag">
                   Step {towerConfig.checkpointSteps[question.checkpointNumber - 1] ?? (question.checkpointNumber * 5)}
                 </span>

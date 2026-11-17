@@ -28,9 +28,7 @@ export function normalizeQuestion(
 
   // Parse title & prompt
   const title =
-    typeof raw.title === 'string' && raw.title.trim()
-      ? raw.title.trim()
-      : `Gate ${checkpointNumber} Challenge`;
+    typeof raw.title === 'string' ? raw.title.trim() : '';
   const prompt =
     typeof raw.prompt === 'string' && raw.prompt.trim()
       ? raw.prompt.trim()
