@@ -149,19 +149,36 @@ export function getTargetMusicVolume(): number {
   return musicDucked ? BGM_DESKTOP_DUCKED_VOLUME : BGM_DESKTOP_NORMAL_VOLUME;
 }
 
-function loadBgmBuffer(ac: AudioContext): Promise<AudioBuffer | null> {
-  if (bgmBuffer) return Promise.resolve(bgmBuffer);
-  if (bgmLoadPromise) return bgmLoadPromise;
+let bgmRawBytesPromise: Promise<ArrayBuffer | null> | null = null;
+
+function prefetchBgmBytes(): Promise<ArrayBuffer | null> {
+  if (bgmRawBytesPromise) return bgmRawBytesPromise;
   if (typeof window === 'undefined' || typeof window.fetch !== 'function') {
     return Promise.resolve(null);
   }
   const url = `${BGM_PATH}?v=${AUDIO_CACHE_BUSTER}`;
-  bgmLoadPromise = window
+  bgmRawBytesPromise = window
     .fetch(url)
     .then((res) => (res.ok ? res.arrayBuffer() : Promise.reject(new Error('BGM fetch failed'))))
-    .then((arr) => ac.decodeAudioData(arr))
+    .catch(() => {
+      bgmRawBytesPromise = null;
+      return null;
+    });
+  return bgmRawBytesPromise;
+}
+
+if (typeof window !== 'undefined') {
+  void prefetchBgmBytes();
+}
+
+function loadBgmBuffer(ac: AudioContext): Promise<AudioBuffer | null> {
+  if (bgmBuffer) return Promise.resolve(bgmBuffer);
+  if (bgmLoadPromise) return bgmLoadPromise;
+  bgmLoadPromise = prefetchBgmBytes()
+    .then((arr) => (arr ? ac.decodeAudioData(arr.slice(0)) : null))
     .then((decoded) => {
-      bgmBuffer = decoded;
+      if (decoded) bgmBuffer = decoded;
+      else bgmLoadPromise = null;
       return decoded;
     })
     .catch(() => {
@@ -217,17 +234,21 @@ function ensureBgmPlaying(): void {
     if (bgmBuffer) {
       if (!bgmSource) {
         try {
+          const target = getTargetMusicVolume();
+          bgmGain.gain.cancelScheduledValues(ac.currentTime);
+          bgmGain.gain.setValueAtTime(target, ac.currentTime);
           const src = ac.createBufferSource();
           src.buffer = bgmBuffer;
           src.loop = true;
           src.connect(bgmGain);
-          src.start(0);
+          src.start(0, Math.min(0.06, bgmBuffer.duration * 0.1));
           bgmSource = src;
         } catch {
           /* ignore */
         }
+      } else {
+        applyMusicVolume();
       }
-      applyMusicVolume();
       return;
     }
 
@@ -345,6 +366,7 @@ export const sfx = {
     const ac = audio();
     if (ac) {
       unlockAudioContext(ac);
+      void loadBgmBuffer(ac);
     }
   },
   /** Upbeat jump chirp — tuned for mobile phone speakers */
