@@ -103,17 +103,42 @@ function tone(
 }
 
 /* --------------------------------------------------------------------------
- * Background music — looping /sounds/bgm.m4a at a gentle volume so game SFX
- * (jump, coins, springs) stay clearly audible, and ducked even lower while
- * answering a question so answer voice lines stand out.
+ * Background music — looping /sounds/bgm.m4a.
+ *
+ * In mobile view (phones / touch screens), phone speakers compress dynamic range
+ * and easily drown out game sound effects. Therefore:
+ * 1. Mobile normal volume is set gentle (0.055) so jumps, coins, springs, and
+ *    landings are punchy, crisp, and clearly audible over the song.
+ * 2. Mobile ducked volume drops even further (0.015) while answering questions
+ *    so voice lines (e.g. HAHA.mp3, mistake voice clips) and answer SFX
+ *    stand out with complete clarity.
  * ------------------------------------------------------------------------ */
-const BGM_PATH = '/sounds/bgm.m4a';
-const BGM_NORMAL_VOLUME = 0.14;
-const BGM_DUCKED_VOLUME = 0.035;
+export const BGM_PATH = '/sounds/bgm.m4a';
+export const BGM_DESKTOP_NORMAL_VOLUME = 0.12;
+export const BGM_DESKTOP_DUCKED_VOLUME = 0.035;
+export const BGM_MOBILE_NORMAL_VOLUME = 0.055;
+export const BGM_MOBILE_DUCKED_VOLUME = 0.015;
 
 let bgmAudio: HTMLAudioElement | null = null;
 let bgmStarted = false;
 let musicDucked = false;
+
+export function isMobileAudioView(): boolean {
+  if (typeof window === 'undefined') return false;
+  const isCoarse =
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(pointer: coarse)').matches;
+  const isNarrow = window.innerWidth <= 820;
+  return Boolean(isCoarse || isNarrow);
+}
+
+export function getTargetMusicVolume(): number {
+  const isMobile = isMobileAudioView();
+  if (isMobile) {
+    return musicDucked ? BGM_MOBILE_DUCKED_VOLUME : BGM_MOBILE_NORMAL_VOLUME;
+  }
+  return musicDucked ? BGM_DESKTOP_DUCKED_VOLUME : BGM_DESKTOP_NORMAL_VOLUME;
+}
 
 function getBgmAudio(): HTMLAudioElement | null {
   if (typeof window === 'undefined') return null;
@@ -129,7 +154,24 @@ function applyMusicVolume(): void {
   const el = bgmAudio;
   if (!el) return;
   el.muted = muted;
-  el.volume = muted ? 0 : musicDucked ? BGM_DUCKED_VOLUME : BGM_NORMAL_VOLUME;
+  el.volume = muted ? 0 : getTargetMusicVolume();
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('resize', applyMusicVolume, { passive: true });
+  window.addEventListener('orientationchange', applyMusicVolume, { passive: true });
+  if (typeof window.matchMedia === 'function') {
+    try {
+      const mql = window.matchMedia('(pointer: coarse)');
+      if (typeof mql.addEventListener === 'function') {
+        mql.addEventListener('change', applyMusicVolume);
+      } else if (typeof (mql as unknown as { addListener?: (fn: () => void) => void }).addListener === 'function') {
+        (mql as unknown as { addListener: (fn: () => void) => void }).addListener(applyMusicVolume);
+      }
+    } catch {
+      /* ignore */
+    }
+  }
 }
 
 if (typeof document !== 'undefined') {
@@ -339,5 +381,11 @@ export const sfx = {
   onMuteChange(fn: (m: boolean) => void): () => void {
     muteListeners.add(fn);
     return () => muteListeners.delete(fn);
+  },
+  getMusicVolume(): number {
+    return bgmAudio ? bgmAudio.volume : getTargetMusicVolume();
+  },
+  isMusicDucked(): boolean {
+    return musicDucked;
   },
 };
