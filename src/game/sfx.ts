@@ -122,8 +122,13 @@ export const BGM_MOBILE_NORMAL_VOLUME = 0.05;
 export const BGM_MOBILE_DUCKED_VOLUME = 0.005;
 
 let bgmAudio: HTMLAudioElement | null = null;
+let bgmBuffer: AudioBuffer | null = null;
+let bgmLoadPromise: Promise<AudioBuffer | null> | null = null;
+let bgmSource: AudioBufferSourceNode | null = null;
+let bgmGain: GainNode | null = null;
 let bgmStarted = false;
 let musicDucked = false;
+let bgmVoiceSilenced = false;
 
 export function isMobileAudioView(): boolean {
   if (typeof window === 'undefined') return false;
@@ -145,21 +150,105 @@ export function getTargetMusicVolume(): number {
   return musicDucked ? BGM_DESKTOP_DUCKED_VOLUME : BGM_DESKTOP_NORMAL_VOLUME;
 }
 
-function getBgmAudio(): HTMLAudioElement | null {
-  if (typeof window === 'undefined') return null;
+function loadBgmBuffer(ac: AudioContext): Promise<AudioBuffer | null> {
+  if (bgmBuffer) return Promise.resolve(bgmBuffer);
+  if (bgmLoadPromise) return bgmLoadPromise;
+  if (typeof window === 'undefined' || typeof window.fetch !== 'function') {
+    return Promise.resolve(null);
+  }
+  const url = `${BGM_PATH}?v=${AUDIO_CACHE_BUSTER}`;
+  bgmLoadPromise = window
+    .fetch(url)
+    .then((res) => (res.ok ? res.arrayBuffer() : Promise.reject(new Error('BGM fetch failed'))))
+    .then((arr) => ac.decodeAudioData(arr))
+    .then((decoded) => {
+      bgmBuffer = decoded;
+      return decoded;
+    })
+    .catch(() => {
+      bgmLoadPromise = null;
+      return null;
+    });
+  return bgmLoadPromise;
+}
+
+function stopBgmSource(): void {
+  if (bgmSource) {
+    try {
+      bgmSource.stop();
+      bgmSource.disconnect();
+    } catch {
+      /* ignore */
+    }
+    bgmSource = null;
+  }
+  if (bgmAudio) {
+    bgmAudio.pause();
+  }
+}
+
+function applyMusicVolume(): void {
+  const target = muted || bgmVoiceSilenced ? 0 : getTargetMusicVolume();
+  if (bgmGain && ctx) {
+    try {
+      bgmGain.gain.cancelScheduledValues(ctx.currentTime);
+      bgmGain.gain.setTargetAtTime(target, ctx.currentTime, 0.05);
+    } catch {
+      bgmGain.gain.value = target;
+    }
+  }
+  if (bgmAudio) {
+    bgmAudio.muted = muted || bgmVoiceSilenced;
+    bgmAudio.volume = target;
+  }
+}
+
+function ensureBgmPlaying(): void {
+  if (typeof window === 'undefined' || !bgmStarted || muted) return;
+  if (typeof document !== 'undefined' && document.hidden) return;
+
+  const ac = audio();
+  if (ac) {
+    if (!bgmGain) {
+      bgmGain = ac.createGain();
+      bgmGain.gain.value = 0;
+      bgmGain.connect(ac.destination);
+    }
+    if (bgmBuffer) {
+      if (!bgmSource) {
+        try {
+          const src = ac.createBufferSource();
+          src.buffer = bgmBuffer;
+          src.loop = true;
+          src.connect(bgmGain);
+          src.start(0);
+          bgmSource = src;
+        } catch {
+          /* ignore */
+        }
+      }
+      applyMusicVolume();
+      return;
+    }
+
+    void loadBgmBuffer(ac).then((buf) => {
+      if (buf && bgmStarted && !muted && !(typeof document !== 'undefined' && document.hidden)) {
+        ensureBgmPlaying();
+      }
+    });
+    return;
+  }
+
+  // Non-WebAudio fallback (only if AudioContext is unavailable)
   if (!bgmAudio) {
     bgmAudio = getAudioElement(BGM_PATH);
     bgmAudio.loop = true;
     bgmAudio.preload = 'auto';
   }
-  return bgmAudio;
-}
-
-function applyMusicVolume(): void {
-  const el = bgmAudio;
-  if (!el) return;
-  el.muted = muted;
-  el.volume = muted ? 0 : getTargetMusicVolume();
+  applyMusicVolume();
+  if (bgmAudio.paused) {
+    void bgmAudio.play().catch(() => {});
+  }
 }
 
 if (typeof window !== 'undefined') {
@@ -181,12 +270,11 @@ if (typeof window !== 'undefined') {
 
 if (typeof document !== 'undefined') {
   document.addEventListener('visibilitychange', () => {
-    if (!bgmAudio || !bgmStarted) return;
+    if (!bgmStarted) return;
     if (document.hidden) {
-      bgmAudio.pause();
+      stopBgmSource();
     } else if (!muted) {
-      applyMusicVolume();
-      void bgmAudio.play().catch(() => {});
+      ensureBgmPlaying();
     }
   });
 }
@@ -230,14 +318,16 @@ function playAudioFile(relativePath: string, volume = 1.0): void {
     audioEl.volume = volume;
     activeAudioElement = audioEl;
 
-    // While an answer voice clip is speaking, drop background music to 0 so the voice
-    // sounds 100% crisp and loud without phone speaker distortion or ducking pumping
-    if (bgmAudio && !muted && (musicDucked || isMobileAudioView())) {
-      bgmAudio.volume = 0;
+    // While an answer voice clip is speaking, drop background music to 0 via GainNode
+    // (works on iOS Safari where HTMLAudioElement.volume is read-only)
+    if (!muted && (musicDucked || isMobileAudioView())) {
+      bgmVoiceSilenced = true;
+      applyMusicVolume();
       let restored = false;
       const restoreBgm = () => {
         if (restored) return;
         restored = true;
+        bgmVoiceSilenced = false;
         applyMusicVolume();
         audioEl.removeEventListener('ended', restoreBgm);
         audioEl.removeEventListener('pause', restoreBgm);
@@ -320,22 +410,16 @@ export const sfx = {
   },
   /** Start (or restart) the looping background music. Must follow a user gesture. */
   startMusic(_level: number = 1): void {
-    const el = getBgmAudio();
-    if (!el) return;
     bgmStarted = true;
     musicDucked = false;
-    applyMusicVolume();
-    if (el.paused) {
-      el.currentTime = 0;
-    }
-    if (!muted) {
-      void el.play().catch(() => {});
-    }
+    bgmVoiceSilenced = false;
+    ensureBgmPlaying();
   },
   stopMusic(): void {
     bgmStarted = false;
+    bgmVoiceSilenced = false;
+    stopBgmSource();
     if (bgmAudio) {
-      bgmAudio.pause();
       bgmAudio.currentTime = 0;
     }
   },
@@ -371,7 +455,11 @@ export const sfx = {
   },
   /** Warm the cache for voice lines and background music (call from a user gesture). */
   preloadVoices(): void {
-    preloadAudioFiles([...MISTAKE_SOUNDS, '/sounds/HAHA.mp3', BGM_PATH]);
+    preloadAudioFiles([...MISTAKE_SOUNDS, '/sounds/HAHA.mp3']);
+    const ac = audio();
+    if (ac) {
+      void loadBgmBuffer(ac);
+    }
   },
   unlockGate(): void {
     tone(300, 0.25, 'triangle', 0.22, 900);
@@ -397,8 +485,8 @@ export const sfx = {
       /* ignore */
     }
     applyMusicVolume();
-    if (!value && bgmStarted && bgmAudio && bgmAudio.paused) {
-      void bgmAudio.play().catch(() => {});
+    if (!value && bgmStarted) {
+      ensureBgmPlaying();
     }
     muteListeners.forEach((fn) => fn(value));
   },
@@ -407,7 +495,8 @@ export const sfx = {
     return () => muteListeners.delete(fn);
   },
   getMusicVolume(): number {
-    return bgmAudio ? bgmAudio.volume : getTargetMusicVolume();
+    if (muted || bgmVoiceSilenced) return 0;
+    return getTargetMusicVolume();
   },
   isMusicDucked(): boolean {
     return musicDucked;
