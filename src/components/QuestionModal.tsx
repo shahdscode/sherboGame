@@ -38,13 +38,41 @@ const CELEBRATION_STICKERS = [
   '/stickers/celebrate-confetti-dance.webp',
 ];
 
+const UNICODE_SUBSCRIPT_MAP: Record<string, string> = {
+  '₀': '0',
+  '₁': '1',
+  '₂': '2',
+  '₃': '3',
+  '₄': '4',
+  '₅': '5',
+  '₆': '6',
+  '₇': '7',
+  '₈': '8',
+  '₉': '9',
+  'ₙ': 'n',
+};
+
+const UNICODE_SUPERSCRIPT_MAP: Record<string, string> = {
+  '⁰': '0',
+  '¹': '1',
+  '²': '2',
+  '³': '3',
+  '⁴': '4',
+  '⁵': '5',
+  '⁶': '6',
+  '⁷': '7',
+  '⁸': '8',
+  '⁹': '9',
+  'ⁿ': 'n',
+};
+
 /**
- * Formats mathematical strings so powers like `^(n - 1)` or `^5` render with proper
- * HTML `<sup>...</sup>` superscript above the number instead of showing a caret `^`.
+ * Renders inline superscripts (^n, ^(n-1), ², ³, ⁴) and subscripts (a₁, a₂, Sₙ, _1).
  */
-export function renderFormattedMathText(text: string): React.ReactNode {
+function renderInlineMathParts(text: string, keyPrefix: string = ''): React.ReactNode {
   const parts: React.ReactNode[] = [];
-  const regex = /\^\(([^)]+)\)|\^([a-zA-Z0-9+-]+)/g;
+  const regex =
+    /\^\(([^)]+)\)|\^([a-zA-Z0-9+-]+)|_\(([^)]+)\)|_([a-zA-Z0-9+-]+)|([⁰¹²³⁴⁵⁶⁷⁸⁹ⁿ]+)|([₀₁₂₃₄₅₆₇₈₉ₙ]+)/g;
   let lastIndex = 0;
   let match: RegExpExecArray | null;
 
@@ -52,12 +80,46 @@ export function renderFormattedMathText(text: string): React.ReactNode {
     if (match.index > lastIndex) {
       parts.push(text.slice(lastIndex, match.index));
     }
-    const exponentContent = match[1] ?? match[2];
-    parts.push(
-      <sup key={match.index} className="math-sup">
-        {exponentContent}
-      </sup>
-    );
+
+    const supExpr = match[1] ?? match[2];
+    const subExpr = match[3] ?? match[4];
+    const uniSup = match[5];
+    const uniSub = match[6];
+
+    if (supExpr !== undefined) {
+      parts.push(
+        <sup key={`${keyPrefix}sup-${match.index}`} className="math-sup">
+          {supExpr}
+        </sup>
+      );
+    } else if (uniSup !== undefined) {
+      const normalized = uniSup
+        .split('')
+        .map((ch) => UNICODE_SUPERSCRIPT_MAP[ch] ?? ch)
+        .join('');
+      parts.push(
+        <sup key={`${keyPrefix}usup-${match.index}`} className="math-sup">
+          {normalized}
+        </sup>
+      );
+    } else if (subExpr !== undefined) {
+      parts.push(
+        <sub key={`${keyPrefix}sub-${match.index}`} className="math-sub">
+          {subExpr}
+        </sub>
+      );
+    } else if (uniSub !== undefined) {
+      const normalized = uniSub
+        .split('')
+        .map((ch) => UNICODE_SUBSCRIPT_MAP[ch] ?? ch)
+        .join('');
+      parts.push(
+        <sub key={`${keyPrefix}usub-${match.index}`} className="math-sub">
+          {normalized}
+        </sub>
+      );
+    }
+
     lastIndex = regex.lastIndex;
   }
 
@@ -66,6 +128,52 @@ export function renderFormattedMathText(text: string): React.ReactNode {
   }
 
   return parts.length > 0 ? parts : text;
+}
+
+/**
+ * Formats mathematical strings so fractions (1/3, 4/r), powers (^n, ⁴),
+ * and subscripts (a₁, Sₙ) render with proper visual mathematical notation.
+ */
+export function renderFormattedMathText(text: string): React.ReactNode {
+  const parts: React.ReactNode[] = [];
+  const fracRegex = /([a-zA-Z0-9₀-₉ₙ]+)\/([a-zA-Z0-9₀-₉ₙ]+)/g;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = fracRegex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(
+        <React.Fragment key={`txt-${lastIndex}`}>
+          {renderInlineMathParts(text.slice(lastIndex, match.index), `t${lastIndex}-`)}
+        </React.Fragment>
+      );
+    }
+
+    const num = match[1];
+    const den = match[2];
+    parts.push(
+      <span key={`frac-${match.index}`} className="math-frac">
+        <span className="math-frac-num">
+          {renderInlineMathParts(num, `fn${match.index}-`)}
+        </span>
+        <span className="math-frac-den">
+          {renderInlineMathParts(den, `fd${match.index}-`)}
+        </span>
+      </span>
+    );
+
+    lastIndex = fracRegex.lastIndex;
+  }
+
+  if (lastIndex < text.length) {
+    parts.push(
+      <React.Fragment key={`txt-end-${lastIndex}`}>
+        {renderInlineMathParts(text.slice(lastIndex), `te${lastIndex}-`)}
+      </React.Fragment>
+    );
+  }
+
+  return parts.length > 0 ? parts : renderInlineMathParts(text);
 }
 
 export const QuestionModal: React.FC<QuestionModalProps> = ({
