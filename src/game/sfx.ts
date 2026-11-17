@@ -154,10 +154,8 @@ function playAudioFile(relativePath: string, volume = 0.85): void {
 const MISTAKE_SOUNDS = [
   '/sounds/ehheeeee.mp3',
   '/sounds/enta ghaby.mp3',
-  '/sounds/khatar khatar khatar.mp3',
   '/sounds/matgawdshhhh.mp3',
   '/sounds/msh hashaga3ak.mp3',
-  '/sounds/tahzeer tahzeer tahzeer.mp3',
   '/sounds/wana bahes enk aabet.mp3',
 ];
 
