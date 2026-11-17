@@ -31,12 +31,6 @@ export const StartScreen: React.FC<StartScreenProps> = ({
   progress,
   loadFailed,
 }) => {
-  const [isTouch] = useState<boolean>(
-    () =>
-      typeof window !== 'undefined' &&
-      !!window.matchMedia &&
-      window.matchMedia('(pointer: coarse)').matches
-  );
   const [isSlow, setIsSlow] = useState(false);
 
   useEffect(() => {
@@ -83,52 +77,26 @@ export const StartScreen: React.FC<StartScreenProps> = ({
               <Gamepad2 size={18} className="icon-cyan" />
               <h3>Controls</h3>
             </div>
-            {isTouch ? (
-              <div className="controls-list">
-                <div className="control-row">
-                  <span className="key-group">
-                    <kbd>
-                      <ArrowLeft size={13} />
-                    </kbd>
-                    <kbd>
-                      <ArrowRight size={13} />
-                    </kbd>
-                  </span>
-                  <span>Hold Left / Right to run</span>
-                </div>
-                <div className="control-row">
-                  <span className="key-group">
-                    <kbd>
-                      <ArrowUp size={13} />
-                    </kbd>
-                  </span>
-                  <span>Tap Jump (Double-tap on way up for Double Jump!)</span>
-                </div>
+            <div className="controls-compact-list">
+              <div className="control-row">
+                <span className="key-group">
+                  <kbd aria-label="Left">
+                    <ArrowLeft size={13} />
+                  </kbd>
+                  <kbd aria-label="Right">
+                    <ArrowRight size={13} />
+                  </kbd>
+                </span>
               </div>
-            ) : (
-              <div className="controls-list">
-                <div className="control-row">
-                  <span className="key-group">
-                    <kbd>
-                      <ArrowLeft size={13} />
-                    </kbd>
-                    <kbd>
-                      <ArrowRight size={13} />
-                    </kbd>
-                  </span>
-                  <span>Run Left / Right</span>
-                </div>
-                <div className="control-row">
-                  <span className="key-group">
-                    <kbd>Space</kbd>
-                    <kbd>
-                      <ArrowUp size={13} />
-                    </kbd>
-                  </span>
-                  <span>Jump (Press on way up to Double Jump!)</span>
-                </div>
+              <div className="control-row control-row-jump">
+                <span className="key-group">
+                  <kbd aria-label="Up">
+                    <ArrowUp size={13} />
+                  </kbd>
+                </span>
+                <span className="control-jump-hint">(double tap for double jump)</span>
               </div>
-            )}
+            </div>
           </div>
 
           <div className="info-box info-box-grades">
@@ -146,12 +114,7 @@ export const StartScreen: React.FC<StartScreenProps> = ({
                     <span className="grade-badge">{g.grade}</span>
                   </div>
                   <div className="grade-details">
-                    <div className="grade-title-row">
-                      <span className="grade-rank-title">{g.title}</span>
-                      <span className="grade-xp-req">
-                        {g.minXp > 0 ? `${g.minXp.toLocaleString()}+ XP` : '< 1,700 XP'}
-                      </span>
-                    </div>
+                    <span className="grade-rank-title">{g.title}</span>
                   </div>
                 </div>
               ))}
