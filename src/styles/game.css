@@ -799,7 +799,7 @@ kbd {
   align-items: center;
   gap: 12px;
   width: 100%;
-  max-width: 980px;
+  max-width: 1180px;
 }
 
 .arcade-gate-topbar {
@@ -808,7 +808,7 @@ kbd {
   justify-content: space-between;
   gap: 12px;
   width: 100%;
-  max-width: 920px;
+  max-width: 1140px;
   padding: 8px 16px;
   border-radius: 999px;
   background: rgba(27, 42, 83, 0.95);
@@ -956,7 +956,7 @@ kbd {
   justify-content: center;
   gap: 24px;
   width: 100%;
-  max-width: 960px;
+  max-width: 1160px;
 }
 
 .question-side-sticker-container {
@@ -1066,9 +1066,9 @@ kbd {
   border: 1.5px solid #fda4af;
 }
 
-.question-modal-card {
+.modal-card.question-modal-card {
   flex: 1;
-  max-width: 600px;
+  max-width: 820px;
   background: #f8e7d6;
 }
 
@@ -1239,18 +1239,25 @@ kbd {
   display: flex;
   align-items: center;
   gap: 11px;
-  padding: 13px 15px;
+  padding: 13px 16px;
   border-radius: 16px;
   border: 2px solid #1b2a53;
   background: #ffffff;
   box-shadow: 0 5px 0 #1b2a53;
   color: #1b2a53;
   font-family: var(--font-display);
-  font-size: 1.12rem;
+  font-size: 1.04rem;
   font-weight: 700;
   text-align: left;
   cursor: pointer;
   transition: transform 0.1s ease, border-color 0.15s ease, filter 0.15s ease;
+}
+
+.option-text {
+  flex: 1;
+  min-width: 0;
+  line-height: 1.35;
+  white-space: nowrap;
 }
 
 /* Card 2-7: Teal / Emerald */
@@ -2584,6 +2591,10 @@ kbd {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 8px;
+  }
+
+  .option-text {
+    white-space: normal;
   }
 }
 
