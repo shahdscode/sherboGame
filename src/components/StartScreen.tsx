@@ -68,7 +68,9 @@ export const StartScreen: React.FC<StartScreenProps> = ({
             </div>
             <p>
               Climb, solve and choose the correct answers to achieve the
-              highest score and unlock the gates.
+              highest score and unlock the gates. Every level adds new
+              platforms — moving, crumbling, icy and springs. Grab coins
+              for +10 XP. The clock pauses on questions, so take your time!
             </p>
           </div>
 

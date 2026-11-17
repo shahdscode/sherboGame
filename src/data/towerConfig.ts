@@ -103,7 +103,7 @@ export const towerConfig: TowerConfigRuntime = {
     firstTryBonusXp: 0,
     summitBonusXp: 300,
     maxSpeedBonus: 600,
-    targetTimeSeconds: 60,
+    targetTimeSeconds: 90,
     speedBonusDecayPerSec: 2.5,
     speedBonusMin: 0,
   },
@@ -114,15 +114,16 @@ export const towerConfig: TowerConfigRuntime = {
 
 /**
  * Calculates a dynamic speed bonus based on stopwatch clear time:
- * Speed XP = 600 * max(0, 1 - max(0, elapsedSeconds - 60) / 240)
+ * Speed XP = 600 * max(0, 1 - max(0, climbSeconds - 90) / 240)
+ * (climbing time only — the stopwatch pauses while a question is open)
  *
  * Rules:
- * <= 60s: 600 XP | 90s: 525 XP | 120s: 450 XP | 180s: 300 XP | 240s: 150 XP | >= 300s: 0 XP
+ * <= 90s: 600 XP | 120s: 525 XP | 150s: 450 XP | 210s: 300 XP | 270s: 150 XP | >= 330s: 0 XP
  */
 export function calculateSpeedBonus(
   elapsedSeconds: number
 ): number {
-  const overtime = Math.max(0, elapsedSeconds - 60);
+  const overtime = Math.max(0, elapsedSeconds - 90);
   const factor = Math.max(0, 1 - overtime / 240);
   return Math.round(600 * factor);
 }

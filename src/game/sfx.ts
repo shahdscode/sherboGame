@@ -102,6 +102,103 @@ function tone(
   osc.stop(start + duration + 0.03);
 }
 
+/* --------------------------------------------------------------------------
+ * Background music — generated live with the Web Audio API (no audio files to
+ * download, nothing to license). A soft, looping arpeggio over four warm chords.
+ * Each tower section nudges the tempo up and adds a sparkle layer.
+ * ------------------------------------------------------------------------ */
+const MUSIC_VOLUME = 0.5;
+// C maj7 – A min7 – F maj7 – G6 (frequencies in Hz)
+const MUSIC_CHORDS: number[][] = [
+  [261.63, 329.63, 392.0, 493.88],
+  [220.0, 261.63, 329.63, 392.0],
+  [174.61, 220.0, 261.63, 329.63],
+  [196.0, 246.94, 293.66, 329.63],
+];
+const MUSIC_PATTERN = [0, 2, 1, 3, 2, 1, 3, 2]; // chord-tone order across one bar of 8th notes
+
+let musicGain: GainNode | null = null;
+let musicTimer: number | null = null;
+let musicNextTime = 0;
+let musicStep = 0;
+let musicLevel = 1;
+let musicDucked = false;
+
+function musicTargetVolume(): number {
+  if (muted) return 0;
+  return MUSIC_VOLUME * (musicDucked ? 0.35 : 1);
+}
+
+function applyMusicVolume(): void {
+  if (!musicGain || !ctx) return;
+  try {
+    musicGain.gain.cancelScheduledValues(ctx.currentTime);
+    musicGain.gain.setTargetAtTime(musicTargetVolume(), ctx.currentTime, 0.25);
+  } catch {
+    /* ignore */
+  }
+}
+
+function musicNote(freq: number, start: number, duration: number, type: Wave, volume: number): void {
+  if (!ctx || !musicGain) return;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq, start);
+  gain.gain.setValueAtTime(0, start);
+  gain.gain.linearRampToValueAtTime(volume, start + 0.02);
+  gain.gain.linearRampToValueAtTime(0, start + duration);
+  osc.connect(gain).connect(musicGain);
+  osc.start(start);
+  osc.stop(start + duration + 0.05);
+}
+
+function scheduleMusic(): void {
+  const ac = ctx;
+  if (!ac || !musicGain) return;
+  // Nothing is scheduled while the tab is hidden or the sound is muted
+  if (document.hidden || muted || ac.state !== 'running') {
+    musicNextTime = 0;
+    return;
+  }
+  if (musicNextTime < ac.currentTime) musicNextTime = ac.currentTime + 0.06;
+
+  const bpm = 84 + musicLevel * 5; // 89 bpm at the base … 114 bpm near the summit
+  const stepDur = 60 / bpm / 2; // 8th notes
+
+  while (musicNextTime < ac.currentTime + 0.4) {
+    const bar = Math.floor(musicStep / 8);
+    const inBar = musicStep % 8;
+    const chord = MUSIC_CHORDS[bar % MUSIC_CHORDS.length];
+    const t = musicNextTime;
+
+    // Arpeggio (the tune)
+    musicNote(chord[MUSIC_PATTERN[inBar]] * 2, t, stepDur * 1.7, 'triangle', 0.075);
+
+    // Soft pad + bass at the start of every bar
+    if (inBar === 0) {
+      const barDur = stepDur * 8;
+      musicNote(chord[0], t, barDur * 0.98, 'sine', 0.06);
+      musicNote(chord[2], t, barDur * 0.98, 'sine', 0.04);
+      musicNote(chord[0] / 2, t, barDur * 0.5, 'triangle', 0.09);
+    }
+    if (inBar === 4) {
+      musicNote(chord[0] / 2, t, stepDur * 3.5, 'triangle', 0.07);
+    }
+    // Sparkle layer from section 3 upwards
+    if (musicLevel >= 3 && (inBar === 2 || inBar === 6)) {
+      musicNote(chord[3] * 4, t, stepDur * 1.2, 'sine', 0.028);
+    }
+    // Light off-beat pulse for the last two sections
+    if (musicLevel >= 5 && inBar % 2 === 1) {
+      musicNote(chord[1] * 2, t, stepDur * 0.5, 'triangle', 0.03);
+    }
+
+    musicNextTime += stepDur;
+    musicStep += 1;
+  }
+}
+
 let activeAudioElement: HTMLAudioElement | null = null;
 const audioCache = new Map<string, HTMLAudioElement>();
 const AUDIO_CACHE_BUSTER = Date.now();
@@ -192,6 +289,65 @@ export const sfx = {
   click(): void {
     tone(720, 0.06, 'triangle', 0.18);
   },
+  /** Bright two-note "ding" for picking up a coin */
+  coin(): void {
+    tone(988, 0.07, 'triangle', 0.2);
+    tone(1319, 0.16, 'triangle', 0.2, undefined, 0.06);
+  },
+  /** Rising "boing" for spring platforms */
+  spring(): void {
+    tone(220, 0.22, 'triangle', 0.26, 880);
+    tone(440, 0.18, 'sine', 0.16, 1320, 0.03);
+  },
+  /** Low rumble: a crumbling platform starts to give way */
+  crumble(): void {
+    tone(210, 0.16, 'sawtooth', 0.1, 150);
+    tone(180, 0.16, 'sawtooth', 0.09, 130, 0.12);
+  },
+  crumbleFall(): void {
+    tone(300, 0.3, 'triangle', 0.2, 110);
+  },
+  /** Start (or restart) the looping background music. Must follow a user gesture. */
+  startMusic(level: number = 1): void {
+    const ac = audio();
+    if (!ac) return;
+    musicLevel = Math.max(1, Math.min(6, level));
+    musicDucked = false;
+    if (!musicGain) {
+      musicGain = ac.createGain();
+      musicGain.gain.value = 0;
+      musicGain.connect(ac.destination);
+    }
+    musicStep = 0;
+    musicNextTime = 0;
+    applyMusicVolume();
+    if (musicTimer === null && typeof window !== 'undefined') {
+      musicTimer = window.setInterval(scheduleMusic, 120);
+    }
+  },
+  stopMusic(): void {
+    if (musicTimer !== null) {
+      window.clearInterval(musicTimer);
+      musicTimer = null;
+    }
+    if (musicGain && ctx) {
+      try {
+        musicGain.gain.cancelScheduledValues(ctx.currentTime);
+        musicGain.gain.setTargetAtTime(0, ctx.currentTime, 0.3);
+      } catch {
+        /* ignore */
+      }
+    }
+  },
+  /** Higher tower sections play slightly faster with extra layers. */
+  setMusicLevel(level: number): void {
+    musicLevel = Math.max(1, Math.min(6, level));
+  },
+  /** Lower the music while a question is open so the student can think. */
+  duckMusic(ducked: boolean): void {
+    musicDucked = ducked;
+    applyMusicVolume();
+  },
   checkpoint(): void {
     tone(523, 0.12, 'triangle', 0.2);
     tone(784, 0.18, 'triangle', 0.2, undefined, 0.1);
@@ -240,6 +396,7 @@ export const sfx = {
     } catch {
       /* ignore */
     }
+    applyMusicVolume();
     muteListeners.forEach((fn) => fn(value));
   },
   onMuteChange(fn: (m: boolean) => void): () => void {

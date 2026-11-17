@@ -11,6 +11,7 @@ import {
 import { towerConfig, formatStopwatchTime } from "../data/towerConfig";
 import { getPerformanceGrade, ScoringState } from "../game/scoring";
 import { captureGameFrame, getSummitViewCrop } from "../game/TowerGame";
+import { gameEvents } from "../game/EventBus";
 import { sfx } from "../game/sfx";
 
 export interface CompletionScreenProps {
@@ -770,7 +771,7 @@ function drawMobileScoreCard(
     },
     {
       type: "time",
-      label: "Total Time",
+      label: "Climb Time",
       val: `${formatStopwatchTime(elapsedTime)}`,
       border: "#00e5ff",
       lip: "#006d7d",
@@ -1029,6 +1030,9 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
     rafId = requestAnimationFrame(tick);
 
     return () => {
+      // Allow the count-up to run again if this effect is ever re-run (otherwise the
+      // score could stay stuck at 0 after the animation frame was cancelled)
+      hasCelebratedRef.current = false;
       cancelAnimationFrame(rafId);
       animTimeoutsRef.current.forEach((t) => window.clearTimeout(t));
       animTimeoutsRef.current = [];
@@ -1177,6 +1181,9 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
           </div>
           <div className="xp-banner-subtext">
             Includes +{speedBonus.toLocaleString()} XP Speed Bonus • {firstTryCount} / {towerConfig.numberOfCheckpoints} Combos
+            {gameEvents.totalCoins > 0 && (
+              <> • 🪙 {scoringState?.coinsCollected ?? 0} / {gameEvents.totalCoins}</>
+            )}
           </div>
         </div>
 
@@ -1209,7 +1216,7 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
           >
             <Timer size={18} className="icon-cyan" />
             <div className="stat-box-val">{formatStopwatchTime(elapsedTime)}</div>
-            <div className="stat-box-label">Total Time</div>
+            <div className="stat-box-label">Climb Time</div>
           </div>
 
           <div

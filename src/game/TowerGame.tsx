@@ -264,6 +264,17 @@ export const TowerGame: React.FC = () => {
 
       gameInstanceRef.current = new Phaser.Game(config);
       activeGame = gameInstanceRef.current;
+
+      // Phones under memory pressure can drop the WebGL context: the picture freezes.
+      // Phaser restores it when the browser gives it back; meanwhile tell the UI so the
+      // student sees a message (and a Reload button) instead of a frozen game.
+      const canvas = gameInstanceRef.current.canvas;
+      canvas.addEventListener('webglcontextlost', () => {
+        gameEvents.emit('evt:context-lost', { lost: true });
+      });
+      canvas.addEventListener('webglcontextrestored', () => {
+        gameEvents.emit('evt:context-lost', { lost: false });
+      });
       qualityTimer = window.setInterval(checkPerformance, 2500);
 
       window.addEventListener('resize', handleResize);

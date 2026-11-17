@@ -28,13 +28,13 @@ console.log('✓ Question XP values verified.');
 // 2. Speed XP calculation tests
 console.log('\nTesting calculateSpeedXp:');
 assert(calculateSpeedXp(45) === 600, '45s must yield 600 XP');
-assert(calculateSpeedXp(60) === 600, '60s must yield 600 XP');
-assert(calculateSpeedXp(90) === 525, '90s must yield 525 XP');
-assert(calculateSpeedXp(120) === 450, '120s must yield 450 XP');
-assert(calculateSpeedXp(180) === 300, '180s must yield 300 XP');
-assert(calculateSpeedXp(240) === 150, '240s must yield 150 XP');
-assert(calculateSpeedXp(300) === 0, '300s must yield 0 XP');
-assert(calculateSpeedXp(360) === 0, '360s must yield 0 XP (no negative)');
+assert(calculateSpeedXp(90) === 600, '90s must yield 600 XP');
+assert(calculateSpeedXp(120) === 525, '120s must yield 525 XP');
+assert(calculateSpeedXp(150) === 450, '150s must yield 450 XP');
+assert(calculateSpeedXp(210) === 300, '210s must yield 300 XP');
+assert(calculateSpeedXp(270) === 150, '270s must yield 150 XP');
+assert(calculateSpeedXp(330) === 0, '330s must yield 0 XP');
+assert(calculateSpeedXp(400) === 0, '400s must yield 0 XP (no negative)');
 console.log('✓ Speed XP formula verified.');
 
 // 3. Performance Grades un-capped tests
@@ -60,22 +60,24 @@ const eng1 = new ScoringEngine();
 for (let g = 1; g <= 5; g++) {
   eng1.recordCorrectAnswer(g, 4.0); // all < 5s
 }
-eng1.recordSummitCompletion(50, 5);
+for (let c = 0; c < 30; c++) eng1.recordCoin();
+eng1.recordSummitCompletion(50, 5, 30);
 const st1 = eng1.getState();
 assert(sumQuestionXp(st1.gateQuestionXp) === 2500, 'Question XP must be 2,500');
 assert(st1.streakXp === 400, 'Streak XP must be 400 (capped at 400)');
 assert(st1.summitXp === 300, 'Summit XP must be 300');
 assert(st1.speedXp === 600, 'Speed XP must be 600');
 assert(st1.unlockedAchievements.includes('UNTOUCHABLE'), 'Must unlock UNTOUCHABLE');
-assert(st1.unlockedAchievements.includes('LIGHTNING_FAST'), 'Must unlock LIGHTNING_FAST');
+assert(st1.unlockedAchievements.includes('TREASURE_HUNTER'), 'Must unlock TREASURE_HUNTER');
+assert(st1.coinXp === 300, 'Coin XP must be 300 (30 coins x 10)');
 assert(!st1.unlockedAchievements.includes('PHOENIX_COMEBACK'), 'Must NOT unlock PHOENIX_COMEBACK');
 // Base = 2500 + 400 + 300 + 600 = 3800
-// Achievements = 150 (Untouchable) + 50 (Lightning Fast) = 200
-assert(st1.totalXp === 4000, `Total XP must be 4000, got ${st1.totalXp}`);
+// Coins = 300, Achievements = 150 (Untouchable) + 50 (Treasure Hunter) = 200
+assert(st1.totalXp === 4300, `Total XP must be 4300, got ${st1.totalXp}`);
 console.log('✓ TEST 1 passed.');
 
 // 5. TEST 2: STRONG RUN (4 first try, 1 on second try, 120s)
-console.log('\nTesting TEST 2 - STRONG RUN (120s):');
+console.log('\nTesting TEST 2 - STRONG RUN (150s):');
 const eng2 = new ScoringEngine();
 eng2.recordCorrectAnswer(1, 6.0); // 500
 eng2.recordIncorrectAttempt(2);   // 1st mistake (-50)
@@ -83,7 +85,7 @@ eng2.recordCorrectAnswer(2, 6.0); // 450
 eng2.recordCorrectAnswer(3, 6.0); // 500, post mistake #1
 eng2.recordCorrectAnswer(4, 6.0); // 500, post mistake #2 -> unlocks PHOENIX_COMEBACK
 eng2.recordCorrectAnswer(5, 6.0); // 500
-eng2.recordSummitCompletion(120, 5);
+eng2.recordSummitCompletion(150, 5);
 const st2 = eng2.getState();
 assert(sumQuestionXp(st2.gateQuestionXp) === 2450, 'Question XP must be 2450');
 assert(st2.speedXp === 450, 'Speed XP must be 450');

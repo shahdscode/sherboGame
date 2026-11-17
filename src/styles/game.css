@@ -3229,3 +3229,132 @@ body {
 }
 
 
+
+
+/* ==========================================================================
+   Game upgrade: controls, clue button, review banner, device overlays
+   ========================================================================== */
+
+/* Touch devices: large, thumb-friendly controls */
+@media (pointer: coarse) {
+  .touch-controls-bar {
+    padding: 4px 8px;
+  }
+
+  .touch-btn {
+    min-width: 84px;
+    height: 66px;
+    font-size: 1rem;
+    border-radius: 18px;
+  }
+
+  .touch-jump-btn {
+    min-width: 118px;
+  }
+}
+
+@media (pointer: coarse) and (max-width: 380px) {
+  .touch-btn {
+    min-width: 74px;
+    padding: 0 8px;
+  }
+
+  .touch-jump-btn {
+    min-width: 100px;
+  }
+}
+
+/* Mouse + keyboard devices play with the keyboard: no on-screen buttons */
+@media (hover: hover) and (pointer: fine) {
+  .touch-controls-bar {
+    display: none;
+  }
+}
+
+.clue-toggle-btn {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1.5px dashed rgba(238, 123, 60, 0.7);
+  background: #fff7ef;
+  color: #b85720;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.86rem;
+  cursor: pointer;
+}
+
+.clue-toggle-btn:hover {
+  background: #ffedd8;
+}
+
+.clue-box {
+  font-size: 0.92rem;
+  line-height: 1.4;
+}
+
+.feedback-review .feedback-explanation {
+  margin: 0;
+  color: #4a1528;
+  font-weight: 600;
+}
+
+/* "Rotate your phone" — only for touch devices held in landscape */
+.rotate-device-overlay {
+  display: none;
+}
+
+@media (pointer: coarse) and (orientation: landscape) and (max-height: 520px) {
+  .rotate-device-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    background: #0f1830;
+    color: #ffffff;
+    font-family: var(--font-display);
+    font-size: 1.15rem;
+    font-weight: 700;
+    text-align: center;
+    padding: 20px;
+  }
+
+  .rotate-device-icon {
+    color: #ee7b3c;
+    animation: rotateDeviceHint 1.8s ease-in-out infinite;
+  }
+}
+
+@keyframes rotateDeviceHint {
+  0%, 20% {
+    transform: rotate(90deg);
+  }
+  60%, 100% {
+    transform: rotate(0deg);
+  }
+}
+
+.context-lost-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 210;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  background: rgba(10, 16, 32, 0.94);
+  color: #ffffff;
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 700;
+  text-align: center;
+  padding: 24px;
+}
