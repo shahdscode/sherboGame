@@ -2568,6 +2568,8 @@ kbd {
     padding: 13px 16px;
     gap: 9px;
     border-radius: 20px;
+    width: 100%;
+    max-width: 100%;
     max-height: none;
   }
 
@@ -2798,7 +2800,7 @@ kbd {
 
   .arcade-gate-arena {
     gap: 5px;
-    max-width: 440px;
+    max-width: min(420px, calc(100vw - 16px));
     width: 100%;
   }
 
@@ -2874,10 +2876,12 @@ kbd {
   }
 
   .modal-card.question-modal-card {
-    padding: 8px 11px;
-    gap: 5px;
+    width: 100%;
+    max-width: 100%;
+    padding: 10px 12px;
+    gap: 6px;
     border-radius: 16px;
-    max-height: calc(100dvh - 84px);
+    max-height: calc(100dvh - 56px);
     overflow-y: auto;
     overscroll-behavior: contain;
   }
@@ -2933,15 +2937,15 @@ kbd {
 
   .options-list {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 5px;
+    grid-template-columns: 1fr;
+    gap: 6px;
   }
 
   .option-btn.arcade-power-tile {
-    padding: 5px 7px;
-    font-size: 0.78rem;
-    gap: 6px;
-    border-radius: 9px;
+    padding: 7px 10px;
+    font-size: 0.84rem;
+    gap: 8px;
+    border-radius: 10px;
     min-height: 36px;
   }
 
