@@ -116,10 +116,10 @@ function tone(
  *    power and clarity is dedicated to the voice line.
  * ------------------------------------------------------------------------ */
 export const BGM_PATH = '/sounds/bgm.m4a';
-export const BGM_DESKTOP_NORMAL_VOLUME = 0.12;
-export const BGM_DESKTOP_DUCKED_VOLUME = 0.025;
-export const BGM_MOBILE_NORMAL_VOLUME = 0.05;
-export const BGM_MOBILE_DUCKED_VOLUME = 0.005;
+export const BGM_DESKTOP_NORMAL_VOLUME = 0.14;
+export const BGM_DESKTOP_DUCKED_VOLUME = 0.055;
+export const BGM_MOBILE_NORMAL_VOLUME = 0.08;
+export const BGM_MOBILE_DUCKED_VOLUME = 0.035;
 
 let bgmAudio: HTMLAudioElement | null = null;
 let bgmBuffer: AudioBuffer | null = null;
@@ -128,7 +128,6 @@ let bgmSource: AudioBufferSourceNode | null = null;
 let bgmGain: GainNode | null = null;
 let bgmStarted = false;
 let musicDucked = false;
-let bgmVoiceSilenced = false;
 
 export function isMobileAudioView(): boolean {
   if (typeof window === 'undefined') return false;
@@ -187,18 +186,19 @@ function stopBgmSource(): void {
   }
 }
 
-function applyMusicVolume(): void {
-  const target = muted || bgmVoiceSilenced ? 0 : getTargetMusicVolume();
+function applyMusicVolume(fadeTimeConstant: unknown = 0.22): void {
+  const tc = typeof fadeTimeConstant === 'number' ? fadeTimeConstant : 0.22;
+  const target = muted ? 0 : getTargetMusicVolume();
   if (bgmGain && ctx) {
     try {
       bgmGain.gain.cancelScheduledValues(ctx.currentTime);
-      bgmGain.gain.setTargetAtTime(target, ctx.currentTime, 0.05);
+      bgmGain.gain.setTargetAtTime(target, ctx.currentTime, tc);
     } catch {
       bgmGain.gain.value = target;
     }
   }
   if (bgmAudio) {
-    bgmAudio.muted = muted || bgmVoiceSilenced;
+    bgmAudio.muted = muted;
     bgmAudio.volume = target;
   }
 }
@@ -318,34 +318,14 @@ function playAudioFile(relativePath: string, volume = 1.0): void {
     audioEl.volume = volume;
     activeAudioElement = audioEl;
 
-    // While an answer voice clip is speaking, drop background music to 0 via GainNode
-    // (works on iOS Safari where HTMLAudioElement.volume is read-only)
-    if (!muted && (musicDucked || isMobileAudioView())) {
-      bgmVoiceSilenced = true;
-      applyMusicVolume();
-      let restored = false;
-      const restoreBgm = () => {
-        if (restored) return;
-        restored = true;
-        bgmVoiceSilenced = false;
-        applyMusicVolume();
-        audioEl.removeEventListener('ended', restoreBgm);
-        audioEl.removeEventListener('pause', restoreBgm);
-      };
-      audioEl.addEventListener('ended', restoreBgm, { once: true });
-      audioEl.addEventListener('pause', restoreBgm, { once: true });
-      setTimeout(restoreBgm, 4000);
-    }
-
     const playPromise = audioEl.play();
     if (playPromise !== undefined) {
       playPromise.catch(() => {
         /* Autoplay / user gesture policy handled gracefully */
-        applyMusicVolume();
       });
     }
   } catch {
-    applyMusicVolume();
+    /* ignore */
   }
 }
 
@@ -412,12 +392,10 @@ export const sfx = {
   startMusic(_level: number = 1): void {
     bgmStarted = true;
     musicDucked = false;
-    bgmVoiceSilenced = false;
     ensureBgmPlaying();
   },
   stopMusic(): void {
     bgmStarted = false;
-    bgmVoiceSilenced = false;
     stopBgmSource();
     if (bgmAudio) {
       bgmAudio.currentTime = 0;
@@ -495,7 +473,7 @@ export const sfx = {
     return () => muteListeners.delete(fn);
   },
   getMusicVolume(): number {
-    if (muted || bgmVoiceSilenced) return 0;
+    if (muted) return 0;
     return getTargetMusicVolume();
   },
   isMusicDucked(): boolean {
