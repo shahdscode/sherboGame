@@ -115,6 +115,9 @@ export const StartScreen: React.FC<StartScreenProps> = ({
                   </div>
                   <div className="grade-details">
                     <span className="grade-rank-title">{g.title}</span>
+                    <span className="grade-score-req">
+                      {g.minXp > 0 ? `${g.minXp.toLocaleString()}+ XP` : '< 1,700 XP'}
+                    </span>
                   </div>
                 </div>
               ))}
