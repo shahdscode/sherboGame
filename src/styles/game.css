@@ -1111,10 +1111,11 @@ kbd {
 }
 
 .question-prompt {
-  font-size: 1.05rem;
-  line-height: 1.45;
-  color: #1b2a53;
-  font-weight: 600;
+  font-size: 1.24rem;
+  line-height: 1.48;
+  color: #101d42;
+  font-weight: 700;
+  letter-spacing: 0.1px;
 }
 
 /* Visual Stepping-Stone Sequence Track */
@@ -2910,8 +2911,10 @@ kbd {
   }
 
   .question-prompt {
-    font-size: 0.94rem;
-    line-height: 1.32;
+    font-size: 1.04rem;
+    line-height: 1.38;
+    font-weight: 700;
+    color: #101d42;
   }
 
   .sequence-stones-track {
