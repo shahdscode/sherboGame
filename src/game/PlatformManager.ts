@@ -1272,18 +1272,6 @@ export class PlatformManager {
 
       const decorations: Phaser.GameObjects.GameObject[] = [];
 
-      const gateNames: Record<number, string> = {
-        1: 'GATE ONE',
-        2: 'GATE TWO',
-        3: 'GATE THREE',
-        4: 'GATE FOUR',
-        5: 'GATE FIVE',
-      };
-      const gateTitle =
-        checkpointNumber !== null
-          ? gateNames[checkpointNumber] || `GATE ${checkpointNumber}`
-          : '';
-
       const checkpointNames: Record<number, string> = {
         1: 'CHECKPOINT ONE',
         2: 'CHECKPOINT TWO',
@@ -1299,7 +1287,7 @@ export class PlatformManager {
       if (isCheckpoint) {
         const stepBadge = this.scene.add
           .text(
-            this.config.wallThickness + 58,
+            centerX,
             y - 1,
             `⚡ ${checkpointTitle}`,
             {
@@ -1312,8 +1300,8 @@ export class PlatformManager {
             }
           )
           .setResolution(TEXT_RES)
-          .setOrigin(0, 0.5)
-          .setDepth(6);
+          .setOrigin(0.5, 0.5)
+          .setDepth(7);
         decorations.push(stepBadge);
       } else if (!isSummit) {
         const stepBadge = this.scene.add
@@ -1377,22 +1365,7 @@ export class PlatformManager {
         this.wavingFlags.push(flag);
         this.flagSteps.push(step);
 
-        const cpSign = this.scene.add
-          .text(centerX + 52, y - 48, `🔑 ${gateTitle}`, {
-            fontFamily: '"Fredoka", sans-serif',
-            fontSize: '14px',
-            color: '#ffffff',
-            backgroundColor: '#0a1020',
-            stroke: '#ee7b3c',
-            strokeThickness: 2.5,
-            padding: { x: 8, y: 3 },
-            fontStyle: 'bold',
-          })
-          .setResolution(TEXT_RES)
-          .setOrigin(0, 0.5)
-          .setDepth(6);
-
-        decorations.push(flagAura, pole, poleShine, finial, finialSparkle, flag.getGameObject(), cpSign);
+        decorations.push(flagAura, pole, poleShine, finial, finialSparkle, flag.getGameObject());
       }
 
       if (isSummit) {
