@@ -2603,24 +2603,27 @@ kbd {
 @media (max-width: 640px) {
   .floating-top-hud {
     top: max(6px, env(safe-area-inset-top, 6px));
-    gap: 4px;
-    padding: 4px 6px;
+    left: 50%;
+    transform: translateX(-50%);
+    gap: 6px;
+    padding: 4px 8px;
     border-radius: 999px;
-    width: calc(100vw - 12px);
-    max-width: 460px;
-    display: grid;
-    grid-template-columns: repeat(5, 1fr) auto;
+    width: max-content;
+    max-width: calc(100vw - 12px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .hud-stat-pill {
-    padding: 4px 2px;
+    padding: 4px 10px;
     gap: 2px;
-    border-radius: 9px;
+    border-radius: 999px;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     text-align: center;
-    min-width: 0;
+    min-width: 56px;
   }
 
   .hud-stat-pill svg {
