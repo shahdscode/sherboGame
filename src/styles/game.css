@@ -2780,45 +2780,223 @@ kbd {
     font-size: 0.88rem;
   }
 
+  /* Question Modal Mobile Fit (Zero Scrolling) */
+  .overlay-backdrop.question-backdrop {
+    padding: max(4px, env(safe-area-inset-top, 4px)) max(8px, env(safe-area-inset-right, 8px)) max(4px, env(safe-area-inset-bottom, 4px)) max(8px, env(safe-area-inset-left, 8px));
+  }
+
+  .arcade-gate-arena {
+    gap: 5px;
+    max-width: 440px;
+    width: 100%;
+  }
+
+  .arcade-gate-topbar {
+    padding: 3px 8px;
+    gap: 4px;
+    flex-wrap: nowrap;
+    justify-content: space-between;
+    border-radius: 999px;
+  }
+
   .checkpoint-pill {
-    font-size: 0.76rem;
-    padding: 3px 9px;
+    font-size: 0.70rem;
+    padding: 2px 6px;
+    gap: 3px;
+  }
+
+  .checkpoint-pill svg {
+    width: 12px;
+    height: 12px;
+  }
+
+  .gate-crystals-row {
+    gap: 3px;
+  }
+
+  .gate-crystal-dot {
+    width: 19px;
+    height: 19px;
+    font-size: 0.68rem;
+    border-radius: 5px;
   }
 
   .gate-xp-bounty {
-    font-size: 0.76rem;
-    padding: 3px 9px;
+    font-size: 0.70rem;
+    padding: 2px 6px;
+    gap: 3px;
+  }
+
+  .gate-xp-bounty svg {
+    width: 12px;
+    height: 12px;
+  }
+
+  .question-stage-layout {
+    gap: 4px;
+    width: 100%;
+  }
+
+  .question-side-sticker-container {
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 0;
+  }
+
+  .sticker-halo {
+    padding: 0;
+  }
+
+  .question-character-sticker-large {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .sticker-mood-pill {
+    font-size: 0.70rem;
+    padding: 2px 9px;
+    letter-spacing: 0.2px;
+  }
+
+  .modal-card.question-modal-card {
+    padding: 8px 11px;
+    gap: 5px;
+    border-radius: 16px;
+    max-height: calc(100dvh - 84px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .sherbo-speech-bubble {
+    padding: 7px 9px;
+    gap: 4px;
+    border-radius: 12px;
+  }
+
+  .speech-header-row {
+    gap: 6px;
   }
 
   .question-title {
-    font-size: 1.12rem;
-    line-height: 1.2;
+    font-size: 0.90rem;
+    line-height: 1.18;
+  }
+
+  .step-milestone-tag {
+    font-size: 0.66rem;
+    padding: 1px 6px;
   }
 
   .question-prompt {
-    font-size: 0.92rem;
-    line-height: 1.38;
+    font-size: 0.80rem;
+    line-height: 1.28;
+  }
+
+  .sequence-stones-track {
+    padding: 3px 5px;
+    gap: 3px;
+    border-radius: 8px;
+  }
+
+  .sequence-stone {
+    min-width: 28px;
+    padding: 2px 5px;
+    font-size: 0.78rem;
+    border-radius: 6px;
+    border-width: 1.5px;
+  }
+
+  .sequence-arrow {
+    font-size: 0.72rem;
+  }
+
+  .power-blocks-header {
+    font-size: 0.68rem;
+    gap: 4px;
+    margin: 0;
+  }
+
+  .options-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 5px;
   }
 
   .option-btn.arcade-power-tile {
-    padding: 9px 10px;
-    font-size: 0.95rem;
-    gap: 8px;
-    border-radius: 12px;
-    min-height: 46px;
+    padding: 5px 7px;
+    font-size: 0.78rem;
+    gap: 6px;
+    border-radius: 9px;
+    min-height: 36px;
   }
 
   .option-letter {
-    width: 26px;
-    height: 26px;
-    font-size: 0.82rem;
-    border-radius: 7px;
+    width: 20px;
+    height: 20px;
+    font-size: 0.72rem;
+    border-radius: 5px;
   }
 
-  .primary-cta-btn {
-    padding: 10px 14px;
-    font-size: 0.98rem;
-    border-radius: 12px;
+  .option-text {
+    font-size: 0.78rem;
+    line-height: 1.15;
+  }
+
+  .option-penalty-badge {
+    font-size: 0.64rem;
+    padding: 1px 4px;
+  }
+
+  .feedback-banner {
+    padding: 5px 8px;
+    gap: 3px;
+    border-radius: 9px;
+    font-size: 0.74rem;
+    line-height: 1.22;
+  }
+
+  .feedback-title {
+    font-size: 0.78rem;
+    gap: 5px;
+  }
+
+  .feedback-title svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .feedback-hint {
+    padding: 3px 6px;
+    gap: 5px;
+    font-size: 0.72rem;
+    border-radius: 6px;
+  }
+
+  .feedback-hint svg {
+    width: 12px;
+    height: 12px;
+  }
+
+  .feedback-explanation {
+    margin: 0;
+    font-size: 0.72rem;
+    line-height: 1.22;
+  }
+
+  .question-actions .primary-cta-btn {
+    padding: 7px 12px;
+    font-size: 0.88rem;
+    min-height: 36px;
+    border-radius: 10px;
+  }
+
+  .question-actions .primary-cta-btn svg {
+    width: 15px;
+    height: 15px;
   }
 
   .completion-title {
@@ -2962,18 +3140,9 @@ body {
    Small-phone layout fixes
    ========================================================================== */
 @media (max-width: 480px) {
-  /* Gate bar: pill + 5 crystals + XP bounty no longer fit on one line */
   .arcade-gate-topbar {
-    flex-wrap: wrap;
-    justify-content: center;
-    row-gap: 6px;
-    border-radius: 20px;
-  }
-
-  /* Keep the whole question card (incl. hint + confirm button) on screen after a mistake */
-  .question-character-sticker-large {
-    width: clamp(84px, 13vh, 130px);
-    height: clamp(84px, 13vh, 130px);
+    flex-wrap: nowrap;
+    justify-content: space-between;
   }
 }
 
