@@ -622,18 +622,29 @@ body,
 
 .grade-details {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  justify-content: center;
   flex: 1;
   min-width: 0;
+  gap: 1px;
 }
 
 .grade-rank-title {
   font-family: var(--font-display);
-  font-size: 0.85rem;
+  font-size: 0.84rem;
   font-weight: 800;
   color: #ffffff;
   letter-spacing: 0.2px;
-  line-height: 1.2;
+  line-height: 1.15;
+}
+
+.grade-score-req {
+  font-family: var(--font-display);
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #ffcc00;
+  line-height: 1.1;
+  letter-spacing: 0.2px;
 }
 
 .grade-desc {
@@ -2703,12 +2714,23 @@ kbd {
     border-radius: 7px;
   }
 
+  .grade-details {
+    gap: 1px;
+  }
+
   .grade-rank-title {
-    font-size: 0.78rem;
+    font-size: 0.76rem;
     font-weight: 800;
     color: #ffffff;
     line-height: 1.15;
     white-space: normal;
+  }
+
+  .grade-score-req {
+    font-size: 0.62rem;
+    font-weight: 700;
+    color: #ffcc00;
+    line-height: 1.05;
   }
 
   .modal-card {
