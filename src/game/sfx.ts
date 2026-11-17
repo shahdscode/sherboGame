@@ -107,17 +107,19 @@ function tone(
  *
  * In mobile view (phones / touch screens), phone speakers compress dynamic range
  * and easily drown out game sound effects. Therefore:
- * 1. Mobile normal volume is set gentle (0.055) so jumps, coins, springs, and
+ * 1. Mobile normal volume is set gentle (0.05) so jumps, coins, springs, and
  *    landings are punchy, crisp, and clearly audible over the song.
- * 2. Mobile ducked volume drops even further (0.015) while answering questions
- *    so voice lines (e.g. HAHA.mp3, mistake voice clips) and answer SFX
- *    stand out with complete clarity.
+ * 2. Mobile ducked volume drops down near-silent (0.005) while answering questions
+ *    so answer options and explanations are distraction-free.
+ * 3. While answer voice lines (e.g. HAHA.mp3, mistake voice clips) actively speak,
+ *    background music is temporarily cut to 0 on mobile so 100% of the speaker's
+ *    power and clarity is dedicated to the voice line.
  * ------------------------------------------------------------------------ */
 export const BGM_PATH = '/sounds/bgm.m4a';
 export const BGM_DESKTOP_NORMAL_VOLUME = 0.12;
-export const BGM_DESKTOP_DUCKED_VOLUME = 0.035;
-export const BGM_MOBILE_NORMAL_VOLUME = 0.055;
-export const BGM_MOBILE_DUCKED_VOLUME = 0.015;
+export const BGM_DESKTOP_DUCKED_VOLUME = 0.025;
+export const BGM_MOBILE_NORMAL_VOLUME = 0.05;
+export const BGM_MOBILE_DUCKED_VOLUME = 0.005;
 
 let bgmAudio: HTMLAudioElement | null = null;
 let bgmStarted = false;
@@ -129,7 +131,10 @@ export function isMobileAudioView(): boolean {
     typeof window.matchMedia === 'function' &&
     window.matchMedia('(pointer: coarse)').matches;
   const isNarrow = window.innerWidth <= 820;
-  return Boolean(isCoarse || isNarrow);
+  const isUserAgentMobile =
+    typeof navigator !== 'undefined' &&
+    /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+  return Boolean(isCoarse || isNarrow || isUserAgentMobile);
 }
 
 export function getTargetMusicVolume(): number {
@@ -212,7 +217,7 @@ function preloadAudioFiles(paths: string[]): void {
   }
 }
 
-function playAudioFile(relativePath: string, volume = 0.85): void {
+function playAudioFile(relativePath: string, volume = 1.0): void {
   if (muted || typeof window === 'undefined') return;
   try {
     if (activeAudioElement) {
@@ -224,14 +229,33 @@ function playAudioFile(relativePath: string, volume = 0.85): void {
     audioEl.currentTime = 0;
     audioEl.volume = volume;
     activeAudioElement = audioEl;
+
+    // While an answer voice clip is speaking, drop background music to 0 so the voice
+    // sounds 100% crisp and loud without phone speaker distortion or ducking pumping
+    if (bgmAudio && !muted && (musicDucked || isMobileAudioView())) {
+      bgmAudio.volume = 0;
+      let restored = false;
+      const restoreBgm = () => {
+        if (restored) return;
+        restored = true;
+        applyMusicVolume();
+        audioEl.removeEventListener('ended', restoreBgm);
+        audioEl.removeEventListener('pause', restoreBgm);
+      };
+      audioEl.addEventListener('ended', restoreBgm, { once: true });
+      audioEl.addEventListener('pause', restoreBgm, { once: true });
+      setTimeout(restoreBgm, 4000);
+    }
+
     const playPromise = audioEl.play();
     if (playPromise !== undefined) {
       playPromise.catch(() => {
         /* Autoplay / user gesture policy handled gracefully */
+        applyMusicVolume();
       });
     }
   } catch {
-    /* ignore */
+    applyMusicVolume();
   }
 }
 
@@ -329,7 +353,7 @@ export const sfx = {
     tone(784, 0.18, 'triangle', 0.2, undefined, 0.1);
   },
   correct(): void {
-    playAudioFile('/sounds/HAHA.mp3', 0.95);
+    playAudioFile('/sounds/HAHA.mp3', 1.0);
   },
   /**
    * Mistake voice lines:
@@ -343,7 +367,7 @@ export const sfx = {
         : MISTAKE_SOUNDS;
     const picked = candidates[Math.floor(Math.random() * candidates.length)];
     lastMistakeSound = picked;
-    playAudioFile(picked, 0.95);
+    playAudioFile(picked, 1.0);
   },
   /** Warm the cache for voice lines and background music (call from a user gesture). */
   preloadVoices(): void {
