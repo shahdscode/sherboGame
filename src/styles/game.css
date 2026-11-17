@@ -688,6 +688,7 @@ body,
   color: #cbd5e1;
 }
 
+.control-move-hint,
 .control-jump-hint {
   font-size: 0.82rem;
   color: #94a3b8;
@@ -2691,6 +2692,7 @@ kbd {
     font-size: 0.80rem;
   }
 
+  .control-move-hint,
   .control-jump-hint {
     font-size: 0.76rem;
   }

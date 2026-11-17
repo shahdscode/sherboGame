@@ -87,6 +87,7 @@ export const StartScreen: React.FC<StartScreenProps> = ({
                     <ArrowRight size={13} />
                   </kbd>
                 </span>
+                <span className="control-move-hint">move right and left</span>
               </div>
               <div className="control-row control-row-jump">
                 <span className="key-group">
