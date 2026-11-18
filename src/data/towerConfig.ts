@@ -18,6 +18,8 @@ export interface CheckpointQuestion {
   correctAnswer: number;
   hint: string;
   explanation: string;
+  /** Absolute URL of an image shown with the question. */
+  image?: string;
 }
 
 export interface TowerConfig {
@@ -111,6 +113,36 @@ export const towerConfig: TowerConfigRuntime = {
   worldHeight: 8660,
   groundY: 8480,
 };
+
+export const MAX_LEVELS = CHECKPOINT_STEPS.length;
+
+/**
+ * Tower geometry for 1..5 levels (gates). It keeps the first sections of the
+ * full tower, so 5 levels gives exactly the default 75-step tower.
+ */
+export function buildTowerGeometry(levelCount: number) {
+  const levels = Math.max(1, Math.min(MAX_LEVELS, Math.floor(levelCount)));
+  const sectionSteps = SECTION_STEPS.slice(0, levels + 1);
+  const totalSteps =
+    sectionSteps.reduce((sum, steps) => sum + steps, 0) + levels + 1;
+  const groundY = 380 + totalSteps * 108;
+  return {
+    numberOfCheckpoints: levels,
+    sectionSteps,
+    checkpointSteps: CHECKPOINT_STEPS.slice(0, levels),
+    totalSteps,
+    groundY,
+    worldHeight: groundY + 180,
+  };
+}
+
+/**
+ * Resizes the shared `towerConfig` in place. Call it before the game
+ * (Phaser scene and React HUD) mounts, so every reader sees the same tower.
+ */
+export function applyTowerLevels(levelCount: number) {
+  Object.assign(towerConfig, buildTowerGeometry(levelCount));
+}
 
 /**
  * Calculates a dynamic speed bonus based on stopwatch clear time:

@@ -196,7 +196,7 @@ export function getPerformanceTier(
   _firstTryCount: number = 0,
   _elapsedTime: number = 0
 ): PerformanceTierConfig {
-  const gradeInfo = getPerformanceGrade(xpPoints);
+  const gradeInfo = getPerformanceGrade(xpPoints, towerConfig.numberOfCheckpoints);
 
   if (gradeInfo.grade === "S+") {
     return {

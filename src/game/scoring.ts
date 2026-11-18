@@ -124,9 +124,20 @@ export const PERFORMANCE_GRADES: PerformanceGradeInfo[] = [
   },
 ];
 
-export function getPerformanceGrade(totalXp: number): PerformanceGradeInfo {
+/** Gate XP plus summit and maximum speed bonus; the grade thresholds are set for 5 gates. */
+const possibleXp = (gateCount: number) => gateCount * 500 + 300 + 600;
+
+/**
+ * Grade for a run. Thresholds scale with the number of gates, so a shorter
+ * tower (fewer levels) can still reach every grade.
+ */
+export function getPerformanceGrade(
+  totalXp: number,
+  gateCount: number = 5
+): PerformanceGradeInfo {
+  const scale = possibleXp(gateCount) / possibleXp(5);
   for (const info of PERFORMANCE_GRADES) {
-    if (totalXp >= info.minXp) {
+    if (totalXp >= Math.round(info.minXp * scale)) {
       return info;
     }
   }

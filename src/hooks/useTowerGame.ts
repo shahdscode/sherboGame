@@ -268,7 +268,7 @@ export function useTowerGame(
       // Send the true completion flag to the host educational platform
       if (!hasNotifiedPlatformRef.current) {
         hasNotifiedPlatformRef.current = true;
-        const gradeInfo = getPerformanceGrade(updated.totalXp);
+        const gradeInfo = getPerformanceGrade(updated.totalXp, towerConfig.numberOfCheckpoints);
         notifyPlatformGameCompleted({
           score: updated.totalXp,
           grade: gradeInfo.grade,
