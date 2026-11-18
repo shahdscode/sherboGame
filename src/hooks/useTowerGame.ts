@@ -334,14 +334,16 @@ export function useTowerGame(
     };
   }, []);
 
-  // Climbing Stopwatch
-  // Counts real elapsed time (Date.now deltas, so nothing is lost between state changes) while
-  // the student is actually climbing. It PAUSES while a question is open — thinking carefully
-  // is never punished — and while the tab is hidden (the game world is paused then too).
+  // Continuous Stopwatch Timer
+  // Counts real elapsed time (Date.now deltas, so nothing is lost between state changes)
+  // while climbing AND while solving checkpoint questions (pauses only while tab is hidden).
   const elapsedMsRef = useRef<number>(0);
   useEffect(() => {
     const isClockRunning =
-      gameState === 'PLAYING' || gameState === 'UNLOCK_NEXT_SECTION';
+      gameState === 'PLAYING' ||
+      gameState === 'CHECKPOINT_REACHED' ||
+      gameState === 'QUESTION_ACTIVE' ||
+      gameState === 'UNLOCK_NEXT_SECTION';
     if (!isClockRunning) return;
 
     let last = Date.now();
