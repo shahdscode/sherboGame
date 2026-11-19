@@ -145,22 +145,6 @@ export function applyTowerLevels(levelCount: number) {
 }
 
 /**
- * Calculates a dynamic speed bonus based on stopwatch clear time:
- * Speed XP = 600 * max(0, 1 - max(0, climbSeconds - 90) / 240)
- * (climbing time only — the stopwatch pauses while a question is open)
- *
- * Rules:
- * <= 90s: 600 XP | 120s: 525 XP | 150s: 450 XP | 210s: 300 XP | 270s: 150 XP | >= 330s: 0 XP
- */
-export function calculateSpeedBonus(
-  elapsedSeconds: number
-): number {
-  const overtime = Math.max(0, elapsedSeconds - 90);
-  const factor = Math.max(0, 1 - overtime / 240);
-  return Math.round(600 * factor);
-}
-
-/**
  * Formats seconds into a stopwatch `mm:ss` display (e.g. 01:24).
  */
 export function formatStopwatchTime(seconds: number): string {

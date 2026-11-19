@@ -69,15 +69,14 @@ export function normalizeQuestion(
     sequence = raw.sequence.map((s: any) => String(s ?? ''));
   }
 
-  const hint =
-    typeof raw.hint === 'string' && raw.hint.trim()
-      ? raw.hint.trim()
-      : 'Look closely at the pattern between the steps!';
+  // Optional: an empty hint hides the clue button in the question modal
+  const hint = typeof raw.hint === 'string' ? raw.hint.trim() : '';
 
   const explanation =
     typeof raw.explanation === 'string' && raw.explanation.trim()
       ? raw.explanation.trim()
-      : `Option ${String.fromCharCode(65 + correctAnswer)} is correct!`;
+      : // Options are shuffled before display, so name the answer, not its letter
+        `The correct answer is ${options[correctAnswer]}.`;
 
   const image =
     typeof raw.image === 'string' && /^https?:///i.test(raw.image.trim())

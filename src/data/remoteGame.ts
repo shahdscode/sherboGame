@@ -17,6 +17,8 @@ interface PlayQuestion {
   image: string | null;
   choices: PlayChoice[];
   correctAnswer: number;
+  /** Optional clue set in the admin; null or missing means no clue. */
+  hint?: string | null;
 }
 
 interface PlayResponse {
@@ -24,6 +26,8 @@ interface PlayResponse {
     id: string;
     titleEn?: string | null;
     titleAr?: string | null;
+    /** Score the student needs to continue the video; null when none is set. */
+    passScore?: number | null;
     levels: { questions: PlayQuestion[] }[];
   };
 }
@@ -31,6 +35,7 @@ interface PlayResponse {
 export interface RemoteGame {
   levelCount: number;
   questions: CheckpointQuestion[];
+  passScore: number | null;
 }
 
 const apiBaseUrl = String(import.meta.env?.VITE_API_URL ?? '').replace(/\/+$/, '');
@@ -62,6 +67,7 @@ export function toCheckpointQuestions(
           image: uploadUrl(question.image),
           options: question.choices.map((choice) => choice.text),
           correctAnswer: question.correctAnswer,
+          hint: question.hint,
         },
         levelIndex + 1,
         questionIndex
@@ -81,8 +87,10 @@ export async function fetchRemoteGame(gameId: string): Promise<RemoteGame> {
   if (!levels.length || levels.some((level) => !level.questions?.length)) {
     throw new Error('Game has no questions');
   }
+  const passScore = body.data?.passScore;
   return {
     levelCount: levels.length,
     questions: toCheckpointQuestions(levels),
+    passScore: typeof passScore === 'number' && passScore > 0 ? passScore : null,
   };
 }

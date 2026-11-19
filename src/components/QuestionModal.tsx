@@ -19,7 +19,7 @@ interface QuestionModalProps {
   feedback: QuestionAttemptFeedback;
   onSelectOption: (index: number) => void;
   onSubmitAnswer: () => void;
-  /** After a wrong answer the solution is reviewed; this moves on to a fresh question. */
+  /** After a wrong answer (marked, solution hidden), moves on to a fresh question. */
   onNextQuestion: () => void;
   onContinue: () => void;
 }
@@ -307,7 +307,7 @@ export const QuestionModal: React.FC<QuestionModalProps> = ({
   const characterMoodTag = isCorrect
     ? 'GATE UNLOCKED!'
     : isReview
-      ? 'LEARN FROM IT!'
+      ? 'TRY AGAIN!'
       : mistakeCount === 1
       ? 'NEXT QUESTION! (450 XP Bounty)'
       : mistakeCount === 2
@@ -444,6 +444,10 @@ export const QuestionModal: React.FC<QuestionModalProps> = ({
                 </div>
               )}
 
+              <p className="question-prompt" data-testid="question-prompt">
+                {renderFormattedMathText(question.prompt)}
+              </p>
+
               {question.image && (
                 <img
                   className="question-image"
@@ -452,10 +456,6 @@ export const QuestionModal: React.FC<QuestionModalProps> = ({
                   loading="eager"
                 />
               )}
-
-              <p className="question-prompt" data-testid="question-prompt">
-                {renderFormattedMathText(question.prompt)}
-              </p>
 
               {/* Visual Stepping-Stone Sequence Track */}
               {question.sequence && question.sequence.length > 0 && (
@@ -500,7 +500,7 @@ export const QuestionModal: React.FC<QuestionModalProps> = ({
                 {isCorrect
                   ? 'Gate code unlocked! Ready to climb!'
                   : isReview
-                    ? 'Here is the correct answer — study it, then try a new question:'
+                    ? 'That stone did not open the gate — try a new question:'
                     : 'Tap the correct Power Stone to unlock the gate:'}
               </span>
             </div>
@@ -514,8 +514,9 @@ export const QuestionModal: React.FC<QuestionModalProps> = ({
               {question.options.map((optionText, index) => {
                 const isSelected = feedback.selectedOptionIndex === index;
                 const isWrongTried = feedback.wrongOptionIndices.includes(index);
-                const isSolvedRight =
-                  (isCorrect || isReview) && index === question.correctAnswer;
+                // The right answer is only revealed once the gate is solved:
+                // after a mistake the student just sees which choice was wrong
+                const isSolvedRight = isCorrect && index === question.correctAnswer;
                 const optionPenalty = feedback.wrongPenalties?.[index];
 
                 let stateClass = BLOCK_THEMES[index % BLOCK_THEMES.length];
@@ -581,7 +582,7 @@ export const QuestionModal: React.FC<QuestionModalProps> = ({
               )
             )}
 
-            {/* Solution review after a wrong answer */}
+            {/* Wrong answer: no solution shown, a new question comes next */}
             {isReview && (
               <div
                 className="feedback-banner feedback-incorrect feedback-review"
@@ -597,14 +598,9 @@ export const QuestionModal: React.FC<QuestionModalProps> = ({
                     ) : (
                       <>This gate now awards <strong>0 XP</strong></>
                     )}
-                    . Here is how to solve it:
+                    . Try a new question to open the gate.
                   </span>
                 </div>
-                {feedback.explanation && (
-                  <p className="feedback-explanation" data-testid="review-explanation">
-                    {renderFormattedMathText(feedback.explanation)}
-                  </p>
-                )}
               </div>
             )}
 

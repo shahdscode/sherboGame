@@ -16,6 +16,7 @@ Unit tests (Node 22+):
 ```bash
 node --experimental-strip-types src/game/scoring.test.ts
 node --experimental-strip-types src/data/questionBank.test.ts
+node --experimental-strip-types src/data/remoteGame.test.ts
 node --experimental-strip-types src/utils/platformBridge.test.ts
 ```
 
@@ -46,3 +47,17 @@ it for grades or prizes without server-side validation.
 
 `vercel.json` only allows embedding on `sherbeniacademy.com` — add other domains to
 `frame-ancestors` if the game is embedded elsewhere.
+
+## Production deployment
+
+Production is served by Nginx at `https://sherbogame.shiftup-solutions.com`.
+Pushes to `main` deploy through `.github/workflows/deploy.yml`; the repository
+requires the `SSH_HOST`, `SSH_USER`, and `SSH_KEY` GitHub Actions secrets. The
+VPS keeps its production `VITE_API_URL` in the untracked `.env` file, builds a
+versioned release under `/var/www/sherbogame/releases`, and atomically updates
+the `/var/www/sherbogame/current` symlink.
+
+The Nginx source configuration is kept in
+`deploy/nginx/sherbogame.shiftup-solutions.com.conf`. Validate it with
+`nginx -t` before reloading Nginx. The backend must set `SHERBO_GAME_URL` to the
+public HTTPS game origin so tower links use this deployment.

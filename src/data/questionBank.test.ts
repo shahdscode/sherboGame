@@ -131,4 +131,17 @@ for (let cp = 1; cp <= 5; cp++) {
 }
 console.log('✓ 3-question rotation, reshuffling, indefinite retry, and no-consecutive-repeat verified.');
 
+// Clues are optional: a question without one gets no made-up clue
+{
+  const base = { prompt: 'P', options: ['A', 'B'], correctAnswer: 0 };
+  assert(normalizeQuestion({ ...base }, 1, 0).hint === '', 'Missing hint must stay empty');
+  assert(normalizeQuestion({ ...base, hint: null }, 1, 0).hint === '', 'Null hint must stay empty');
+  assert(normalizeQuestion({ ...base, hint: '   ' }, 1, 0).hint === '', 'Blank hint must stay empty');
+  assert(
+    normalizeQuestion({ ...base, hint: '  Count the rows  ' }, 1, 0).hint === 'Count the rows',
+    'A given hint must be kept, trimmed'
+  );
+}
+console.log('✓ Optional clues: kept when given, empty otherwise.');
+
 console.log('ALL QUESTION BANK TESTS PASSED! 🎉');

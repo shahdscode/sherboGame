@@ -2,6 +2,9 @@ import {
   ScoringEngine,
   calculateGateQuestionXp,
   calculateSpeedXp,
+  calculateMistakeXpLoss,
+  calculateMaxScore,
+  calculateMaxStreakXp,
   getPerformanceGrade,
   sumQuestionXp,
   ACHIEVEMENTS,
@@ -28,13 +31,18 @@ console.log('✓ Question XP values verified.');
 // 2. Speed XP calculation tests
 console.log('\nTesting calculateSpeedXp:');
 assert(calculateSpeedXp(45) === 600, '45s must yield 600 XP');
-assert(calculateSpeedXp(90) === 600, '90s must yield 600 XP');
-assert(calculateSpeedXp(120) === 525, '120s must yield 525 XP');
-assert(calculateSpeedXp(150) === 450, '150s must yield 450 XP');
-assert(calculateSpeedXp(210) === 300, '210s must yield 300 XP');
-assert(calculateSpeedXp(270) === 150, '270s must yield 150 XP');
-assert(calculateSpeedXp(330) === 0, '330s must yield 0 XP');
-assert(calculateSpeedXp(400) === 0, '400s must yield 0 XP (no negative)');
+assert(calculateSpeedXp(180) === 600, '180s (grace period) must yield 600 XP');
+assert(calculateSpeedXp(240) === 450, '240s must yield 450 XP');
+assert(calculateSpeedXp(300) === 300, '300s must yield 300 XP');
+assert(calculateSpeedXp(360) === 150, '360s must yield 150 XP');
+assert(calculateSpeedXp(420) === 0, '420s must yield 0 XP');
+assert(calculateSpeedXp(500) === 0, '500s must yield 0 XP (no negative)');
+
+// Mistake loss shown to the student
+assert(calculateMistakeXpLoss(1) === 50, '1st mistake costs 50 XP');
+assert(calculateMistakeXpLoss(2) === 150, '2nd mistake costs 150 XP');
+assert(calculateMistakeXpLoss(3) === 300, '3rd mistake costs 300 XP');
+assert(calculateMistakeXpLoss(4) === 0, '4th mistake costs nothing more');
 console.log('✓ Speed XP formula verified.');
 
 // 3. Performance Grades un-capped tests
@@ -58,7 +66,7 @@ console.log('✓ Grade thresholds verified.');
 console.log('\nTesting TEST 1 - PERFECT RUN (50s, 0 mistakes):');
 const eng1 = new ScoringEngine();
 for (let g = 1; g <= 5; g++) {
-  eng1.recordCorrectAnswer(g, 4.0); // all < 5s
+  eng1.recordCorrectAnswer(g);
 }
 for (let c = 0; c < 30; c++) eng1.recordCoin();
 eng1.recordSummitCompletion(50, 5, 30);
@@ -79,13 +87,13 @@ console.log('✓ TEST 1 passed.');
 // 5. TEST 2: STRONG RUN (4 first try, 1 on second try, 120s)
 console.log('\nTesting TEST 2 - STRONG RUN (150s):');
 const eng2 = new ScoringEngine();
-eng2.recordCorrectAnswer(1, 6.0); // 500
+eng2.recordCorrectAnswer(1); // 500
 eng2.recordIncorrectAttempt(2);   // 1st mistake (-50)
-eng2.recordCorrectAnswer(2, 6.0); // 450
-eng2.recordCorrectAnswer(3, 6.0); // 500, post mistake #1
-eng2.recordCorrectAnswer(4, 6.0); // 500, post mistake #2 -> unlocks PHOENIX_COMEBACK
-eng2.recordCorrectAnswer(5, 6.0); // 500
-eng2.recordSummitCompletion(150, 5);
+eng2.recordCorrectAnswer(2); // 450
+eng2.recordCorrectAnswer(3); // 500, post mistake #1
+eng2.recordCorrectAnswer(4); // 500, post mistake #2 -> unlocks PHOENIX_COMEBACK
+eng2.recordCorrectAnswer(5); // 500
+eng2.recordSummitCompletion(240, 5);
 const st2 = eng2.getState();
 assert(sumQuestionXp(st2.gateQuestionXp) === 2450, 'Question XP must be 2450');
 assert(st2.speedXp === 450, 'Speed XP must be 450');
@@ -98,21 +106,21 @@ console.log('✓ TEST 2 passed.');
 console.log('\nTesting TEST 3 - COMEBACK:');
 const eng3 = new ScoringEngine();
 eng3.recordIncorrectAttempt(1);
-eng3.recordCorrectAnswer(1, 10.0);
-eng3.recordCorrectAnswer(2, 10.0);
-eng3.recordCorrectAnswer(3, 10.0);
+eng3.recordCorrectAnswer(1);
+eng3.recordCorrectAnswer(2);
+eng3.recordCorrectAnswer(3);
 const st3 = eng3.getState();
 assert(st3.unlockedAchievements.includes('PHOENIX_COMEBACK'), 'Phoenix Comeback must unlock');
 assert(st3.achievementXp === 75, 'Achievement XP must be 75');
 console.log('✓ TEST 3 passed.');
 
-// 7. TEST 4: SLOW RUN (360s)
-console.log('\nTesting TEST 4 - SLOW RUN (360s):');
+// 7. TEST 4: SLOW RUN (450s)
+console.log('\nTesting TEST 4 - SLOW RUN (450s):');
 const eng4 = new ScoringEngine();
 for (let g = 1; g <= 5; g++) {
-  eng4.recordCorrectAnswer(g, 72.0);
+  eng4.recordCorrectAnswer(g);
 }
-eng4.recordSummitCompletion(360, 5);
+eng4.recordSummitCompletion(450, 5);
 const st4 = eng4.getState();
 assert(st4.speedXp === 0, 'Speed XP must be 0');
 assert(st4.summitXp === 300, 'Summit XP must still be awarded');
@@ -122,9 +130,9 @@ console.log('✓ TEST 4 passed.');
 // 8. TEST 5: DUPLICATE EVENT IDEMPOTENCY
 console.log('\nTesting TEST 5 - DUPLICATE EVENT IDEMPOTENCY:');
 const eng5 = new ScoringEngine();
-const gate1First = eng5.recordCorrectAnswer(1, 4.0);
+const gate1First = eng5.recordCorrectAnswer(1);
 assert(gate1First.questionXpEarned === 500, 'First solve must earn 500');
-const gate1Dupe = eng5.recordCorrectAnswer(1, 4.0);
+const gate1Dupe = eng5.recordCorrectAnswer(1);
 assert(gate1Dupe.questionXpEarned === 0, 'Duplicate solve must earn 0');
 const sum1 = eng5.recordSummitCompletion(50, 1);
 assert(sum1.summitXpEarned === 300, 'Summit completion must earn 300');
@@ -135,7 +143,7 @@ console.log('✓ TEST 5 passed.');
 // 9. Negative deductions, 3rd mistake zero-XP rule, and independent checkpoint counters:
 console.log('\nTesting 3rd-Mistake Zero-XP rule and independent checkpoint counters:');
 const eng6 = new ScoringEngine();
-eng6.recordCorrectAnswer(1, 10.0); // +500
+eng6.recordCorrectAnswer(1); // +500
 const scoreAfterGate1 = eng6.getState().totalXp;
 assert(scoreAfterGate1 === 500, 'Initial score is 500');
 
@@ -151,15 +159,42 @@ assert(g2m4.potentialXp === 0, 'After 4th mistake, potential XP remains 0');
 assert(eng6.getState().totalXp === scoreAfterGate1, 'Total XP must NEVER decrease from mistakes');
 
 // Eventually solves gate 2 on 5th attempt -> receives 0 XP for gate 2, but gate 2 is marked solved!
-const solveGate2 = eng6.recordCorrectAnswer(2, 10.0);
+const solveGate2 = eng6.recordCorrectAnswer(2);
 assert(solveGate2.questionXpEarned === 0, 'Correct answer after 3rd mistake must award 0 XP for checkpoint');
 assert(eng6.getState().gateSolved[2] === true, 'Gate 2 must still be marked solved to allow progression');
 assert(eng6.getState().totalXp === 500, 'Total XP remains 500');
 
 // Gate 3 starts with a fresh 0-mistake counter and awards full 500 XP on 1st try!
-const solveGate3 = eng6.recordCorrectAnswer(3, 10.0);
+const solveGate3 = eng6.recordCorrectAnswer(3);
 assert(solveGate3.questionXpEarned === 500, 'New checkpoint must reset mistake counter and award 500 XP');
 assert(eng6.getState().totalXp === 1000, 'Total XP after gate 3 is 1000');
 console.log('✓ 3rd-Mistake Zero-XP rule, no negative deductions, and independent counters verified.');
+
+// MAX SCORE PER LEVEL COUNT
+// The admin (sherbeni-academy-admin, src/features/videos/utils/towerScore.ts)
+// and the backend (video-game.constants.ts) keep a copy of this table to
+// suggest and validate pass scores. If this test fails, update those copies too.
+console.log('\nTesting max score per level count:');
+const MAX_SCORE_BY_LEVELS = [1660, 2260, 2930, 3680, 4420];
+for (let levels = 1; levels <= 5; levels++) {
+  const max = calculateMaxScore(levels);
+  assert(
+    max.total === MAX_SCORE_BY_LEVELS[levels - 1],
+    `${levels} level(s): max score is ${max.total}, table says ${MAX_SCORE_BY_LEVELS[levels - 1]}`
+  );
+
+  // A perfect, fast run that grabs every coin really reaches that number
+  const perfect = new ScoringEngine();
+  for (let coin = 0; coin < max.coins; coin++) perfect.recordCoin();
+  for (let gate = 1; gate <= levels; gate++) perfect.recordCorrectAnswer(gate);
+  perfect.recordSummitCompletion(60, levels, max.coins);
+  assert(
+    perfect.getState().totalXp === max.total,
+    `${levels} level(s): a perfect run scores ${perfect.getState().totalXp}, max is ${max.total}`
+  );
+}
+assert(calculateMaxStreakXp(1) === 0, 'One gate cannot build a streak');
+assert(calculateMaxStreakXp(5) === 400, 'Streak XP is capped at 400');
+console.log('✓ Max score table matches a perfect run for 1 to 5 levels.');
 
 console.log('\nALL TESTS PASSED SUCCESSFULLY! 🎉');

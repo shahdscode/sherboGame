@@ -7,80 +7,20 @@ import {
 import { WavingFlag } from './WavingFlag';
 import { gameEvents } from './EventBus';
 import { sfx } from './sfx';
+import {
+  SECTION_DESIGNS,
+  coinsForStep,
+  getStepKind,
+  type PlatformKind,
+} from './towerLayout';
+
+export type { PlatformKind };
 
 /** Super-sampling factor for procedural textures so platforms stay razor-sharp when zoomed in. */
 const TEX_SCALE = 2;
 /** High-DPI resolution multiplier for Phaser in-world text labels. */
 const TEXT_RES = 2;
 
-/**
- * Platform behaviours. Each tower section introduces new ones, so the climb gets
- * harder (and more interesting) with every gate:
- *  normal  – solid step
- *  moving  – slides left/right and carries the climber
- *  crumble – shakes, then falls away shortly after being stepped on (it grows back)
- *  ice     – slippery: the climber accelerates and stops slowly
- *  spring  – launches the climber high into the air
- */
-export type PlatformKind = 'normal' | 'moving' | 'crumble' | 'ice' | 'spring';
-
-interface SectionDesign {
-  /** Platform width multiplier (platforms get narrower higher up). */
-  widthScale: number;
-  /** Behaviour per regular step of the section (index = step inside the section). */
-  kinds: Partial<Record<number, PlatformKind>>;
-  /** Horizontal travel (px each side) and speed (radians/sec) of moving platforms. */
-  moveAmp: number;
-  moveSpeed: number;
-  /** Time (ms) a crumbling platform holds after being stepped on. */
-  crumbleDelay: number;
-}
-
-const SECTION_DESIGNS: SectionDesign[] = [
-  // Section 1 — warm-up: plain steps only
-  { widthScale: 1, kinds: {}, moveAmp: 0, moveSpeed: 0, crumbleDelay: 900 },
-  // Section 2 — moving platforms appear
-  { widthScale: 1, kinds: { 2: 'moving', 5: 'moving' }, moveAmp: 55, moveSpeed: 1.3, crumbleDelay: 900 },
-  // Section 3 — crumbling steps join in
-  {
-    widthScale: 0.94,
-    kinds: { 1: 'crumble', 3: 'moving', 5: 'crumble', 7: 'moving', 8: 'crumble' },
-    moveAmp: 65,
-    moveSpeed: 1.5,
-    crumbleDelay: 800,
-  },
-  // Section 4 — ice and the first spring
-  {
-    widthScale: 0.9,
-    kinds: { 1: 'ice', 2: 'ice', 4: 'moving', 5: 'crumble', 7: 'spring', 9: 'moving', 10: 'ice', 11: 'crumble' },
-    moveAmp: 75,
-    moveSpeed: 1.75,
-    crumbleDelay: 700,
-  },
-  // Section 5 — everything, faster
-  {
-    widthScale: 0.85,
-    kinds: {
-      1: 'moving', 2: 'ice', 3: 'crumble', 5: 'moving', 6: 'spring', 8: 'crumble',
-      9: 'moving', 10: 'ice', 11: 'crumble', 13: 'moving', 14: 'ice',
-    },
-    moveAmp: 85,
-    moveSpeed: 2.0,
-    crumbleDelay: 620,
-  },
-  // Section 6 — the final ascent
-  {
-    widthScale: 0.8,
-    kinds: {
-      1: 'moving', 2: 'crumble', 3: 'ice', 4: 'moving', 6: 'crumble', 7: 'spring', 8: 'moving',
-      9: 'ice', 10: 'crumble', 12: 'moving', 13: 'ice', 14: 'crumble', 15: 'spring', 16: 'moving',
-      17: 'crumble',
-    },
-    moveAmp: 95,
-    moveSpeed: 2.3,
-    crumbleDelay: 540,
-  },
-];
 
 const KIND_TEXTURE: Record<PlatformKind, string> = {
   normal: 'tex-regular-platform',
@@ -343,11 +283,13 @@ export class PlatformManager {
 
     this.platforms.forEach((p) => {
       if (p.isCheckpoint || p.isSummit) return;
-      if (p.kind === 'spring') {
+      // Same rule as countTowerCoins, which the max-score calculation uses
+      const count = coinsForStep(p.kind, p.stepNumber);
+      if (count === 2) {
         // A column of coins only a spring launch can reach
         addCoin(p.baseX, p.y - 170, p.sectionIndex);
         addCoin(p.baseX, p.y - 240, p.sectionIndex);
-      } else if (p.stepNumber % 2 === 0) {
+      } else if (count === 1) {
         addCoin(p.baseX, p.y - 52, p.sectionIndex);
       }
     });
@@ -1230,7 +1172,7 @@ export class PlatformManager {
         const offsets =
           sectionOffsets[(sectionIndex - 1) % sectionOffsets.length];
         x = centerX + offsets[stepInSection % offsets.length];
-        kind = design.kinds[stepInSection] ?? 'normal';
+        kind = getStepKind(sectionIndex, stepInSection);
         // Springs and moving platforms keep a comfortable landing size
         widthScale = kind === 'spring' ? Math.max(0.9, design.widthScale) : design.widthScale;
         if (kind === 'moving') {

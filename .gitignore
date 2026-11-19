@@ -12,6 +12,12 @@ dist
 dist-ssr
 *.local
 
+# Local build-time configuration. Vite exposes VITE_* values in the browser
+# bundle, so production values belong in the deployment environment, not Git.
+.env
+.env.*
+!.env.example
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

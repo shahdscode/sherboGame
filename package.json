@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "node --experimental-strip-types src/game/scoring.test.ts && node --experimental-strip-types src/data/questionBank.test.ts && node --experimental-strip-types src/data/remoteGame.test.ts && node --experimental-strip-types src/utils/platformBridge.test.ts"
   },
   "dependencies": {
     "canvas-confetti": "^1.9.3",

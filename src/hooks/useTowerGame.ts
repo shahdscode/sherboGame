@@ -5,7 +5,6 @@ import {
   CheckpointQuestion,
   towerConfig,
   getCheckpointStepRange,
-  calculateSpeedBonus,
 } from '../data/towerConfig';
 import { checkpointQuestions } from '../data/sampleQuestions';
 import {
@@ -28,6 +27,7 @@ import {
   ScoringState,
   createInitialScoringState,
   calculateGateQuestionXp,
+  calculateMistakeXpLoss,
   getPerformanceGrade,
 } from '../game/scoring';
 
@@ -43,7 +43,7 @@ export interface CheckpointStateItem {
 export interface QuestionAttemptFeedback {
   /**
    * idle      – fresh question, nothing answered yet
-   * review    – wrong answer: the solution of the missed question is shown before moving on
+   * review    – wrong answer: the wrong choice is marked (not the solution) before moving on
    * incorrect – a new question is shown after a mistake
    * correct   – gate solved
    */
@@ -57,17 +57,6 @@ export interface QuestionAttemptFeedback {
   hint: string | null;
   explanation: string | null;
   attemptsForCurrentQuestion: number;
-}
-
-export function getPenaltyForMistakes(mistakes: number): number {
-  if (mistakes <= 0) return 0;
-  if (mistakes === 1) return 50;
-  if (mistakes === 2) return 200; // 50 + 150
-  return 500; // 3rd+ mistake: 0 XP remaining for the checkpoint
-}
-
-export function getQuestionXpForMistakes(mistakes: number): number {
-  return calculateGateQuestionXp(mistakes + 1);
 }
 
 /**
@@ -150,7 +139,6 @@ export function useTowerGame(
   const [scoringState, setScoringState] = useState<ScoringState>(() =>
     scoringEngineRef.current.getState()
   );
-  const questionStartTimeRef = useRef<number | null>(null);
   const hasNotifiedPlatformRef = useRef<boolean>(false);
 
   // The Start button stays locked until the Phaser scene has loaded its assets
@@ -222,7 +210,6 @@ export function useTowerGame(
         setActiveCheckpointNumber(checkpointNumber);
         setGameState('CHECKPOINT_REACHED');
         isSubmittingRef.current = false;
-        questionStartTimeRef.current = Date.now();
 
         // Initialize randomized question rotation for this checkpoint's 3-question pool
         const activeBank =
@@ -251,7 +238,6 @@ export function useTowerGame(
         });
 
         setTimeout(() => {
-          questionStartTimeRef.current = Date.now();
           setGameState((prev) =>
             prev === 'CHECKPOINT_REACHED' ? 'QUESTION_ACTIVE' : prev
           );
@@ -424,14 +410,7 @@ export function useTowerGame(
         isSubmittingRef.current = true;
         sfx.correct();
 
-        const solveDurationSeconds = questionStartTimeRef.current
-          ? Math.max(0.1, (Date.now() - questionStartTimeRef.current) / 1000)
-          : 10.0;
-
-        const result = scoringEngineRef.current.recordCorrectAnswer(
-          activeCheckpointNumber,
-          solveDurationSeconds
-        );
+        const result = scoringEngineRef.current.recordCorrectAnswer(activeCheckpointNumber);
 
         const updatedScoring = scoringEngineRef.current.getState();
         setScoringState(updatedScoring);
@@ -497,11 +476,12 @@ export function useTowerGame(
         setScoringState(updatedScoring);
         setTotalAttempts(updatedScoring.totalAttempts);
 
-        const penaltyApplied =
-          mistakeNumber === 1 ? 50 : mistakeNumber === 2 ? 150 : 0;
+        // XP this mistake cost at the gate: 50, then 150, then 300 (none after that)
+        const penaltyApplied = calculateMistakeXpLoss(result.attemptNumber);
 
-        // Show the solution of the missed question first (the student learns from the
-        // mistake); a fresh question comes when they press "Try a New Question".
+        // Mark the wrong choice only (the right answer is NOT revealed, so the
+        // pool can repeat questions); a fresh question comes when they press
+        // "Try a New Question".
         setFeedback({
           status: 'review',
           selectedOptionIndex: chosen,
@@ -511,7 +491,7 @@ export function useTowerGame(
           potentialXp: result.potentialXp,
           wrongPenalties: {},
           hint: null,
-          explanation: activeQuestion.explanation,
+          explanation: null,
           attemptsForCurrentQuestion: newAttemptNum,
         });
       }
@@ -519,7 +499,7 @@ export function useTowerGame(
     [activeCheckpointNumber, activeQuestion, feedback]
   );
 
-  /** After reviewing the solution of a missed question, move on to a fresh one. */
+  /** After a wrong answer, move on to a fresh question. */
   const nextQuestionAfterReview = useCallback(() => {
     if (activeCheckpointNumber === null || feedback.status !== 'review') return;
     sfx.click();
@@ -531,7 +511,6 @@ export function useTowerGame(
     setCheckpointRotation((prev) =>
       prev ? advanceCheckpointRotation(prev, pool) : initCheckpointRotation(pool)
     );
-    questionStartTimeRef.current = Date.now();
     setFeedback((prev) => ({
       ...prev,
       status: 'incorrect',

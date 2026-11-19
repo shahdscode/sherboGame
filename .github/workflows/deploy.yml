@@ -1,0 +1,80 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: sherbo-game-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Wait for SSH port
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+        run: |
+          for attempt in $(seq 1 10); do
+            if timeout 10 bash -c "</dev/tcp/$SSH_HOST/22"; then
+              exit 0
+            fi
+            echo "SSH port unreachable (attempt $attempt/10), retrying in 15s"
+            sleep 15
+          done
+          echo "SSH port still unreachable after 10 attempts"
+          exit 1
+
+      - name: Build and publish on the VPS
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          timeout: 60s
+          command_timeout: 15m
+          script: |
+            set -eu
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+
+            cd /root/sherbeni-academy/sherboGame
+            git pull --ff-only origin main
+            npm ci --no-audit --no-fund
+
+            if [ ! -f .env ] || ! grep -qE '^VITE_API_URL=https://.+/api/v1/?$' .env; then
+              echo "VITE_API_URL must be an HTTPS /api/v1 endpoint in .env"
+              exit 1
+            fi
+            if grep -hE '^VITE_[A-Z0-9_]*(API_KEY|ACCESS_KEY|SECRET|TOKEN|PASSWORD|PRIVATE)[A-Z0-9_]*=' .env* 2>/dev/null; then
+              echo "Refusing to publish secret-like VITE variables"
+              exit 1
+            fi
+
+            npm test
+            npm run build
+
+            deploy_sha="$(git rev-parse --short=12 HEAD)"
+            web_root=/var/www/sherbogame
+            release_dir="$web_root/releases/$deploy_sha"
+            mkdir -p "$release_dir"
+            rsync -a --delete --delay-updates dist/ "$release_dir/"
+            test -s "$release_dir/index.html"
+
+            next_link="$web_root/.current-$deploy_sha"
+            ln -sfn "releases/$deploy_sha" "$next_link"
+            mv -Tf "$next_link" "$web_root/current"
+
+            if [ -d /etc/letsencrypt/live/sherbogame.shiftup-solutions.com ]; then
+              curl --fail --silent --show-error \
+                --resolve sherbogame.shiftup-solutions.com:443:127.0.0.1 \
+                https://sherbogame.shiftup-solutions.com/ >/dev/null
+            else
+              echo "TLS is not provisioned yet; checking the local HTTP site"
+              curl --fail --silent --show-error \
+                -H 'Host: sherbogame.shiftup-solutions.com' \
+                http://127.0.0.1/ >/dev/null
+            fi

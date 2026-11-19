@@ -22,6 +22,8 @@ export interface CompletionScreenProps {
   xpPoints: number;
   elapsedTime: number;
   speedBonus: number;
+  /** Score needed to continue the video; null when the game has none. */
+  passScore?: number | null;
   onPlayAgain: () => void;
 }
 
@@ -900,6 +902,7 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
   elapsedTime,
   speedBonus: rawSpeedBonus,
   scoringState,
+  passScore = null,
   onPlayAgain,
 }) => {
   const [isExporting, setIsExporting] = useState(false);
@@ -1185,6 +1188,17 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
               <> • 🪙 {scoringState?.coinsCollected ?? 0} / {gameEvents.totalCoins}</>
             )}
           </div>
+          {passScore !== null && (
+            <div
+              className={`pass-target-banner ${xpPoints >= passScore ? "pass-target-met" : "pass-target-missed"}`}
+              data-testid="pass-target-banner"
+              role="status"
+            >
+              {xpPoints >= passScore
+                ? `✅ Target reached (${passScore.toLocaleString()} XP) — you can continue the video!`
+                : `🎯 You need ${passScore.toLocaleString()} XP to continue the video — climb again!`}
+            </div>
+          )}
         </div>
 
         <div className="stats-summary-grid">

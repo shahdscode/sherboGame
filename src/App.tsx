@@ -15,7 +15,7 @@ import { applyTowerLevels, type CheckpointQuestion } from './data/towerConfig';
 type RemoteGameState =
   | { status: 'loading' }
   | { status: 'failed' }
-  | { status: 'ready'; questions?: CheckpointQuestion[] };
+  | { status: 'ready'; questions?: CheckpointQuestion[]; passScore?: number | null };
 
 /**
  * `/?game=<id>` plays a game built in the admin: its levels are loaded and
@@ -35,7 +35,7 @@ export const App: React.FC = () => {
       .then((game) => {
         if (cancelled) return;
         applyTowerLevels(game.levelCount);
-        setRemote({ status: 'ready', questions: game.questions });
+        setRemote({ status: 'ready', questions: game.questions, passScore: game.passScore });
       })
       .catch(() => {
         if (!cancelled) setRemote({ status: 'failed' });
@@ -48,14 +48,16 @@ export const App: React.FC = () => {
   if (remote.status !== 'ready') {
     return <GameLoadScreen failed={remote.status === 'failed'} />;
   }
-  return <TowerApp customQuestions={remote.questions} />;
+  return <TowerApp customQuestions={remote.questions} passScore={remote.passScore ?? null} />;
 };
 
 interface TowerAppProps {
   customQuestions?: CheckpointQuestion[];
+  /** Score needed to continue the video (games built in the admin). */
+  passScore: number | null;
 }
 
-const TowerApp: React.FC<TowerAppProps> = ({ customQuestions }) => {
+const TowerApp: React.FC<TowerAppProps> = ({ customQuestions, passScore }) => {
   const {
     gameState,
     currentStep,
@@ -153,6 +155,7 @@ const TowerApp: React.FC<TowerAppProps> = ({ customQuestions }) => {
           elapsedTime={elapsedTime}
           speedBonus={speedBonus}
           scoringState={scoringState}
+          passScore={passScore}
           onPlayAgain={restartGame}
         />
       )}

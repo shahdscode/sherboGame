@@ -5,11 +5,12 @@
  * Final XP = Question XP + Streak XP + Summit XP + Speed XP + Achievement XP
  *
  * Components:
- * 1. Question XP (Max 2,500 XP across 5 gates):
+ * 1. Question XP (500 XP per gate, 2,500 XP for a 5-gate tower):
  *    - Attempt 1 (0 mistakes): 500 XP
  *    - Attempt 2 (1st mistake -50 XP): 450 XP
  *    - Attempt 3 (2nd mistake -150 XP): 300 XP
- *    - Attempt 4+ (3rd+ mistake): 0 XP for the checkpoint
+ *    - Attempt 4+ (3rd mistake -300 XP): 0 XP for the gate
+ *    - Attempts count per gate, across the different questions shown at it.
  *    - Points awarded once per gate upon solving.
  *    - Wrong attempts never deduct previously earned XP.
  * 2. Streak XP (Max 400 XP):
@@ -17,22 +18,38 @@
  *    - Milestones: 2 -> +50 XP, 3 -> +100 XP, 4 -> +150 XP, 5 -> +250 XP (capped at 400 XP total).
  *    - Each milestone awarded at most once per game.
  *    - Reset to 0 on any incorrect attempt.
- * 3. Speed XP (Max 600 XP) — based on CLIMBING time only (the clock pauses while a question is open):
- *    - 600 * max(0, 1 - max(0, climbSeconds - 90) / 240)
- *    - <= 90s: 600 XP | 120s: 525 XP | 150s: 450 XP | 210s: 300 XP | 270s: 150 XP | >= 330s: 0 XP
+ * 3. Speed XP (Max 600 XP) — the stopwatch runs while climbing AND while a question is open:
+ *    - 600 * max(0, 1 - max(0, seconds - 180) / 240)
+ *    - <= 180s: 600 XP | 240s: 450 XP | 300s: 300 XP | 360s: 150 XP | >= 420s: 0 XP
  * 4. Summit XP:
  *    - Fixed +300 XP upon crossing the summit finish line.
- * 5. Achievements (Max 275 XP):
+ * 5. Coins: +10 XP for each coin collected while climbing.
+ * 6. Achievements (at most 200 XP: UNTOUCHABLE and PHOENIX_COMEBACK exclude each other):
  *    - TREASURE_HUNTER: Collect every coin in the tower (+50 XP).
- * 6. Coins: +10 XP for each coin collected while climbing.
- *    - UNTOUCHABLE: Complete all 5 gates with 0 mistakes (+150 XP).
+ *    - UNTOUCHABLE: Complete every gate with 0 mistakes (+150 XP).
  *    - PHOENIX_COMEBACK: After a mistake, solve next 2 consecutive gates on attempt 1 (+75 XP).
  */
+
+import { countTowerCoins } from './towerLayout.ts';
+import { MAX_LEVELS } from '../data/towerConfig.ts';
 
 export type AchievementId = 'TREASURE_HUNTER' | 'UNTOUCHABLE' | 'PHOENIX_COMEBACK';
 
 /** XP awarded for every coin collected while climbing. */
 export const COIN_XP = 10;
+
+/** Fixed XP for crossing the summit finish line. */
+export const SUMMIT_XP = 300;
+
+/** Streak bonus per run of consecutive first-try gates (each awarded once). */
+export const STREAK_MILESTONES: Readonly<Record<number, number>> = {
+  2: 50,
+  3: 100,
+  4: 150,
+  5: 250,
+};
+/** Total streak XP never goes above this. */
+export const MAX_STREAK_XP = 400;
 
 export interface AchievementDef {
   id: AchievementId;
@@ -53,7 +70,7 @@ export const ACHIEVEMENTS: Record<AchievementId, AchievementDef> = {
   UNTOUCHABLE: {
     id: 'UNTOUCHABLE',
     title: 'Untouchable',
-    description: 'Conquered all 5 gates without a single mistake!',
+    description: 'Conquered every gate without a single mistake!',
     xp: 150,
     icon: '🛡️',
   },
@@ -128,7 +145,10 @@ export const PERFORMANCE_GRADES: PerformanceGradeInfo[] = [
   },
 ];
 
-/** Gate XP plus summit and maximum speed bonus; the grade thresholds are set for 5 gates. */
+/**
+ * Gate XP plus summit and maximum speed bonus (streak, coins and achievements
+ * are extra); the grade thresholds are set for 5 gates.
+ */
 const possibleXp = (gateCount: number) => gateCount * 500 + 300 + 600;
 
 /**
@@ -159,13 +179,79 @@ export function calculateGateQuestionXp(attempts: number): number {
 }
 
 /**
- * Speed XP Formula (climbing time only):
- * 600 * max(0, 1 - max(0, elapsedSeconds - 90) / 240)
+ * XP lost by one more mistake at a gate: 50, then 150, then 300, then 0
+ * (`mistakes` counts the new one).
+ */
+export function calculateMistakeXpLoss(mistakes: number): number {
+  if (mistakes <= 0) return 0;
+  return calculateGateQuestionXp(mistakes) - calculateGateQuestionXp(mistakes + 1);
+}
+
+/** Full speed XP up to this many seconds; question time counts too. */
+export const SPEED_GRACE_SECONDS = 180;
+/** Seconds after the grace period over which speed XP falls to 0. */
+export const SPEED_DECAY_SECONDS = 240;
+export const MAX_SPEED_XP = 600;
+
+/**
+ * Speed XP Formula (whole run: climbing and answering):
+ * 600 * max(0, 1 - max(0, elapsedSeconds - 180) / 240)
  */
 export function calculateSpeedXp(elapsedSeconds: number): number {
-  const overtime = Math.max(0, elapsedSeconds - 90);
-  const factor = Math.max(0, 1 - overtime / 240);
-  return Math.round(600 * factor);
+  const overtime = Math.max(0, elapsedSeconds - SPEED_GRACE_SECONDS);
+  const factor = Math.max(0, 1 - overtime / SPEED_DECAY_SECONDS);
+  return Math.round(MAX_SPEED_XP * factor);
+}
+
+/** Most streak XP a run through `gateCount` gates can earn. */
+export function calculateMaxStreakXp(gateCount: number): number {
+  let total = 0;
+  for (let streak = 1; streak <= gateCount; streak++) {
+    total += STREAK_MILESTONES[streak] ?? 0;
+  }
+  return Math.min(MAX_STREAK_XP, total);
+}
+
+export interface MaxScoreBreakdown {
+  gates: number;
+  questionXp: number;
+  streakXp: number;
+  summitXp: number;
+  speedXp: number;
+  coins: number;
+  coinXp: number;
+  achievementXp: number;
+  total: number;
+}
+
+/**
+ * The highest score a tower with `levelCount` levels allows: every gate on the
+ * first try, finished within the speed grace period, every coin collected.
+ * UNTOUCHABLE and TREASURE_HUNTER both count; PHOENIX_COMEBACK needs a mistake,
+ * so it can never join a perfect run.
+ *
+ * The admin copies these numbers to suggest a pass score (see
+ * `MAX_SCORE_BY_LEVELS` in scoring.test.ts); update both when scoring changes.
+ */
+export function calculateMaxScore(levelCount: number): MaxScoreBreakdown {
+  const gates = Math.max(1, Math.min(MAX_LEVELS, Math.floor(levelCount)));
+  const coins = countTowerCoins(gates);
+  const questionXp = gates * calculateGateQuestionXp(1);
+  const streakXp = calculateMaxStreakXp(gates);
+  const coinXp = coins * COIN_XP;
+  const achievementXp =
+    ACHIEVEMENTS.UNTOUCHABLE.xp + (coins > 0 ? ACHIEVEMENTS.TREASURE_HUNTER.xp : 0);
+  return {
+    gates,
+    questionXp,
+    streakXp,
+    summitXp: SUMMIT_XP,
+    speedXp: MAX_SPEED_XP,
+    coins,
+    coinXp,
+    achievementXp,
+    total: questionXp + streakXp + SUMMIT_XP + MAX_SPEED_XP + coinXp + achievementXp,
+  };
 }
 
 export interface ScoreNotification {
@@ -328,21 +414,17 @@ export class ScoringEngine {
 
   /**
    * Handle a correct answer at a gate.
-   * - Calculates Question XP based on total attempts on this gate (1 -> 500, 2 -> 400, 3 -> 300, 4+ -> 250).
+   * - Calculates Question XP based on total attempts on this gate (1 -> 500, 2 -> 450, 3 -> 300, 4+ -> 0).
    * - Points awarded only once per gate (idempotent).
    * - If solved on 1st attempt:
    *     - Increment current streak.
    *     - Check streak milestones: 2 (+50), 3 (+100), 4 (+150), 5 (+250 capped at 400 total).
-   *     - Check LIGHTNING_FAST achievement if solveDurationSeconds < 5.0.
    *     - If hasMadeMistake, increment consecutiveFirstTriesSinceMistake and check PHOENIX_COMEBACK (reaches 2).
    * - If solved on 2nd+ attempt:
    *     - Consecutive streak is already 0.
    *     - consecutiveFirstTriesSinceMistake resets to 0.
    */
-  public recordCorrectAnswer(
-    gateNumber: number,
-    solveDurationSeconds: number
-  ): {
+  public recordCorrectAnswer(gateNumber: number): {
     questionXpEarned: number;
     streakXpEarned: number;
     achievementsUnlocked: AchievementDef[];
@@ -388,21 +470,13 @@ export class ScoringEngine {
         this.state.bestStreak = this.state.currentStreak;
       }
 
-      // Check milestones
-      const streakMilestones: Record<number, number> = {
-        2: 50,
-        3: 100,
-        4: 150,
-        5: 250,
-      };
-
-      const milestoneBonus = streakMilestones[this.state.currentStreak];
+      const milestoneBonus = STREAK_MILESTONES[this.state.currentStreak];
       if (
         milestoneBonus &&
         !this.state.streakMilestonesAwarded.includes(this.state.currentStreak)
       ) {
-        // Ensure total streak reward cannot exceed 400 XP
-        const remainingStreakCapacity = Math.max(0, 400 - this.state.streakXp);
+        // Ensure total streak reward cannot exceed the cap
+        const remainingStreakCapacity = Math.max(0, MAX_STREAK_XP - this.state.streakXp);
         const actualBonus = Math.min(remainingStreakCapacity, milestoneBonus);
 
         if (actualBonus > 0) {
@@ -445,12 +519,6 @@ export class ScoringEngine {
     };
   }
 
-  /**
-   * Handle summit finish line crossing.
-   * - Award Summit XP: +300 XP (only once).
-   * - Calculate Speed XP: 600 * max(0, 1 - max(0, elapsedSeconds - 60) / 240).
-   * - Check UNTOUCHABLE achievement: complete all 5 gates with 0 mistakes (+150 XP).
-   */
   /** A coin was picked up while climbing: +10 XP each. */
   public recordCoin(): number {
     this.state.coinsCollected += 1;
@@ -459,6 +527,12 @@ export class ScoringEngine {
     return COIN_XP;
   }
 
+  /**
+   * Handle summit finish line crossing (only once, and only after every gate is solved).
+   * - Award Summit XP: +300 XP.
+   * - Calculate Speed XP with `calculateSpeedXp`.
+   * - Check UNTOUCHABLE (every gate with 0 mistakes, +150 XP) and TREASURE_HUNTER (+50 XP).
+   */
   public recordSummitCompletion(
     elapsedSeconds: number,
     totalGatesRequired: number = 5,
@@ -488,13 +562,13 @@ export class ScoringEngine {
     }
 
     this.state.summitCompleted = true;
-    this.state.summitXp = 300;
+    this.state.summitXp = SUMMIT_XP;
 
     this.pushNotification({
       type: 'summit',
       title: '👑 Summit Conquered!',
-      subtitle: 'Summit Completion Bonus (+300 XP)',
-      xpEarned: 300,
+      subtitle: `Summit Completion Bonus (+${SUMMIT_XP} XP)`,
+      xpEarned: SUMMIT_XP,
     });
 
     // Speed XP calculation
@@ -527,7 +601,7 @@ export class ScoringEngine {
     this.recalculateTotalXp();
 
     return {
-      summitXpEarned: 300,
+      summitXpEarned: SUMMIT_XP,
       speedXpEarned: speedXp,
       achievementsUnlocked: unlockedList,
     };
