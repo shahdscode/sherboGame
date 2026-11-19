@@ -3277,20 +3277,28 @@ body {
   align-self: flex-start;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border-radius: 999px;
-  border: 1.5px dashed rgba(238, 123, 60, 0.7);
-  background: #fff7ef;
-  color: #b85720;
+  gap: 7px;
+  padding: 7px 14px;
+  border-radius: 12px;
+  border: 2px solid #b85720;
+  background: linear-gradient(180deg, #fff3e0 0%, #ffe0b2 100%);
+  box-shadow: 0 3px 0 #b85720;
+  color: #9a3412;
   font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 0.86rem;
+  font-weight: 800;
+  font-size: 0.88rem;
   cursor: pointer;
+  transition: transform 0.1s ease, filter 0.15s ease, box-shadow 0.1s ease;
 }
 
 .clue-toggle-btn:hover {
-  background: #ffedd8;
+  transform: translateY(-1px);
+  filter: brightness(1.03);
+}
+
+.clue-toggle-btn:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 #b85720;
 }
 
 .clue-box {
