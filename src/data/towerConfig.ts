@@ -83,10 +83,12 @@ export const towerConfig: TowerConfigRuntime = {
   stepsPerCheckpoint: 5,
   numberOfCheckpoints: 5,
   platformSpacingY: 108,
-  towerWidth: 720,
+  // Platforms are laid out relative to the centre, so widening the tower only adds open
+  // space near the walls (lets wide screens zoom out without thicker-looking walls).
+  towerWidth: 800,
   wallThickness: 44,
   regularPlatformWidth: 165,
-  checkpointPlatformWidth: 632, // Full inner width between walls (720 - 44*2)
+  checkpointPlatformWidth: 712, // Full inner width between walls (800 - 44*2)
   platformHeight: 24,
   player: {
     width: 38,

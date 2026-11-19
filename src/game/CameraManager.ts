@@ -10,14 +10,14 @@ const VISIBLE_WORLD_HEIGHT = 620;
  */
 const MIN_VISIBLE_WORLD_WIDTH = 600;
 /**
- * Never zoom in so far on wide screens that less than ~3.7 steps of the tower are visible.
- * 400 still lets a 16:9 screen (720 / (16/9) = 405) fill edge-to-edge.
+ * Never zoom in so far on wide screens that less than ~4 steps of the tower are visible.
+ * A 16:9 screen needs (800 + 2*60) / (16/9) ≈ 518 to fill edge to edge, so it always does.
  */
-const MIN_VISIBLE_WORLD_HEIGHT = 400;
+const MIN_VISIBLE_WORLD_HEIGHT = 440;
 /**
- * On wide screens the view shows this much of the outer wall on each side of the tower,
- * which zooms out a little (≈ 525 world units visible vertically on a 16:10 laptop instead
- * of 450) while still filling the screen edge to edge. Must stay ≤ OUTER_WALL_EXTENT.
+ * On wide screens the view shows this much of the outer wall on each side of the tower
+ * (≈ 575 world units visible vertically on a 16:10 laptop) while still filling the screen
+ * edge to edge. Must stay ≤ OUTER_WALL_EXTENT.
  */
 const WIDE_SIDE_MARGIN = 60;
 /**

@@ -800,6 +800,9 @@ export class PlatformManager {
     }
 
     const squareWindows: SquareWindowDef[] = [];
+    // Windows sit a fixed distance inside each wall, so they follow the tower width
+    const winLeftX = this.config.wallThickness + 80;
+    const winRightX = this.config.towerWidth - this.config.wallThickness - 80;
     for (let s = 1; s <= 6; s++) {
       const startStep = s === 1 ? 1 : this.config.checkpointSteps[s - 2] + 1;
       const endStep =
@@ -815,14 +818,14 @@ export class PlatformManager {
       const hasSunbeam = s <= 3;
       if (s % 2 === 1) {
         squareWindows.push({
-          x: 596,
+          x: winRightX,
           y: y1,
           size: 72,
           side: 'right',
           sunbeam: hasSunbeam,
         });
         squareWindows.push({
-          x: 124,
+          x: winLeftX,
           y: y2,
           size: 72,
           side: 'left',
@@ -830,14 +833,14 @@ export class PlatformManager {
         });
       } else {
         squareWindows.push({
-          x: 124,
+          x: winLeftX,
           y: y1,
           size: 72,
           side: 'left',
           sunbeam: hasSunbeam,
         });
         squareWindows.push({
-          x: 596,
+          x: winRightX,
           y: y2,
           size: 72,
           side: 'right',
@@ -847,7 +850,7 @@ export class PlatformManager {
     }
     // Summit Sky Gallery (Twin squared observatory windows flanking summit arch)
     squareWindows.push({
-      x: 130,
+      x: winLeftX + 6,
       y: 220,
       size: 82,
       side: 'left',
@@ -855,7 +858,7 @@ export class PlatformManager {
       sunbeam: false,
     });
     squareWindows.push({
-      x: 590,
+      x: winRightX - 6,
       y: 220,
       size: 82,
       side: 'right',

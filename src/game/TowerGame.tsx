@@ -65,9 +65,9 @@ export function getSummitViewCrop(targetAspect: number = 1.7): SummitCropRect {
     const summitWorldY =
       towerConfig.groundY - towerConfig.totalSteps * towerConfig.platformSpacingY; // 380
 
-    // Full width showing both observatory windows (left at x:130, right at x:590)
-    // Symmetrical span from x: 30 to 690 (worldW = 660, centered at 360).
-    const worldW = 660;
+    // Full width showing both observatory windows (130 in from each tower edge),
+    // symmetrical about the tower centre with a 30px margin inside each edge.
+    const worldW = towerConfig.towerWidth - 60;
     const worldLeft = (towerConfig.towerWidth - worldW) / 2; // 30
 
     // Bottom is placed precisely below the checkered platform surface tiles
@@ -101,7 +101,7 @@ export function getSummitViewRatios(): { summitRatioY: number; playerRatioX: num
       0.18,
       0.75
     );
-    const playerWorldX = scene?.player?.sprite?.x ?? 388;
+    const playerWorldX = scene?.player?.sprite?.x ?? towerConfig.towerWidth / 2 + 28;
     const playerRatioX = Phaser.Math.Clamp(
       (playerWorldX - cam.worldView.x) / cam.worldView.width,
       0.15,
