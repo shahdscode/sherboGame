@@ -143,6 +143,14 @@ export class Player {
     this.createSprite();
     this.createDustPool();
     this.setupKeyboard();
+
+    // Arcade physics writes the new body position onto `sprite` in POST_UPDATE — after
+    // `update()` has run. Re-sync the drawn character there too, otherwise it is always
+    // drawn one frame behind the camera (which follows `sprite`) and visibly stutters.
+    this.scene.events.on(Phaser.Scenes.Events.POST_UPDATE, this.syncVisualPosition, this);
+    this.scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.scene.events.off(Phaser.Scenes.Events.POST_UPDATE, this.syncVisualPosition, this);
+    });
   }
 
   private createPhysicsPlaceholderTexture(): void {

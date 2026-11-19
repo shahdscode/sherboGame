@@ -14,6 +14,17 @@ const MIN_VISIBLE_WORLD_WIDTH = 600;
  * 400 still lets a 16:9 screen (720 / (16/9) = 405) fill edge-to-edge.
  */
 const MIN_VISIBLE_WORLD_HEIGHT = 400;
+/**
+ * On wide screens the view shows this much of the outer wall on each side of the tower,
+ * which zooms out a little (≈ 525 world units visible vertically on a 16:10 laptop instead
+ * of 450) while still filling the screen edge to edge.
+ */
+const WIDE_SIDE_MARGIN = 60;
+/**
+ * How far the tower's outer walls are drawn beyond the play area on each side. Must cover
+ * the widest view (ultra-wide 21:9 at MIN_VISIBLE_WORLD_HEIGHT shows ~115 per side).
+ */
+export const OUTER_WALL_EXTENT = 140;
 
 export class CameraManager {
   private scene: Phaser.Scene;
@@ -40,9 +51,9 @@ export class CameraManager {
     let zoom = Math.max(0.5, Math.min(zoomByHeight, zoomByWidth));
 
     // Laptops / desktops: the height-based zoom leaves empty sky either side of the tower.
-    // Zoom in until the tower spans the full screen width — but never so far that fewer
-    // than MIN_VISIBLE_WORLD_HEIGHT units are visible vertically (ultra-wide monitors).
-    const zoomToFillWidth = this.camera.width / towerWidth;
+    // Zoom in until the tower (plus a strip of outer wall) spans the full screen width —
+    // but never so far that fewer than MIN_VISIBLE_WORLD_HEIGHT units are visible vertically.
+    const zoomToFillWidth = this.camera.width / (towerWidth + WIDE_SIDE_MARGIN * 2);
     if (zoomToFillWidth > zoom) {
       const maxZoomByHeight = this.camera.height / MIN_VISIBLE_WORLD_HEIGHT;
       zoom = Math.max(zoom, Math.min(zoomToFillWidth, maxZoomByHeight));

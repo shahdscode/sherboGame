@@ -21,7 +21,9 @@ const getViewport = () => {
   const vv = typeof window !== 'undefined' ? window.visualViewport : null;
   const w = Math.max(320, Math.round(vv?.width ?? window.innerWidth));
   const h = Math.max(320, Math.round(vv?.height ?? window.innerHeight));
-  const maxDpr = w * h > 900_000 ? 1.5 : 1.75;
+  // Big laptop/desktop windows already have plenty of pixels; 1.25x keeps art crisp while
+  // cutting the GPU fill cost by ~30% compared to 1.5x on a Retina laptop.
+  const maxDpr = w * h > 900_000 ? 1.25 : 1.75;
   const deviceDpr = Math.min(Math.max(window.devicePixelRatio || 1, 1), maxDpr);
   const dpr = Math.max(MIN_RENDER_DPR, deviceDpr * qualityScale);
   return { w, h, dpr };
@@ -257,6 +259,9 @@ export const TowerGame: React.FC = () => {
             gravity: { x: 0, y: 0 },
             debug: false,
             useTree: false,
+            // Default is a fixed 60Hz step: on 120Hz laptop screens the climber then only
+            // moves every other frame, which reads as lag. 120Hz steps stay smooth on both.
+            fps: 120,
           },
         },
         input: {

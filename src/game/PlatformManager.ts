@@ -7,6 +7,7 @@ import {
 import { WavingFlag } from './WavingFlag';
 import { gameEvents } from './EventBus';
 import { sfx } from './sfx';
+import { OUTER_WALL_EXTENT } from './CameraManager';
 import {
   SECTION_DESIGNS,
   coinsForStep,
@@ -1063,12 +1064,28 @@ export class PlatformManager {
     const brickPeriod = 48;
     const segH = brickPeriod * 10;
     const bakeH = segH + 2; // 2px overlap hides any seam between segments
-    const wallW = wallThickness + 4;
+    // Walls extend OUTER_WALL_EXTENT beyond the play area so wide screens, which see a little
+    // past the tower edges, show solid masonry instead of empty sky.
+    const outer = OUTER_WALL_EXTENT;
+    const wallW = wallThickness + outer;
     const rightX = towerWidth - wallThickness;
+    // Staggered outer brick courses (offset half a course from the inner column)
+    const drawOuterBricks = (g: Phaser.GameObjects.Graphics, x0: number, x1: number) => {
+      g.fillStyle(0x1b2a53, 1);
+      g.fillRect(x0, 0, x1 - x0, bakeH);
+      g.fillStyle(0x223363, 1);
+      for (let x = x0 + 4, col = 0; x < x1 - 8; x += 40, col++) {
+        const off = col % 2 === 0 ? 24 : 0;
+        for (let y = -brickPeriod + off; y < bakeH; y += brickPeriod) {
+          g.fillRoundedRect(x, y + 4, 34, 40, 5);
+        }
+      }
+    };
 
-    this.bake('tex-wall-left', -4, 0, wallW, bakeH, (g) => {
+    this.bake('tex-wall-left', -outer, 0, wallW, bakeH, (g) => {
+      drawOuterBricks(g, -outer, -4);
       g.fillStyle(0x0f1830, 1);
-      g.fillRect(-4, 0, wallThickness + 4, bakeH);
+      g.fillRect(-4, 0, 4, bakeH);
       g.fillStyle(0x1b2a53, 1);
       g.fillRect(0, 0, wallThickness, bakeH);
       g.fillStyle(0x273b70, 1);
@@ -1080,8 +1097,9 @@ export class PlatformManager {
     });
 
     this.bake('tex-wall-right', rightX, 0, wallW, bakeH, (g) => {
+      drawOuterBricks(g, towerWidth + 4, towerWidth + outer);
       g.fillStyle(0x0f1830, 1);
-      g.fillRect(rightX, 0, wallThickness + 4, bakeH);
+      g.fillRect(towerWidth, 0, 4, bakeH);
       g.fillStyle(0x1b2a53, 1);
       g.fillRect(rightX, 0, wallThickness, bakeH);
       g.fillStyle(0x273b70, 1);
@@ -1093,7 +1111,7 @@ export class PlatformManager {
     });
 
     for (let y = 0; y < worldHeight; y += segH) {
-      this.addBaked('tex-wall-left', -4, y, 15);
+      this.addBaked('tex-wall-left', -outer, y, 15);
       this.addBaked('tex-wall-right', rightX, y, 15);
     }
   }
