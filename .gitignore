@@ -29,3 +29,8 @@ dist-ssr
 # Local updates/patches
 updates/
 
+
+# Environment files (keep .env.example tracked)
+.env
+.env.*
+!.env.example
