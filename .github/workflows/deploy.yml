@@ -1,8 +1,6 @@
 name: Deploy
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 concurrency:
@@ -45,8 +43,8 @@ jobs:
             git pull --ff-only origin main
             npm ci --no-audit --no-fund
 
-            if [ ! -f .env ] || ! grep -qE '^VITE_API_URL=https://.+/api/v1/?$' .env; then
-              echo "VITE_API_URL must be an HTTPS /api/v1 endpoint in .env"
+            if [ ! -f .env ] || ! grep -qE '^VITE_API_URL=https?://.+/api/v1/?$' .env; then
+              echo "VITE_API_URL must be an HTTP(S) /api/v1 endpoint in .env"
               exit 1
             fi
             if grep -hE '^VITE_[A-Z0-9_]*(API_KEY|ACCESS_KEY|SECRET|TOKEN|PASSWORD|PRIVATE)[A-Z0-9_]*=' .env* 2>/dev/null; then

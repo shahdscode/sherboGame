@@ -53,11 +53,16 @@ it for grades or prizes without server-side validation.
 Production is served by Nginx at `https://sherbogame.shiftup-solutions.com`.
 Until that hostname is available, the same release is reachable directly at
 `http://187.77.71.97:3201`.
-Pushes to `main` deploy through `.github/workflows/deploy.yml`; the repository
-requires the `SSH_HOST`, `SSH_USER`, and `SSH_KEY` GitHub Actions secrets. The
-VPS keeps its production `VITE_API_URL` in the untracked `.env` file, builds a
+To publish changes manually from the VPS, run `./deploy-manual.sh`. The script
+installs locked dependencies, runs the tests and production build, creates a
 versioned release under `/var/www/sherbogame/releases`, and atomically updates
-the `/var/www/sherbogame/current` symlink.
+the `/var/www/sherbogame/current` symlink. The VPS keeps its production
+`VITE_API_URL` in the untracked `.env` file.
+The current direct-IP deployment can use an HTTP API; switch it to HTTPS before
+enabling the final HTTPS game domain to avoid browser mixed-content blocking.
+
+The GitHub workflow is manual-only and can still be started with
+`workflow_dispatch` if remote deployment is needed later.
 
 The Nginx source configuration is kept in
 `deploy/nginx/sherbogame.shiftup-solutions.com.conf`. Validate it with
