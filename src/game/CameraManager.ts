@@ -9,6 +9,11 @@ const VISIBLE_WORLD_HEIGHT = 620;
  * always on screen (with 390 students had to jump blind towards off-screen platforms).
  */
 const MIN_VISIBLE_WORLD_WIDTH = 600;
+/**
+ * Never zoom in so far on wide screens that less than ~3.7 steps of the tower are visible.
+ * 400 still lets a 16:9 screen (720 / (16/9) = 405) fill edge-to-edge.
+ */
+const MIN_VISIBLE_WORLD_HEIGHT = 400;
 
 export class CameraManager {
   private scene: Phaser.Scene;
@@ -32,7 +37,16 @@ export class CameraManager {
     const { towerWidth, worldHeight } = this.config;
     const zoomByHeight = this.camera.height / VISIBLE_WORLD_HEIGHT;
     const zoomByWidth = this.camera.width / MIN_VISIBLE_WORLD_WIDTH;
-    const zoom = Math.max(0.5, Math.min(zoomByHeight, zoomByWidth));
+    let zoom = Math.max(0.5, Math.min(zoomByHeight, zoomByWidth));
+
+    // Laptops / desktops: the height-based zoom leaves empty sky either side of the tower.
+    // Zoom in until the tower spans the full screen width — but never so far that fewer
+    // than MIN_VISIBLE_WORLD_HEIGHT units are visible vertically (ultra-wide monitors).
+    const zoomToFillWidth = this.camera.width / towerWidth;
+    if (zoomToFillWidth > zoom) {
+      const maxZoomByHeight = this.camera.height / MIN_VISIBLE_WORLD_HEIGHT;
+      zoom = Math.max(zoom, Math.min(zoomToFillWidth, maxZoomByHeight));
+    }
     this.camera.setZoom(zoom);
 
     // If the viewport is wider than the 720px tower (e.g. desktop landscape),
