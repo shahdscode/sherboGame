@@ -444,6 +444,15 @@ export const QuestionModal: React.FC<QuestionModalProps> = ({
                 </div>
               )}
 
+              {question.image && (
+                <img
+                  className="question-image"
+                  src={question.image}
+                  alt=""
+                  loading="eager"
+                />
+              )}
+
               <p className="question-prompt" data-testid="question-prompt">
                 {renderFormattedMathText(question.prompt)}
               </p>

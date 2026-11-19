@@ -7,9 +7,55 @@ import { StartScreen } from './components/StartScreen';
 import { QuestionModal } from './components/QuestionModal';
 import { CompletionScreen } from './components/CompletionScreen';
 import { TouchControls } from './components/TouchControls';
+import { GameLoadScreen } from './components/GameLoadScreen';
 import { useTowerGame } from './hooks/useTowerGame';
+import { fetchRemoteGame, getRequestedGameId } from './data/remoteGame';
+import { applyTowerLevels, type CheckpointQuestion } from './data/towerConfig';
 
+type RemoteGameState =
+  | { status: 'loading' }
+  | { status: 'failed' }
+  | { status: 'ready'; questions?: CheckpointQuestion[] };
+
+/**
+ * `/?game=<id>` plays a game built in the admin: its levels are loaded and
+ * the tower is resized before the game mounts. Without it, the default
+ * 5-level game with `public/questions.json` runs as before.
+ */
 export const App: React.FC = () => {
+  const [gameId] = useState(getRequestedGameId);
+  const [remote, setRemote] = useState<RemoteGameState>(() =>
+    gameId ? { status: 'loading' } : { status: 'ready' }
+  );
+
+  useEffect(() => {
+    if (!gameId) return;
+    let cancelled = false;
+    fetchRemoteGame(gameId)
+      .then((game) => {
+        if (cancelled) return;
+        applyTowerLevels(game.levelCount);
+        setRemote({ status: 'ready', questions: game.questions });
+      })
+      .catch(() => {
+        if (!cancelled) setRemote({ status: 'failed' });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [gameId]);
+
+  if (remote.status !== 'ready') {
+    return <GameLoadScreen failed={remote.status === 'failed'} />;
+  }
+  return <TowerApp customQuestions={remote.questions} />;
+};
+
+interface TowerAppProps {
+  customQuestions?: CheckpointQuestion[];
+}
+
+const TowerApp: React.FC<TowerAppProps> = ({ customQuestions }) => {
   const {
     gameState,
     currentStep,
@@ -34,7 +80,7 @@ export const App: React.FC = () => {
     continueAfterCorrectAnswer,
     restartGame,
     setTouchControls,
-  } = useTowerGame();
+  } = useTowerGame(customQuestions);
 
   // Graphics context lost (low memory on a phone): offer a reload if it does not come back
   const [contextLost, setContextLost] = useState(false);
