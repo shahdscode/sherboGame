@@ -41,7 +41,13 @@ export interface CheckpointStateItem {
 }
 
 export interface QuestionAttemptFeedback {
-  status: 'idle' | 'incorrect' | 'correct';
+  /**
+   * idle      – fresh question, nothing answered yet
+   * review    – wrong answer: the solution of the missed question is shown before moving on
+   * incorrect – a new question is shown after a mistake
+   * correct   – gate solved
+   */
+  status: 'idle' | 'review' | 'incorrect' | 'correct';
   selectedOptionIndex: number | null;
   wrongOptionIndices: number[];
   earnedXp: number | null;
@@ -63,6 +69,26 @@ export function getPenaltyForMistakes(mistakes: number): number {
 export function getQuestionXpForMistakes(mistakes: number): number {
   return calculateGateQuestionXp(mistakes + 1);
 }
+
+/**
+ * Returns a copy of the question with its options in a random order (correct index remapped),
+ * so students cannot memorise "the answer is B".
+ */
+function shuffleQuestionOptions(q: CheckpointQuestion): CheckpointQuestion {
+  const order = q.options.map((_, i) => i);
+  for (let i = order.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [order[i], order[j]] = [order[j], order[i]];
+  }
+  return {
+    ...q,
+    options: order.map((i) => q.options[i]),
+    correctAnswer: order.indexOf(q.correctAnswer),
+  };
+}
+
+const shufflePool = (pool: CheckpointQuestion[]): CheckpointQuestion[] =>
+  pool.map(shuffleQuestionOptions);
 
 export function useTowerGame(
   customQuestions?: CheckpointQuestion[]
@@ -203,7 +229,7 @@ export function useTowerGame(
           customQuestionsRef.current && customQuestionsRef.current.length > 0
             ? customQuestionsRef.current
             : questionBankRef.current;
-        const pool = getCheckpointPool(activeBank, checkpointNumber);
+        const pool = shufflePool(getCheckpointPool(activeBank, checkpointNumber));
         setCheckpointRotation(initCheckpointRotation(pool));
 
         // Check if gate was already attempted/solved
@@ -245,7 +271,8 @@ export function useTowerGame(
       const finalElapsed = elapsedTimeRef.current;
       scoringEngineRef.current.recordSummitCompletion(
         finalElapsed,
-        towerConfig.numberOfCheckpoints
+        towerConfig.numberOfCheckpoints,
+        gameEvents.totalCoins
       );
       const updated = scoringEngineRef.current.getState();
       setScoringState(updated);
@@ -253,11 +280,19 @@ export function useTowerGame(
       setXpPoints(updated.totalXp);
     });
 
+    const unsubCoin = gameEvents.on('evt:coin-collected', () => {
+      scoringEngineRef.current.recordCoin();
+      const updated = scoringEngineRef.current.getState();
+      setScoringState(updated);
+      setXpPoints(updated.totalXp);
+    });
+
     const unsubSummitCelebrated = gameEvents.on('evt:summit-celebrated', () => {
       const finalElapsed = elapsedTimeRef.current;
       scoringEngineRef.current.recordSummitCompletion(
         finalElapsed,
-        towerConfig.numberOfCheckpoints
+        towerConfig.numberOfCheckpoints,
+        gameEvents.totalCoins
       );
       const updated = scoringEngineRef.current.getState();
       setScoringState(updated);
@@ -275,7 +310,10 @@ export function useTowerGame(
           gradeName: gradeInfo.title,
           elapsedTimeSeconds: finalElapsed,
           totalAttempts: updated.totalAttempts,
-          firstTryCount: firstTryCount,
+          // Count from the scoring engine (a React state value here would be stale: always 0)
+          firstTryCount: Object.keys(updated.gateSolved).filter(
+            (gate) => updated.gateSolved[Number(gate)] && updated.gateAttempts[Number(gate)] === 1
+          ).length,
         });
       }
     });
@@ -291,34 +329,42 @@ export function useTowerGame(
       unsubSectionUnlocked();
       unsubSummitReached();
       unsubSummitCelebrated();
+      unsubCoin();
       unsubPlatform();
     };
   }, []);
 
   // Continuous Stopwatch Timer
-  // Ticks every second while the student is actively playing, climbing, and solving
+  // Counts real elapsed time (Date.now deltas, so nothing is lost between state changes)
+  // while climbing AND while solving checkpoint questions (pauses only while tab is hidden).
+  const elapsedMsRef = useRef<number>(0);
   useEffect(() => {
-    let intervalId: number | null = null;
     const isClockRunning =
       gameState === 'PLAYING' ||
-      gameState === 'QUESTION_ACTIVE' ||
       gameState === 'CHECKPOINT_REACHED' ||
+      gameState === 'QUESTION_ACTIVE' ||
       gameState === 'UNLOCK_NEXT_SECTION';
+    if (!isClockRunning) return;
 
-    if (isClockRunning) {
-      intervalId = window.setInterval(() => {
-        setElapsedTime((prev) => {
-          const next = prev + 1;
-          elapsedTimeRef.current = next;
-          return next;
-        });
-      }, 1000);
-    }
+    let last = Date.now();
+    const tick = () => {
+      const now = Date.now();
+      if (!document.hidden) {
+        // Ignore huge gaps (device sleep / throttled background timers)
+        elapsedMsRef.current += Math.min(now - last, 1000);
+      }
+      last = now;
+      const secs = Math.floor(elapsedMsRef.current / 1000);
+      if (secs !== elapsedTimeRef.current) {
+        elapsedTimeRef.current = secs;
+        setElapsedTime(secs);
+      }
+    };
+    const intervalId = window.setInterval(tick, 200);
 
     return () => {
-      if (intervalId !== null) {
-        window.clearInterval(intervalId);
-      }
+      tick();
+      window.clearInterval(intervalId);
     };
   }, [gameState]);
 
@@ -332,6 +378,7 @@ export function useTowerGame(
     scoringEngineRef.current.reset();
     setScoringState(scoringEngineRef.current.getState());
     elapsedTimeRef.current = 0;
+    elapsedMsRef.current = 0;
     setElapsedTime(0);
     setSpeedBonus(0);
     setXpPoints(0);
@@ -359,7 +406,8 @@ export function useTowerGame(
         isSubmittingRef.current ||
         !activeQuestion ||
         activeCheckpointNumber === null ||
-        feedback.status === 'correct'
+        feedback.status === 'correct' ||
+        feedback.status === 'review'
       ) {
         return;
       }
@@ -449,37 +497,49 @@ export function useTowerGame(
         setScoringState(updatedScoring);
         setTotalAttempts(updatedScoring.totalAttempts);
 
-        // Advance to the next question in this checkpoint's 3-question rotation
-        const activeBank =
-          customQuestionsRef.current && customQuestionsRef.current.length > 0
-            ? customQuestionsRef.current
-            : questionBankRef.current;
-        const pool = getCheckpointPool(activeBank, activeCheckpointNumber);
-        setCheckpointRotation((prev) =>
-          prev ? advanceCheckpointRotation(prev, pool) : initCheckpointRotation(pool)
-        );
-        questionStartTimeRef.current = Date.now();
-
         const penaltyApplied =
           mistakeNumber === 1 ? 50 : mistakeNumber === 2 ? 150 : 0;
 
+        // Show the solution of the missed question first (the student learns from the
+        // mistake); a fresh question comes when they press "Try a New Question".
         setFeedback({
-          status: 'incorrect',
-          // Clear the selection and previous wrong indices so the next question is fresh
-          selectedOptionIndex: null,
-          wrongOptionIndices: [],
+          status: 'review',
+          selectedOptionIndex: chosen,
+          wrongOptionIndices: [chosen],
           earnedXp: null,
           currentLoss: penaltyApplied,
           potentialXp: result.potentialXp,
           wrongPenalties: {},
           hint: null,
-          explanation: null,
+          explanation: activeQuestion.explanation,
           attemptsForCurrentQuestion: newAttemptNum,
         });
       }
     },
     [activeCheckpointNumber, activeQuestion, feedback]
   );
+
+  /** After reviewing the solution of a missed question, move on to a fresh one. */
+  const nextQuestionAfterReview = useCallback(() => {
+    if (activeCheckpointNumber === null || feedback.status !== 'review') return;
+    sfx.click();
+    const activeBank =
+      customQuestionsRef.current && customQuestionsRef.current.length > 0
+        ? customQuestionsRef.current
+        : questionBankRef.current;
+    const pool = shufflePool(getCheckpointPool(activeBank, activeCheckpointNumber));
+    setCheckpointRotation((prev) =>
+      prev ? advanceCheckpointRotation(prev, pool) : initCheckpointRotation(pool)
+    );
+    questionStartTimeRef.current = Date.now();
+    setFeedback((prev) => ({
+      ...prev,
+      status: 'incorrect',
+      selectedOptionIndex: null,
+      wrongOptionIndices: [],
+      explanation: null,
+    }));
+  }, [activeCheckpointNumber, feedback.status]);
 
   // Tapping a stone only SELECTS it; the answer is graded when the student confirms.
   // (On phones an accidental tap used to cost XP immediately.)
@@ -489,6 +549,7 @@ export function useTowerGame(
       setFeedback((prev) => {
         if (
           prev.status === 'correct' ||
+          prev.status === 'review' ||
           prev.wrongOptionIndices.includes(optionIndex) ||
           prev.selectedOptionIndex === optionIndex
         ) {
@@ -534,6 +595,7 @@ export function useTowerGame(
     setFirstTryCount(0);
     setXpPoints(0);
     elapsedTimeRef.current = 0;
+    elapsedMsRef.current = 0;
     setElapsedTime(0);
     setSpeedBonus(0);
     setCheckpoints(buildInitialCheckpoints());
@@ -596,6 +658,7 @@ export function useTowerGame(
     startGame,
     selectOption,
     submitAnswer,
+    nextQuestionAfterReview,
     continueAfterCorrectAnswer,
     restartGame,
     setTouchControls,

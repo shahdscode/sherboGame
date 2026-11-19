@@ -102,9 +102,207 @@ function tone(
   osc.stop(start + duration + 0.03);
 }
 
+/* --------------------------------------------------------------------------
+ * Background music — looping /sounds/bgm.m4a.
+ *
+ * In mobile view (phones / touch screens), phone speakers compress dynamic range
+ * and easily drown out game sound effects. Therefore:
+ * 1. Mobile normal volume is set gentle (0.05) so jumps, coins, springs, and
+ *    landings are punchy, crisp, and clearly audible over the song.
+ * 2. Mobile ducked volume drops down near-silent (0.005) while answering questions
+ *    so answer options and explanations are distraction-free.
+ * 3. While answer voice lines (e.g. HAHA.mp3, mistake voice clips) actively speak,
+ *    background music is temporarily cut to 0 on mobile so 100% of the speaker's
+ *    power and clarity is dedicated to the voice line.
+ * ------------------------------------------------------------------------ */
+export const BGM_PATH = '/sounds/bgm.m4a';
+const AUDIO_CACHE_BUSTER = Date.now();
+export const BGM_DESKTOP_NORMAL_VOLUME = 0.14;
+export const BGM_DESKTOP_DUCKED_VOLUME = 0.055;
+export const BGM_MOBILE_NORMAL_VOLUME = 0.08;
+export const BGM_MOBILE_DUCKED_VOLUME = 0.035;
+
+let bgmAudio: HTMLAudioElement | null = null;
+let bgmBuffer: AudioBuffer | null = null;
+let bgmLoadPromise: Promise<AudioBuffer | null> | null = null;
+let bgmSource: AudioBufferSourceNode | null = null;
+let bgmGain: GainNode | null = null;
+let bgmStarted = false;
+let musicDucked = false;
+
+export function isMobileAudioView(): boolean {
+  if (typeof window === 'undefined') return false;
+  const isCoarse =
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(pointer: coarse)').matches;
+  const isNarrow = window.innerWidth <= 820;
+  const isUserAgentMobile =
+    typeof navigator !== 'undefined' &&
+    /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+  return Boolean(isCoarse || isNarrow || isUserAgentMobile);
+}
+
+export function getTargetMusicVolume(): number {
+  const isMobile = isMobileAudioView();
+  if (isMobile) {
+    return musicDucked ? BGM_MOBILE_DUCKED_VOLUME : BGM_MOBILE_NORMAL_VOLUME;
+  }
+  return musicDucked ? BGM_DESKTOP_DUCKED_VOLUME : BGM_DESKTOP_NORMAL_VOLUME;
+}
+
+let bgmRawBytesPromise: Promise<ArrayBuffer | null> | null = null;
+
+function prefetchBgmBytes(): Promise<ArrayBuffer | null> {
+  if (bgmRawBytesPromise) return bgmRawBytesPromise;
+  if (typeof window === 'undefined' || typeof window.fetch !== 'function') {
+    return Promise.resolve(null);
+  }
+  const url = `${BGM_PATH}?v=${AUDIO_CACHE_BUSTER}`;
+  bgmRawBytesPromise = window
+    .fetch(url)
+    .then((res) => (res.ok ? res.arrayBuffer() : Promise.reject(new Error('BGM fetch failed'))))
+    .catch(() => {
+      bgmRawBytesPromise = null;
+      return null;
+    });
+  return bgmRawBytesPromise;
+}
+
+if (typeof window !== 'undefined') {
+  void prefetchBgmBytes();
+}
+
+function loadBgmBuffer(ac: AudioContext): Promise<AudioBuffer | null> {
+  if (bgmBuffer) return Promise.resolve(bgmBuffer);
+  if (bgmLoadPromise) return bgmLoadPromise;
+  bgmLoadPromise = prefetchBgmBytes()
+    .then((arr) => (arr ? ac.decodeAudioData(arr.slice(0)) : null))
+    .then((decoded) => {
+      if (decoded) bgmBuffer = decoded;
+      else bgmLoadPromise = null;
+      return decoded;
+    })
+    .catch(() => {
+      bgmLoadPromise = null;
+      return null;
+    });
+  return bgmLoadPromise;
+}
+
+function stopBgmSource(): void {
+  if (bgmSource) {
+    try {
+      bgmSource.stop();
+      bgmSource.disconnect();
+    } catch {
+      /* ignore */
+    }
+    bgmSource = null;
+  }
+  if (bgmAudio) {
+    bgmAudio.pause();
+  }
+}
+
+function applyMusicVolume(fadeTimeConstant: unknown = 0.22): void {
+  const tc = typeof fadeTimeConstant === 'number' ? fadeTimeConstant : 0.22;
+  const target = muted ? 0 : getTargetMusicVolume();
+  if (bgmGain && ctx) {
+    try {
+      bgmGain.gain.cancelScheduledValues(ctx.currentTime);
+      bgmGain.gain.setTargetAtTime(target, ctx.currentTime, tc);
+    } catch {
+      bgmGain.gain.value = target;
+    }
+  }
+  if (bgmAudio) {
+    bgmAudio.muted = muted;
+    bgmAudio.volume = target;
+  }
+}
+
+function ensureBgmPlaying(): void {
+  if (typeof window === 'undefined' || !bgmStarted || muted) return;
+  if (typeof document !== 'undefined' && document.hidden) return;
+
+  const ac = audio();
+  if (ac) {
+    if (!bgmGain) {
+      bgmGain = ac.createGain();
+      bgmGain.gain.value = 0;
+      bgmGain.connect(ac.destination);
+    }
+    if (bgmBuffer) {
+      if (!bgmSource) {
+        try {
+          const target = getTargetMusicVolume();
+          bgmGain.gain.cancelScheduledValues(ac.currentTime);
+          bgmGain.gain.setValueAtTime(target, ac.currentTime);
+          const src = ac.createBufferSource();
+          src.buffer = bgmBuffer;
+          src.loop = true;
+          src.connect(bgmGain);
+          src.start(0, Math.min(0.06, bgmBuffer.duration * 0.1));
+          bgmSource = src;
+        } catch {
+          /* ignore */
+        }
+      } else {
+        applyMusicVolume();
+      }
+      return;
+    }
+
+    void loadBgmBuffer(ac).then((buf) => {
+      if (buf && bgmStarted && !muted && !(typeof document !== 'undefined' && document.hidden)) {
+        ensureBgmPlaying();
+      }
+    });
+    return;
+  }
+
+  // Non-WebAudio fallback (only if AudioContext is unavailable)
+  if (!bgmAudio) {
+    bgmAudio = getAudioElement(BGM_PATH);
+    bgmAudio.loop = true;
+    bgmAudio.preload = 'auto';
+  }
+  applyMusicVolume();
+  if (bgmAudio.paused) {
+    void bgmAudio.play().catch(() => {});
+  }
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('resize', applyMusicVolume, { passive: true });
+  window.addEventListener('orientationchange', applyMusicVolume, { passive: true });
+  if (typeof window.matchMedia === 'function') {
+    try {
+      const mql = window.matchMedia('(pointer: coarse)');
+      if (typeof mql.addEventListener === 'function') {
+        mql.addEventListener('change', applyMusicVolume);
+      } else if (typeof (mql as unknown as { addListener?: (fn: () => void) => void }).addListener === 'function') {
+        (mql as unknown as { addListener: (fn: () => void) => void }).addListener(applyMusicVolume);
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', () => {
+    if (!bgmStarted) return;
+    if (document.hidden) {
+      stopBgmSource();
+    } else if (!muted) {
+      ensureBgmPlaying();
+    }
+  });
+}
+
 let activeAudioElement: HTMLAudioElement | null = null;
 const audioCache = new Map<string, HTMLAudioElement>();
-const AUDIO_CACHE_BUSTER = Date.now();
 
 function getAudioElement(relativePath: string): HTMLAudioElement {
   let el = audioCache.get(relativePath);
@@ -128,7 +326,7 @@ function preloadAudioFiles(paths: string[]): void {
   }
 }
 
-function playAudioFile(relativePath: string, volume = 0.85): void {
+function playAudioFile(relativePath: string, volume = 1.0): void {
   if (muted || typeof window === 'undefined') return;
   try {
     if (activeAudioElement) {
@@ -140,6 +338,7 @@ function playAudioFile(relativePath: string, volume = 0.85): void {
     audioEl.currentTime = 0;
     audioEl.volume = volume;
     activeAudioElement = audioEl;
+
     const playPromise = audioEl.play();
     if (playPromise !== undefined) {
       playPromise.catch(() => {
@@ -167,6 +366,7 @@ export const sfx = {
     const ac = audio();
     if (ac) {
       unlockAudioContext(ac);
+      void loadBgmBuffer(ac);
     }
   },
   /** Upbeat jump chirp — tuned for mobile phone speakers */
@@ -192,12 +392,52 @@ export const sfx = {
   click(): void {
     tone(720, 0.06, 'triangle', 0.18);
   },
+  /** Bright two-note "ding" for picking up a coin */
+  coin(): void {
+    tone(988, 0.07, 'triangle', 0.2);
+    tone(1319, 0.16, 'triangle', 0.2, undefined, 0.06);
+  },
+  /** Rising "boing" for spring platforms */
+  spring(): void {
+    tone(220, 0.22, 'triangle', 0.26, 880);
+    tone(440, 0.18, 'sine', 0.16, 1320, 0.03);
+  },
+  /** Low rumble: a crumbling platform starts to give way */
+  crumble(): void {
+    tone(210, 0.16, 'sawtooth', 0.1, 150);
+    tone(180, 0.16, 'sawtooth', 0.09, 130, 0.12);
+  },
+  crumbleFall(): void {
+    tone(300, 0.3, 'triangle', 0.2, 110);
+  },
+  /** Start (or restart) the looping background music. Must follow a user gesture. */
+  startMusic(_level: number = 1): void {
+    bgmStarted = true;
+    musicDucked = false;
+    ensureBgmPlaying();
+  },
+  stopMusic(): void {
+    bgmStarted = false;
+    stopBgmSource();
+    if (bgmAudio) {
+      bgmAudio.currentTime = 0;
+    }
+  },
+  /** Kept for section-change compatibility. */
+  setMusicLevel(_level: number): void {
+    /* background track plays continuously */
+  },
+  /** Lower the music while a question is open so answer SFX stand out clearly. */
+  duckMusic(ducked: boolean): void {
+    musicDucked = ducked;
+    applyMusicVolume();
+  },
   checkpoint(): void {
     tone(523, 0.12, 'triangle', 0.2);
     tone(784, 0.18, 'triangle', 0.2, undefined, 0.1);
   },
   correct(): void {
-    playAudioFile('/sounds/HAHA.mp3', 0.95);
+    playAudioFile('/sounds/HAHA.mp3', 1.0);
   },
   /**
    * Mistake voice lines:
@@ -211,11 +451,15 @@ export const sfx = {
         : MISTAKE_SOUNDS;
     const picked = candidates[Math.floor(Math.random() * candidates.length)];
     lastMistakeSound = picked;
-    playAudioFile(picked, 0.95);
+    playAudioFile(picked, 1.0);
   },
-  /** Warm the cache for voice lines (call from a user gesture). */
+  /** Warm the cache for voice lines and background music (call from a user gesture). */
   preloadVoices(): void {
     preloadAudioFiles([...MISTAKE_SOUNDS, '/sounds/HAHA.mp3']);
+    const ac = audio();
+    if (ac) {
+      void loadBgmBuffer(ac);
+    }
   },
   unlockGate(): void {
     tone(300, 0.25, 'triangle', 0.22, 900);
@@ -240,10 +484,21 @@ export const sfx = {
     } catch {
       /* ignore */
     }
+    applyMusicVolume();
+    if (!value && bgmStarted) {
+      ensureBgmPlaying();
+    }
     muteListeners.forEach((fn) => fn(value));
   },
   onMuteChange(fn: (m: boolean) => void): () => void {
     muteListeners.add(fn);
     return () => muteListeners.delete(fn);
+  },
+  getMusicVolume(): number {
+    if (muted) return 0;
+    return getTargetMusicVolume();
+  },
+  isMusicDucked(): boolean {
+    return musicDucked;
   },
 };

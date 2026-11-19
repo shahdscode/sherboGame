@@ -63,6 +63,18 @@ const POSE_TEXTURE_MAP: Record<CharacterPose, string> = {
   victory: 'char-victory',
 };
 
+interface DustParticle {
+  sprite: Phaser.GameObjects.Image;
+  active: boolean;
+  age: number;
+  duration: number;
+  vx: number;
+  vy: number;
+  startScale: number;
+  peakScale: number;
+  baseAlpha: number;
+}
+
 export class Player {
   private scene: Phaser.Scene;
   private config: TowerConfigRuntime;
@@ -93,6 +105,14 @@ export class Player {
   private canDoubleJump: boolean = true;
   private isDoubleJumping: boolean = false;
   private prevJumpPressed: boolean = false;
+  /** Soft ground shadow under the climber (fades as they rise). */
+  private shadow!: Phaser.GameObjects.Ellipse;
+  /** Squash (<0) / stretch (>0) amount, eases back to 0. */
+  private squash: number = 0;
+  /** Y of the surface last stood on — the shadow stays there while airborne. */
+  private lastGroundY: number = 0;
+  private dustPool: DustParticle[] = [];
+  private dustCursor: number = 0;
 
   public static preloadAssets(scene: Phaser.Scene): void {
     // 1. Extracted 2x HD character sheet animation frames
@@ -111,10 +131,8 @@ export class Player {
       spacing: 4,
     });
 
-    // 3. Checkpoint & feedback stickers (512x512 WebP)
-    scene.load.image('char-question', '/stickers/question.webp');
-    scene.load.image('char-retry', '/stickers/retry.webp');
-    scene.load.image('char-goodjob', '/stickers/goodjob.webp');
+    // (The big sticker image used to be loaded here three times as three GPU textures,
+    //  but the in-game character never shows it — the question card does, in the DOM.)
   }
 
   constructor(scene: Phaser.Scene, config: TowerConfigRuntime) {
@@ -123,6 +141,7 @@ export class Player {
     this.createPhysicsPlaceholderTexture();
     this.createAnimations();
     this.createSprite();
+    this.createDustPool();
     this.setupKeyboard();
   }
 
@@ -288,6 +307,11 @@ export class Player {
     body.setMaxVelocity(this.config.player.moveSpeed, 950);
     body.setCollideWorldBounds(true);
 
+    this.lastGroundY = startY + this.config.player.height / 2;
+    this.shadow = this.scene.add
+      .ellipse(startX, this.lastGroundY, 46, 11, 0x0a1020, 0.28)
+      .setDepth(19);
+
     this.visualSprite = this.scene.add.sprite(startX, startY, CHAR_ATLAS_KEY, 0);
     this.visualSprite.setScale(this.baseScale);
     this.visualSprite.setOrigin(0.5, 0.96);
@@ -301,6 +325,31 @@ export class Player {
     const bodyBottomY = this.sprite.y + this.config.player.height / 2;
     this.visualSprite.x = this.sprite.x;
     this.visualSprite.y = bodyBottomY;
+
+    if (this.shadow) {
+      const height = Math.max(0, this.lastGroundY - bodyBottomY);
+      const k = Phaser.Math.Clamp(1 - height / 170, 0, 1);
+      this.shadow.setPosition(this.sprite.x, this.lastGroundY + 1);
+      this.shadow.setScale(0.55 + 0.45 * k, 1);
+      this.shadow.setAlpha(0.3 * k);
+    }
+  }
+
+  /** Launched by a spring platform: a big bounce, and the double jump is available again. */
+  public springLaunch(velocityY: number): void {
+    this.sprite.setVelocityY(velocityY);
+    this.coyoteTimer = 0;
+    this.jumpBufferTimer = 0;
+    this.landLockTimer = 0;
+    this.canDoubleJump = true;
+    this.isDoubleJumping = false;
+    this.squash = 0.22;
+    this.spawnDustPuff(8);
+    if (this.currentPose === 'climbing') {
+      const jumpAnim =
+        this.facing === 'left' ? 'anim-jump-left' : 'anim-jump-right';
+      this.visualSprite.play(jumpAnim, false);
+    }
   }
 
   /**
@@ -373,13 +422,44 @@ export class Player {
     }
   }
 
+  private createDustPool(): void {
+    if (!this.scene.textures.exists('tex-dust-puff')) {
+      const g = this.scene.make.graphics({ x: 0, y: 0 }, false);
+      g.fillStyle(0xffffff, 1);
+      g.fillCircle(8, 8, 8);
+      g.generateTexture('tex-dust-puff', 16, 16);
+      g.destroy();
+    }
+    this.dustPool = [];
+    for (let i = 0; i < 24; i++) {
+      const sprite = this.scene.add
+        .image(0, 0, 'tex-dust-puff')
+        .setDepth(21)
+        .setVisible(false);
+      this.dustPool.push({
+        sprite,
+        active: false,
+        age: 0,
+        duration: 300,
+        vx: 0,
+        vy: 0,
+        startScale: 0.4,
+        peakScale: 1,
+        baseAlpha: 0.85,
+      });
+    }
+  }
+
   private spawnDustPuff(count: number = 5, isRun: boolean = false): void {
-    if (!this.sprite || !this.scene) return;
+    if (!this.sprite || !this.scene || this.dustPool.length === 0) return;
     const footY = this.sprite.y + this.config.player.height / 2 - 2;
     const footX = this.sprite.x;
     const palette = this.getSmokePaletteForAltitude(footY);
 
     for (let i = 0; i < count; i++) {
+      const p = this.dustPool[this.dustCursor];
+      this.dustCursor = (this.dustCursor + 1) % this.dustPool.length;
+
       const color =
         palette.colors[Phaser.Math.Between(0, palette.colors.length - 1)];
 
@@ -388,52 +468,57 @@ export class Player {
         : (i % 2 === 0 ? -1 : 1);
 
       const spreadDist = isRun
-        ? Phaser.Math.Between(6, 18)
-        : Phaser.Math.Between(8, 28);
-      const spreadX = dir * spreadDist;
-
-      const baseR = isRun
-        ? Phaser.Math.FloatBetween(2.8, 4.6)
-        : Phaser.Math.FloatBetween(4.2, 7.5);
-      const r = baseR * palette.scaleMultiplier;
-
-      const puff = this.scene.add
-        .circle(
-          footX + Phaser.Math.Between(-6, 6),
-          footY + Phaser.Math.Between(-2, 2),
-          r,
-          color,
-          palette.alpha
-        )
-        .setDepth(21);
-
-      puff.setScale(0.5);
-
+        ? Phaser.Math.Between(8, 22)
+        : Phaser.Math.Between(10, 34);
       const duration = isRun
         ? Phaser.Math.Between(220, 280)
         : Phaser.Math.Between(340, 420);
 
-      this.scene.tweens.add({
-        targets: puff,
-        x: puff.x + spreadX,
-        y: footY - (isRun ? Phaser.Math.Between(2, 8) : Phaser.Math.Between(6, 18)),
-        scale: isRun ? 0.9 : 1.2,
-        duration: duration * 0.38,
-        ease: 'Quad.easeOut',
-        onComplete: () => {
-          if (!puff.active) return;
-          this.scene.tweens.add({
-            targets: puff,
-            x: puff.x + spreadX * 0.35,
-            y: puff.y - (isRun ? 3 : 8),
-            scale: 0.15,
-            alpha: 0,
-            duration: duration * 0.62,
-            ease: 'Cubic.easeIn',
-            onComplete: () => puff.destroy(),
-          });
-        },
-      });
+      const baseR = isRun
+        ? Phaser.Math.FloatBetween(0.35, 0.58)
+        : Phaser.Math.FloatBetween(0.52, 0.94);
+
+      p.active = true;
+      p.age = 0;
+      p.duration = duration;
+      p.vx = (dir * spreadDist) / (duration * 0.001);
+      p.vy = -(isRun ? Phaser.Math.Between(5, 11) : Phaser.Math.Between(14, 26)) / (duration * 0.001);
+      p.startScale = baseR * 0.5 * palette.scaleMultiplier;
+      p.peakScale = baseR * (isRun ? 0.95 : 1.2) * palette.scaleMultiplier;
+      p.baseAlpha = palette.alpha;
+
+      p.sprite
+        .setPosition(footX + Phaser.Math.Between(-6, 6), footY + Phaser.Math.Between(-2, 2))
+        .setTint(color)
+        .setScale(p.startScale)
+        .setAlpha(p.baseAlpha)
+        .setVisible(true);
+    }
+  }
+
+  private updateDustPool(delta: number): void {
+    const dt = delta * 0.001;
+    for (let i = 0; i < this.dustPool.length; i++) {
+      const p = this.dustPool[i];
+      if (!p.active) continue;
+      p.age += delta;
+      if (p.age >= p.duration) {
+        p.active = false;
+        p.sprite.setVisible(false);
+        continue;
+      }
+      const t = p.age / p.duration;
+      p.sprite.x += p.vx * dt * (1 - t * 0.65);
+      p.sprite.y += p.vy * dt * (1 - t * 0.5);
+      if (t < 0.38) {
+        const k = t / 0.38;
+        p.sprite.setScale(p.startScale + (p.peakScale - p.startScale) * k);
+        p.sprite.setAlpha(p.baseAlpha);
+      } else {
+        const k = (t - 0.38) / 0.62;
+        p.sprite.setScale(p.peakScale * (1 - k * 0.8));
+        p.sprite.setAlpha(p.baseAlpha * (1 - k));
+      }
     }
   }
 
@@ -475,22 +560,10 @@ export class Player {
       this.visualSprite.setFlipX(false);
       this.visualSprite.play(randomCelebration, true);
     } else {
-      this.visualSprite.stop();
-      const texKey = POSE_TEXTURE_MAP[pose] || 'char-question';
-      if (this.scene.textures.exists(texKey)) {
-        this.visualSprite.setTexture(texKey);
-      }
-      // 512x512 stickers scaled to 0.24 ≈ 122px in-world height
-      this.visualSprite.setScale(0.24);
-      this.visualSprite.setOrigin(0.5, 0.84);
+      this.visualSprite.setScale(this.baseScale);
+      this.visualSprite.setOrigin(0.5, 0.96);
       this.visualSprite.setFlipX(false);
-      this.scene.tweens.add({
-        targets: this.visualSprite,
-        scaleX: 0.27,
-        scaleY: 0.27,
-        duration: 160,
-        yoyo: true,
-      });
+      this.visualSprite.play('anim-idle', true);
     }
   }
 
@@ -539,6 +612,8 @@ export class Player {
       this.visualSprite.setFlipX(false);
     }
     this.facing = 'right';
+    this.squash = 0;
+    this.lastGroundY = startY + this.config.player.height / 2;
     this.setPose('climbing');
     this.touchInput = { left: false, right: false, jump: false };
     this.syncVisualPosition();
@@ -571,7 +646,11 @@ export class Player {
     this.syncVisualPosition();
   }
 
-  public update(delta: number, canControl: boolean): void {
+  /**
+   * @param onIce true while standing on an ice platform (slippery movement)
+   */
+  public update(delta: number, canControl: boolean, onIce: boolean = false): void {
+    this.updateDustPool(delta);
     const body = this.sprite.body as Phaser.Physics.Arcade.Body;
     if (!body || !body.enable) {
       this.syncVisualPosition();
@@ -621,18 +700,35 @@ export class Player {
       this.coyoteTimer = 120;
       this.canDoubleJump = true;
       this.isDoubleJumping = false;
+      this.lastGroundY = this.sprite.y + this.config.player.height / 2;
     } else if (this.coyoteTimer > 0) {
       this.coyoteTimer -= delta;
     }
 
+    // Squash & stretch eases back to neutral
+    if (this.squash !== 0) {
+      this.squash *= Math.exp(-delta / 85);
+      if (Math.abs(this.squash) < 0.004) this.squash = 0;
+    }
+
+    let targetVx = 0;
     if (moveLeft && !moveRight) {
       this.facing = 'left';
-      this.sprite.setVelocityX(-this.config.player.moveSpeed);
+      targetVx = -this.config.player.moveSpeed;
     } else if (moveRight && !moveLeft) {
       this.facing = 'right';
-      this.sprite.setVelocityX(this.config.player.moveSpeed);
+      targetVx = this.config.player.moveSpeed;
+    }
+
+    if (onIce && onFloor) {
+      // Slippery: speed changes gradually (slow to start, slow to stop)
+      const accel = (targetVx === 0 ? 260 : 620) * (delta / 1000);
+      const vx = body.velocity.x;
+      const next =
+        Math.abs(targetVx - vx) <= accel ? targetVx : vx + Math.sign(targetVx - vx) * accel;
+      this.sprite.setVelocityX(next);
     } else {
-      this.sprite.setVelocityX(0);
+      this.sprite.setVelocityX(targetVx);
     }
 
     const minX = this.config.wallThickness + this.config.player.width / 2;
@@ -658,6 +754,7 @@ export class Player {
       this.landLockTimer = 0;
       this.canDoubleJump = true;
       this.isDoubleJumping = false;
+      this.squash = 0.16;
       this.spawnDustPuff(6);
       sfx.jump();
       if (this.currentPose === 'climbing') {
@@ -716,6 +813,7 @@ export class Player {
     if (onFloor && this.wasAirborne) {
       this.spawnDustPuff(4);
       sfx.land();
+      this.squash = -0.18;
       this.landLockTimer = 130;
       this.canDoubleJump = true;
       this.isDoubleJumping = false;
@@ -792,6 +890,13 @@ export class Player {
           }
         }
       }
+    }
+
+    if (this.currentPose === 'climbing') {
+      this.visualSprite.setScale(
+        this.baseScale * (1 - this.squash * 0.55),
+        this.baseScale * (1 + this.squash)
+      );
     }
 
     this.syncVisualPosition();

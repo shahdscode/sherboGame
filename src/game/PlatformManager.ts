@@ -5,13 +5,113 @@ import {
   getMaxStepForSection,
 } from '../data/towerConfig';
 import { WavingFlag } from './WavingFlag';
+import { gameEvents } from './EventBus';
+import { sfx } from './sfx';
 
 /** Super-sampling factor for procedural textures so platforms stay razor-sharp when zoomed in. */
 const TEX_SCALE = 2;
 /** High-DPI resolution multiplier for Phaser in-world text labels. */
-const TEXT_RES = 3;
+const TEXT_RES = 2;
+
+/**
+ * Platform behaviours. Each tower section introduces new ones, so the climb gets
+ * harder (and more interesting) with every gate:
+ *  normal  – solid step
+ *  moving  – slides left/right and carries the climber
+ *  crumble – shakes, then falls away shortly after being stepped on (it grows back)
+ *  ice     – slippery: the climber accelerates and stops slowly
+ *  spring  – launches the climber high into the air
+ */
+export type PlatformKind = 'normal' | 'moving' | 'crumble' | 'ice' | 'spring';
+
+interface SectionDesign {
+  /** Platform width multiplier (platforms get narrower higher up). */
+  widthScale: number;
+  /** Behaviour per regular step of the section (index = step inside the section). */
+  kinds: Partial<Record<number, PlatformKind>>;
+  /** Horizontal travel (px each side) and speed (radians/sec) of moving platforms. */
+  moveAmp: number;
+  moveSpeed: number;
+  /** Time (ms) a crumbling platform holds after being stepped on. */
+  crumbleDelay: number;
+}
+
+const SECTION_DESIGNS: SectionDesign[] = [
+  // Section 1 — warm-up: plain steps only
+  { widthScale: 1, kinds: {}, moveAmp: 0, moveSpeed: 0, crumbleDelay: 900 },
+  // Section 2 — moving platforms appear
+  { widthScale: 1, kinds: { 2: 'moving', 5: 'moving' }, moveAmp: 55, moveSpeed: 1.3, crumbleDelay: 900 },
+  // Section 3 — crumbling steps join in
+  {
+    widthScale: 0.94,
+    kinds: { 1: 'crumble', 3: 'moving', 5: 'crumble', 7: 'moving', 8: 'crumble' },
+    moveAmp: 65,
+    moveSpeed: 1.5,
+    crumbleDelay: 800,
+  },
+  // Section 4 — ice and the first spring
+  {
+    widthScale: 0.9,
+    kinds: { 1: 'ice', 2: 'ice', 4: 'moving', 5: 'crumble', 7: 'spring', 9: 'moving', 10: 'ice', 11: 'crumble' },
+    moveAmp: 75,
+    moveSpeed: 1.75,
+    crumbleDelay: 700,
+  },
+  // Section 5 — everything, faster
+  {
+    widthScale: 0.85,
+    kinds: {
+      1: 'moving', 2: 'ice', 3: 'crumble', 5: 'moving', 6: 'spring', 8: 'crumble',
+      9: 'moving', 10: 'ice', 11: 'crumble', 13: 'moving', 14: 'ice',
+    },
+    moveAmp: 85,
+    moveSpeed: 2.0,
+    crumbleDelay: 620,
+  },
+  // Section 6 — the final ascent
+  {
+    widthScale: 0.8,
+    kinds: {
+      1: 'moving', 2: 'crumble', 3: 'ice', 4: 'moving', 6: 'crumble', 7: 'spring', 8: 'moving',
+      9: 'ice', 10: 'crumble', 12: 'moving', 13: 'ice', 14: 'crumble', 15: 'spring', 16: 'moving',
+      17: 'crumble',
+    },
+    moveAmp: 95,
+    moveSpeed: 2.3,
+    crumbleDelay: 540,
+  },
+];
+
+const KIND_TEXTURE: Record<PlatformKind, string> = {
+  normal: 'tex-regular-platform',
+  moving: 'tex-moving-platform',
+  crumble: 'tex-crumble-platform',
+  ice: 'tex-ice-platform',
+  spring: 'tex-spring-platform',
+};
+
+interface CoinData {
+  image: Phaser.GameObjects.Image;
+  x: number;
+  y: number;
+  sectionIndex: number;
+  collected: boolean;
+  phase: number;
+}
 
 export interface PlatformData {
+  kind: PlatformKind;
+  /** Resting X (moving platforms oscillate around it). */
+  baseX: number;
+  moveAmp: number;
+  moveSpeed: number;
+  movePhase: number;
+  /** Horizontal scale multiplier (narrower platforms higher up). */
+  widthScale: number;
+  crumbleDelay: number;
+  /** 0 = solid, 1 = shaking (about to fall), 2 = fallen (waiting to grow back) */
+  crumbleState: 0 | 1 | 2;
+  crumbleTimer: number;
   stepNumber: number;
   isCheckpoint: boolean;
   checkpointNumber: number | null;
@@ -46,6 +146,7 @@ interface CheckpointDoor {
   lightRays: Phaser.GameObjects.Graphics;
   lockIcon: Phaser.GameObjects.Text;
   glow: Phaser.GameObjects.Arc;
+  lockY: number;
   isUnlocked: boolean;
 }
 
@@ -54,6 +155,8 @@ export class PlatformManager {
   private config: TowerConfigRuntime;
   private staticGroup: Phaser.Physics.Arcade.StaticGroup;
   private platforms: Map<number, PlatformData> = new Map();
+  private movingPlatforms: PlatformData[] = [];
+  private crumblePlatforms: PlatformData[] = [];
   private checkpointDoors: Map<number, CheckpointDoor> = new Map();
   private ceilingBarrier!: Phaser.Physics.Arcade.Sprite;
   private unlockedSection: number = 1;
@@ -62,6 +165,10 @@ export class PlatformManager {
   private flagSteps: number[] = [];
   private spriteToPlatform: Map<Phaser.GameObjects.GameObject, PlatformData> = new Map();
   private clouds: BackgroundCloud[] = [];
+  private coins: CoinData[] = [];
+  private coinsCollected = 0;
+  /** Clock for moving platforms — only advances while the game world is running. */
+  private moveClock = 0;
 
   constructor(scene: Phaser.Scene, config: TowerConfigRuntime) {
     this.scene = scene;
@@ -99,6 +206,8 @@ export class PlatformManager {
     this.wavingFlags.forEach((flag) => flag.destroy());
     this.wavingFlags = [];
     this.flagSteps = [];
+    this.movingPlatforms = [];
+    this.crumblePlatforms = [];
     this.spriteToPlatform.clear();
     this.clouds.forEach((cloud) => cloud.container.destroy());
     this.clouds = [];
@@ -106,11 +215,277 @@ export class PlatformManager {
     this.createTowerBackgroundAndWalls();
     this.createGroundPlatform();
     this.createAllStepPlatforms();
+    this.createCoins();
+    this.createSideScenery();
     this.createSectionBarrier();
+  }
+
+  /** Regular-platform variants: same stone step, different "energy strip" + markings. */
+  private createPlatformVariantTexture(
+    key: string,
+    colors: { base: number; body: number; bevel: number; stripDark: number; strip: number; shine: number },
+    decorate?: (g: Phaser.GameObjects.Graphics, w: number, h: number, s: number) => void
+  ): void {
+    if (this.scene.textures.exists(key)) return;
+    const s = TEX_SCALE;
+    const w = this.config.regularPlatformWidth * s;
+    const h = this.config.platformHeight * s;
+    const g = this.scene.make.graphics({ x: 0, y: 0 }, false);
+    g.fillStyle(colors.base, 1);
+    g.fillRoundedRect(0, 4 * s, w, h - 4 * s, 9 * s);
+    g.fillStyle(colors.body, 1);
+    g.fillRoundedRect(1 * s, 3 * s, w - 2 * s, h - 5 * s, 8 * s);
+    g.fillStyle(colors.bevel, 1);
+    g.fillRoundedRect(3 * s, 4 * s, w - 6 * s, h - 9 * s, 6 * s);
+    g.fillStyle(colors.stripDark, 1);
+    g.fillRoundedRect(0, 0, w, 10 * s, 6 * s);
+    g.fillStyle(colors.strip, 1);
+    g.fillRoundedRect(2 * s, 1 * s, w - 4 * s, 7 * s, 5 * s);
+    g.fillStyle(colors.shine, 0.95);
+    g.fillRoundedRect(10 * s, 2 * s, w - 20 * s, 2.5 * s, 1.5 * s);
+    if (decorate) decorate(g, w, h, s);
+    g.generateTexture(key, w, h);
+    g.destroy();
+  }
+
+  private createGameplayTextures(): void {
+    // Moving platform: cyan energy strip with direction arrows
+    this.createPlatformVariantTexture(
+      'tex-moving-platform',
+      { base: 0x0f1830, body: 0x1b2a53, bevel: 0x273b70, stripDark: 0x0e7490, strip: 0x22d3ee, shine: 0xecfeff },
+      (g, w, h, s) => {
+        g.fillStyle(0x67e8f9, 1);
+        const cy = h * 0.68;
+        g.fillTriangle(14 * s, cy, 24 * s, cy - 5 * s, 24 * s, cy + 5 * s);
+        g.fillTriangle(w - 14 * s, cy, w - 24 * s, cy - 5 * s, w - 24 * s, cy + 5 * s);
+      }
+    );
+
+    // Crumbling platform: cracked sandstone
+    this.createPlatformVariantTexture(
+      'tex-crumble-platform',
+      { base: 0x3b2413, body: 0x7c4a1e, bevel: 0x9a6233, stripDark: 0x92400e, strip: 0xd97706, shine: 0xfde68a },
+      (g, w, h, s) => {
+        g.lineStyle(1.6 * s, 0x2b1708, 0.95);
+        for (let i = 1; i <= 4; i++) {
+          const cx = (w / 5) * i;
+          g.beginPath();
+          g.moveTo(cx - 5 * s, 1 * s);
+          g.lineTo(cx + 2 * s, 8 * s);
+          g.lineTo(cx - 3 * s, 14 * s);
+          g.lineTo(cx + 3 * s, h - 2 * s);
+          g.strokePath();
+        }
+      }
+    );
+
+    // Ice platform: frosty and glossy
+    this.createPlatformVariantTexture(
+      'tex-ice-platform',
+      { base: 0x1e3a8a, body: 0x60a5fa, bevel: 0x93c5fd, stripDark: 0x7dd3fc, strip: 0xe0f2fe, shine: 0xffffff },
+      (g, w, h, s) => {
+        g.fillStyle(0xffffff, 0.75);
+        for (let x = 18 * s; x < w - 20 * s; x += 30 * s) {
+          g.fillTriangle(x, h * 0.5, x + 9 * s, h * 0.5, x + 4 * s, h * 0.86);
+        }
+      }
+    );
+
+    // Spring platform: green launch pad with up-chevrons
+    this.createPlatformVariantTexture(
+      'tex-spring-platform',
+      { base: 0x052e16, body: 0x166534, bevel: 0x15803d, stripDark: 0x15803d, strip: 0x4ade80, shine: 0xf0fdf4 },
+      (g, w, h, s) => {
+        g.lineStyle(2.4 * s, 0xbbf7d0, 1);
+        for (const cx of [w * 0.3, w * 0.5, w * 0.7]) {
+          g.beginPath();
+          g.moveTo(cx - 7 * s, h * 0.86);
+          g.lineTo(cx, h * 0.56);
+          g.lineTo(cx + 7 * s, h * 0.86);
+          g.strokePath();
+        }
+      }
+    );
+
+    // Coin
+    this.bake('tex-coin', 0, 0, 30, 30, (g) => {
+      g.fillStyle(0xb45309, 1);
+      g.fillCircle(15, 16, 13);
+      g.fillStyle(0xfbbf24, 1);
+      g.fillCircle(15, 14.5, 13);
+      g.fillStyle(0xfde68a, 1);
+      g.fillCircle(15, 14.5, 9.5);
+      g.fillStyle(0xf59e0b, 1);
+      g.fillRoundedRect(13, 9, 4, 11, 1.5);
+      g.fillStyle(0xffffff, 0.9);
+      g.fillCircle(10, 9.5, 2.2);
+    });
+
+    // Distant tower silhouette for the parallax scenery beside the main tower
+    this.bake('tex-far-tower', 0, 0, 120, 420, (g) => {
+      g.fillStyle(0xffffff, 1);
+      g.fillRect(18, 60, 84, 360);
+      for (let i = 0; i < 4; i++) g.fillRect(12 + i * 26, 36, 18, 28);
+      g.fillTriangle(60, 0, 34, 40, 86, 40);
+    }, 1);
+  }
+
+  /** Coins: +10 XP each. Placed above steps (and high above springs) to reward good movement. */
+  private createCoins(): void {
+    this.coins.forEach((c) => c.image.destroy());
+    this.coins = [];
+    this.coinsCollected = 0;
+
+    const addCoin = (x: number, y: number, sectionIndex: number) => {
+      const image = this.scene.add.image(x, y, 'tex-coin').setScale(0.8).setDepth(7);
+      this.coins.push({ image, x, y, sectionIndex, collected: false, phase: (x + y) * 0.01 });
+    };
+
+    this.platforms.forEach((p) => {
+      if (p.isCheckpoint || p.isSummit) return;
+      if (p.kind === 'spring') {
+        // A column of coins only a spring launch can reach
+        addCoin(p.baseX, p.y - 170, p.sectionIndex);
+        addCoin(p.baseX, p.y - 240, p.sectionIndex);
+      } else if (p.stepNumber % 2 === 0) {
+        addCoin(p.baseX, p.y - 52, p.sectionIndex);
+      }
+    });
+
+    this.coins.forEach((c) => c.image.setVisible(c.sectionIndex === 1));
+    gameEvents.totalCoins = this.coins.length;
+  }
+
+  /** Far-away towers beside the main tower (wide screens). They scroll slower = parallax depth. */
+  private createSideScenery(): void {
+    const { towerWidth, worldHeight } = this.config;
+    const parallax = 0.72;
+    const span = worldHeight * parallax + 900;
+    for (let i = 0; i < 14; i++) {
+      const left = i % 2 === 0;
+      const dist = 150 + ((i * 97) % 330);
+      const x = left ? -dist : towerWidth + dist;
+      const y = 200 + (span / 14) * i + ((i * 53) % 120);
+      const scale = 0.55 + ((i * 37) % 60) / 100;
+      this.scene.add
+        .image(x, y, 'tex-far-tower')
+        .setOrigin(0.5, 0)
+        .setScale(scale)
+        .setAlpha(0.16 + (i % 3) * 0.04)
+        .setTint(i % 3 === 0 ? 0xfde68a : 0xffffff)
+        .setScrollFactor(1, parallax)
+        .setDepth(-27);
+    }
+  }
+
+  public getCoinCount(): number {
+    return this.coins.length;
+  }
+
+  /**
+   * Called every frame with the climber's body centre: collects coins in reach.
+   */
+  public collectCoinsNear(px: number, py: number): void {
+    for (let i = 0; i < this.coins.length; i++) {
+      const c = this.coins[i];
+      if (c.collected || !c.image.visible) continue;
+      if (Math.abs(c.x - px) < 34 && Math.abs(c.y - py) < 50) {
+        c.collected = true;
+        this.coinsCollected += 1;
+        sfx.coin();
+        this.scene.tweens.add({
+          targets: c.image,
+          y: c.y - 46,
+          scale: 1.5,
+          alpha: 0,
+          duration: 320,
+          ease: 'Cubic.easeOut',
+          onComplete: () => c.image.setVisible(false),
+        });
+        for (let k = 0; k < 5; k++) {
+          const spark = this.scene.add
+            .image(c.x, c.y, 'tex-star')
+            .setScale(0.3)
+            .setTint(0xfde047)
+            .setDepth(8);
+          const ang = (Math.PI * 2 * k) / 5;
+          this.scene.tweens.add({
+            targets: spark,
+            x: c.x + Math.cos(ang) * 30,
+            y: c.y + Math.sin(ang) * 30,
+            alpha: 0,
+            scale: 0.05,
+            duration: 360,
+            onComplete: () => spark.destroy(),
+          });
+        }
+        gameEvents.emit('evt:coin-collected', {
+          collected: this.coinsCollected,
+          total: this.coins.length,
+        });
+      }
+    }
+  }
+
+  /** The climber just landed on / is standing on this platform. */
+  public onPlayerStanding(platform: PlatformData): void {
+    if (platform.kind === 'crumble' && platform.crumbleState === 0) {
+      platform.crumbleState = 1;
+      platform.crumbleTimer = platform.crumbleDelay;
+      sfx.crumble();
+    }
+  }
+
+  /** Squash-and-release animation when a spring launches the climber. */
+  public animateSpring(platform: PlatformData): void {
+    const base = 1 / TEX_SCALE;
+    platform.sprite.setScale(base * platform.widthScale * 1.08, base * 0.6);
+    this.scene.tweens.add({
+      targets: platform.sprite,
+      scaleX: base * platform.widthScale,
+      scaleY: base,
+      duration: 260,
+      ease: 'Back.easeOut',
+    });
+  }
+
+  private setPlatformX(platform: PlatformData, x: number): void {
+    const dx = x - platform.x;
+    if (dx === 0) return;
+    platform.x = x;
+    platform.sprite.x = x;
+    (platform.sprite.body as Phaser.Physics.Arcade.StaticBody).updateFromGameObject();
+    for (let i = 0; i < platform.decorations.length; i++) {
+      const d = platform.decorations[i] as unknown as { x: number };
+      d.x += dx;
+    }
+  }
+
+  private restoreCrumbled(platform: PlatformData, animate: boolean): void {
+    platform.crumbleState = 0;
+    platform.crumbleTimer = 0;
+    const base = 1 / TEX_SCALE;
+    const body = platform.sprite.body as Phaser.Physics.Arcade.StaticBody;
+    this.scene.tweens.killTweensOf(platform.sprite);
+    platform.sprite.setPosition(platform.x, platform.y);
+    platform.sprite.setAngle(0);
+    platform.sprite.setScale(base * platform.widthScale, base);
+    if (!platform.unlocked) return;
+    body.enable = true;
+    platform.sprite.refreshBody();
+    platform.sprite.setVisible(true);
+    platform.decorations.forEach((d: any) => d.setVisible?.(true));
+    if (animate) {
+      platform.sprite.setAlpha(0);
+      this.scene.tweens.add({ targets: platform.sprite, alpha: 1, duration: 260 });
+    } else {
+      platform.sprite.setAlpha(1);
+    }
   }
 
   private createTextures(): void {
     const s = TEX_SCALE;
+    this.createGameplayTextures();
 
     // 1. Regular platform texture (2x super-sampled with white stone body + Sherbeni Orange top runner)
     if (!this.scene.textures.exists('tex-regular-platform')) {
@@ -845,30 +1220,47 @@ export class PlatformManager {
       const y = this.getStepY(step);
       let x = centerX;
 
+      const design =
+        SECTION_DESIGNS[Math.min(sectionIndex, SECTION_DESIGNS.length) - 1];
+      let kind: PlatformKind = 'normal';
+      let widthScale = 1;
+      let moveAmp = 0;
+
       if (!isCheckpoint && !isSummit) {
         const offsets =
           sectionOffsets[(sectionIndex - 1) % sectionOffsets.length];
         x = centerX + offsets[stepInSection % offsets.length];
+        kind = design.kinds[stepInSection] ?? 'normal';
+        // Springs and moving platforms keep a comfortable landing size
+        widthScale = kind === 'spring' ? Math.max(0.9, design.widthScale) : design.widthScale;
+        if (kind === 'moving') {
+          // Never slide into the tower walls
+          const half = (regularPlatformWidth * widthScale) / 2;
+          const minX = this.config.wallThickness + half + 6;
+          const maxX = towerWidth - this.config.wallThickness - half - 6;
+          x = Phaser.Math.Clamp(x, minX + 30, maxX - 30);
+          moveAmp = Math.min(design.moveAmp, x - minX, maxX - x);
+        }
       }
 
       const width =
         isCheckpoint || isSummit
           ? checkpointPlatformWidth
-          : regularPlatformWidth;
+          : regularPlatformWidth * widthScale;
       const height =
         isCheckpoint || isSummit ? platformHeight + 4 : platformHeight;
       const textureKey = isSummit
         ? 'tex-summit-platform'
         : isCheckpoint
           ? 'tex-checkpoint-platform'
-          : 'tex-regular-platform';
+          : KIND_TEXTURE[kind];
 
       const sprite = this.staticGroup.create(
         x,
         y,
         textureKey
       ) as Phaser.Physics.Arcade.Sprite;
-      sprite.setScale(1 / TEX_SCALE);
+      sprite.setScale(widthScale / TEX_SCALE, 1 / TEX_SCALE);
       sprite.setDepth(5);
       sprite.refreshBody();
 
@@ -879,18 +1271,6 @@ export class PlatformManager {
       body.checkCollision.right = false;
 
       const decorations: Phaser.GameObjects.GameObject[] = [];
-
-      const gateNames: Record<number, string> = {
-        1: 'GATE ONE',
-        2: 'GATE TWO',
-        3: 'GATE THREE',
-        4: 'GATE FOUR',
-        5: 'GATE FIVE',
-      };
-      const gateTitle =
-        checkpointNumber !== null
-          ? gateNames[checkpointNumber] || `GATE ${checkpointNumber}`
-          : '';
 
       const checkpointNames: Record<number, string> = {
         1: 'CHECKPOINT ONE',
@@ -907,7 +1287,7 @@ export class PlatformManager {
       if (isCheckpoint) {
         const stepBadge = this.scene.add
           .text(
-            this.config.wallThickness + 58,
+            centerX,
             y - 1,
             `⚡ ${checkpointTitle}`,
             {
@@ -920,8 +1300,8 @@ export class PlatformManager {
             }
           )
           .setResolution(TEXT_RES)
-          .setOrigin(0, 0.5)
-          .setDepth(6);
+          .setOrigin(0.5, 0.5)
+          .setDepth(7);
         decorations.push(stepBadge);
       } else if (!isSummit) {
         const stepBadge = this.scene.add
@@ -985,22 +1365,7 @@ export class PlatformManager {
         this.wavingFlags.push(flag);
         this.flagSteps.push(step);
 
-        const cpSign = this.scene.add
-          .text(flagX - 8, y - 46, `🔑 ${gateTitle}`, {
-            fontFamily: '"Fredoka", sans-serif',
-            fontSize: '14px',
-            color: '#ffffff',
-            backgroundColor: '#0a1020',
-            stroke: '#ee7b3c',
-            strokeThickness: 2.5,
-            padding: { x: 8, y: 3 },
-            fontStyle: 'bold',
-          })
-          .setResolution(TEXT_RES)
-          .setOrigin(1, 0.5)
-          .setDepth(6);
-
-        decorations.push(flagAura, pole, poleShine, finial, finialSparkle, flag.getGameObject(), cpSign);
+        decorations.push(flagAura, pole, poleShine, finial, finialSparkle, flag.getGameObject());
       }
 
       if (isSummit) {
@@ -1083,6 +1448,15 @@ export class PlatformManager {
 
       const isInitiallyUnlocked = sectionIndex === 1;
       const platformData: PlatformData = {
+        kind,
+        baseX: x,
+        moveAmp,
+        moveSpeed: design.moveSpeed * (step % 2 === 0 ? 1 : 0.85),
+        movePhase: step * 1.7,
+        widthScale,
+        crumbleDelay: design.crumbleDelay,
+        crumbleState: 0,
+        crumbleTimer: 0,
         stepNumber: step,
         isCheckpoint,
         checkpointNumber,
@@ -1099,6 +1473,8 @@ export class PlatformManager {
 
       this.platforms.set(step, platformData);
       this.spriteToPlatform.set(sprite, platformData);
+      if (kind === 'moving') this.movingPlatforms.push(platformData);
+      if (kind === 'crumble') this.crumblePlatforms.push(platformData);
       this.applyPlatformLockState(platformData, isInitiallyUnlocked, false);
     }
   }
@@ -1237,19 +1613,11 @@ export class PlatformManager {
     doorRight.strokeCircle(5, doorTopY + doorH * 0.52, 4);
 
     // 5. Central Pulsing Lock Core
-    const glow = this.scene.add.circle(0, doorTopY + doorH * 0.52, 22, 0xee7b3c, 0.45);
-    this.scene.tweens.add({
-      targets: glow,
-      scale: { from: 0.85, to: 1.3 },
-      alpha: { from: 0.3, to: 0.7 },
-      duration: 800,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut',
-    });
+    const lockY = doorTopY + doorH * 0.52;
+    const glow = this.scene.add.circle(0, lockY, 22, 0xee7b3c, 0.45);
 
     const lockIcon = this.scene.add
-      .text(0, doorTopY + doorH * 0.52, '🔒', {
+      .text(0, lockY, '🔒', {
         fontSize: '24px',
       })
       .setResolution(TEXT_RES)
@@ -1267,6 +1635,7 @@ export class PlatformManager {
       lightRays,
       lockIcon,
       glow,
+      lockY,
       isUnlocked: false,
     };
   }
@@ -1310,11 +1679,11 @@ export class PlatformManager {
 
       if (animate) {
         platform.sprite.setAlpha(0);
-        platform.sprite.setScale(baseScale * 0.7, baseScale * 0.7);
+        platform.sprite.setScale(baseScale * platform.widthScale * 0.7, baseScale * 0.7);
         this.scene.tweens.add({
           targets: platform.sprite,
           alpha: 1,
-          scaleX: baseScale,
+          scaleX: baseScale * platform.widthScale,
           scaleY: baseScale,
           duration: 380,
           ease: 'Back.easeOut',
@@ -1334,7 +1703,7 @@ export class PlatformManager {
         });
       } else {
         platform.sprite.setAlpha(1);
-        platform.sprite.setScale(baseScale, baseScale);
+        platform.sprite.setScale(baseScale * platform.widthScale, baseScale);
         platform.sprite.refreshBody();
       }
     } else {
@@ -1409,7 +1778,7 @@ export class PlatformManager {
       // Floating unlocked badge rise and fade
       this.scene.tweens.add({
         targets: door.lockIcon,
-        y: door.lockIcon.y - 32,
+        y: door.lockY - 32,
         scale: 1.4,
         alpha: 0,
         duration: 650,
@@ -1424,6 +1793,14 @@ export class PlatformManager {
       }
     });
 
+    // Reveal the coins of the new section
+    this.coins.forEach((c) => {
+      if (c.sectionIndex === sectionIndex && !c.collected) {
+        c.image.setVisible(true).setAlpha(0);
+        this.scene.tweens.add({ targets: c.image, alpha: 1, duration: 400 });
+      }
+    });
+
     const totalSections = this.config.numberOfCheckpoints + 1;
     if (sectionIndex <= totalSections) {
       const newBarrierY = this.getBarrierYForSection(sectionIndex);
@@ -1434,20 +1811,42 @@ export class PlatformManager {
 
   public resetSections(): void {
     this.unlockedSection = 1;
+    this.moveClock = 0;
     this.platforms.forEach((platform) => {
       const unlocked = platform.sectionIndex === 1;
+      if (platform.kind === 'moving') this.setPlatformX(platform, platform.baseX);
+      this.scene.tweens.killTweensOf(platform.sprite);
+      platform.sprite.setPosition(platform.x, platform.y).setAngle(0);
+      platform.crumbleState = 0;
+      platform.crumbleTimer = 0;
       this.applyPlatformLockState(platform, unlocked, false);
+    });
+
+    // Put every coin back
+    this.coinsCollected = 0;
+    this.coins.forEach((c) => {
+      this.scene.tweens.killTweensOf(c.image);
+      c.collected = false;
+      c.image.setPosition(c.x, c.y).setScale(0.8).setAlpha(1);
+      c.image.setVisible(c.sectionIndex === 1);
     });
 
     // Reset all doors back to locked state
     this.checkpointDoors.forEach((door) => {
+      this.scene.tweens.killTweensOf([
+        door.lockIcon,
+        door.glow,
+        door.doorLeft,
+        door.doorRight,
+        door.lightRays,
+      ]);
       door.isUnlocked = false;
       door.lockIcon.setText('🔒');
-      door.lockIcon.setAlpha(1).setScale(1);
+      door.lockIcon.setPosition(0, door.lockY).setAlpha(1).setScale(1);
       door.doorLeft.setScale(1, 1).setAlpha(1).setX(0);
       door.doorRight.setScale(1, 1).setAlpha(1).setX(0);
       door.lightRays.setAlpha(0);
-      door.glow.setScale(1).setAlpha(0.45).setFillStyle(0xee7b3c, 0.45);
+      door.glow.setPosition(0, door.lockY).setScale(1).setAlpha(0.45).setFillStyle(0xee7b3c, 0.45);
     });
 
     const barrierY = this.getBarrierYForSection(1);
@@ -1455,12 +1854,75 @@ export class PlatformManager {
     this.ceilingBarrier.refreshBody();
   }
 
-  public update(time: number, delta: number): void {
+  /**
+   * @param worldRunning false while the game is paused on a question (nothing may move then)
+   * @param standingOn the platform the climber is standing on this frame (if any)
+   * @returns how far the platform under the climber moved, so the climber can be carried along
+   */
+  public update(
+    time: number,
+    delta: number,
+    worldRunning: boolean = true,
+    standingOn: PlatformData | null = null
+  ): number {
     // Only animate / draw flags and gate doors that are actually near the camera.
     // (Each one is a live vector Graphics that is expensive to rebuild every frame.)
     const view = this.scene.cameras.main.worldView;
     const top = view.y - 180;
     const bottom = view.bottom + 180;
+    let carryDx = 0;
+
+    if (worldRunning) {
+      this.moveClock += delta * 0.001;
+
+      // Moving platforms (pre-filtered list, only update ones near the screen)
+      for (let i = 0; i < this.movingPlatforms.length; i++) {
+        const p = this.movingPlatforms[i];
+        if (!p.unlocked || p.y <= top - 200 || p.y >= bottom + 200) continue;
+        const nx = p.baseX + Math.sin(this.moveClock * p.moveSpeed + p.movePhase) * p.moveAmp;
+        const dx = nx - p.x;
+        this.setPlatformX(p, nx);
+        if (standingOn === p) carryDx = dx;
+      }
+
+      // Crumbling platforms (pre-filtered list)
+      for (let i = 0; i < this.crumblePlatforms.length; i++) {
+        const p = this.crumblePlatforms[i];
+        if (!p.unlocked || p.crumbleState === 0) continue;
+        p.crumbleTimer -= delta;
+        if (p.crumbleState === 1) {
+          // Shake harder as it is about to give way
+          const k = 1 - Math.max(0, p.crumbleTimer) / p.crumbleDelay;
+          p.sprite.x = p.x + Math.sin(time * 0.09) * (1 + k * 2.5);
+          p.sprite.setAngle(Math.sin(time * 0.07) * k * 2);
+          if (p.crumbleTimer <= 0) {
+            p.crumbleState = 2;
+            p.crumbleTimer = 2400;
+            (p.sprite.body as Phaser.Physics.Arcade.StaticBody).enable = false;
+            p.decorations.forEach((d: any) => d.setVisible?.(false));
+            sfx.crumbleFall();
+            this.scene.tweens.add({
+              targets: p.sprite,
+              y: p.y + 90,
+              alpha: 0,
+              angle: p.stepNumber % 2 === 0 ? 14 : -14,
+              duration: 420,
+              ease: 'Quad.easeIn',
+            });
+          }
+        } else if (p.crumbleTimer <= 0) {
+          this.restoreCrumbled(p, true);
+        }
+      }
+    }
+
+    // Gentle coin bobbing (visible coins only)
+    for (let i = 0; i < this.coins.length; i++) {
+      const c = this.coins[i];
+      if (c.collected || !c.image.visible) continue;
+      if (c.y < top || c.y > bottom) continue;
+      c.image.y = c.y + Math.sin(time * 0.004 + c.phase) * 4;
+    }
 
     // 1. Update physically-simulated waving flags
     for (let i = 0; i < this.wavingFlags.length; i++) {
@@ -1471,15 +1933,20 @@ export class PlatformManager {
       if (onScreen) this.wavingFlags[i].update(time);
     }
 
+    const pulse = 0.5 + 0.5 * Math.sin(time * 0.004);
     this.checkpointDoors.forEach((door, checkpointNumber) => {
       const cpStep = this.config.checkpointSteps[checkpointNumber - 1];
       const platform = this.platforms.get(cpStep);
-      door.container.setVisible(
-        !!platform && platform.unlocked && platform.y > top && platform.y < bottom
-      );
+      const visible =
+        !!platform && platform.unlocked && platform.y > top && platform.y < bottom;
+      door.container.setVisible(visible);
+      if (visible && !door.isUnlocked) {
+        door.glow.setScale(0.88 + pulse * 0.35);
+        door.glow.setAlpha(0.32 + pulse * 0.35);
+      }
     });
 
-    // 2. Update drifting clouds across the tower
+    // 2. Update drifting clouds across the tower (only move display objects on-screen)
     const dt = delta * 0.001;
     const minX = -140;
     const maxX = this.config.towerWidth + 140;
@@ -1491,7 +1958,11 @@ export class PlatformManager {
       if (c.x > maxX) {
         c.x -= span;
       }
-      c.container.setX(c.x + c.offsetX);
+      if (c.y > top && c.y < bottom) {
+        c.container.setX(c.x + c.offsetX);
+      }
     }
+
+    return carryDx;
   }
 }

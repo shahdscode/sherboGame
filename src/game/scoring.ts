@@ -17,18 +17,22 @@
  *    - Milestones: 2 -> +50 XP, 3 -> +100 XP, 4 -> +150 XP, 5 -> +250 XP (capped at 400 XP total).
  *    - Each milestone awarded at most once per game.
  *    - Reset to 0 on any incorrect attempt.
- * 3. Speed XP (Max 600 XP):
- *    - 600 * max(0, 1 - max(0, elapsedSeconds - 60) / 240)
- *    - <= 60s: 600 XP | 90s: 525 XP | 120s: 450 XP | 180s: 300 XP | 240s: 150 XP | >= 300s: 0 XP
+ * 3. Speed XP (Max 600 XP) — based on CLIMBING time only (the clock pauses while a question is open):
+ *    - 600 * max(0, 1 - max(0, climbSeconds - 90) / 240)
+ *    - <= 90s: 600 XP | 120s: 525 XP | 150s: 450 XP | 210s: 300 XP | 270s: 150 XP | >= 330s: 0 XP
  * 4. Summit XP:
  *    - Fixed +300 XP upon crossing the summit finish line.
  * 5. Achievements (Max 275 XP):
- *    - LIGHTNING_FAST: Solve a gate on attempt 1 in under 5.0 seconds (+50 XP).
+ *    - TREASURE_HUNTER: Collect every coin in the tower (+50 XP).
+ * 6. Coins: +10 XP for each coin collected while climbing.
  *    - UNTOUCHABLE: Complete all 5 gates with 0 mistakes (+150 XP).
  *    - PHOENIX_COMEBACK: After a mistake, solve next 2 consecutive gates on attempt 1 (+75 XP).
  */
 
-export type AchievementId = 'LIGHTNING_FAST' | 'UNTOUCHABLE' | 'PHOENIX_COMEBACK';
+export type AchievementId = 'TREASURE_HUNTER' | 'UNTOUCHABLE' | 'PHOENIX_COMEBACK';
+
+/** XP awarded for every coin collected while climbing. */
+export const COIN_XP = 10;
 
 export interface AchievementDef {
   id: AchievementId;
@@ -39,12 +43,12 @@ export interface AchievementDef {
 }
 
 export const ACHIEVEMENTS: Record<AchievementId, AchievementDef> = {
-  LIGHTNING_FAST: {
-    id: 'LIGHTNING_FAST',
-    title: 'Lightning Fast',
-    description: 'Cracked a gate code in under 5 seconds on the 1st try!',
+  TREASURE_HUNTER: {
+    id: 'TREASURE_HUNTER',
+    title: 'Treasure Hunter',
+    description: 'Collected every single coin in the tower!',
     xp: 50,
-    icon: '⚡',
+    icon: '🪙',
   },
   UNTOUCHABLE: {
     id: 'UNTOUCHABLE',
@@ -155,11 +159,11 @@ export function calculateGateQuestionXp(attempts: number): number {
 }
 
 /**
- * Speed XP Formula:
- * 600 * max(0, 1 - max(0, elapsedSeconds - 60) / 240)
+ * Speed XP Formula (climbing time only):
+ * 600 * max(0, 1 - max(0, elapsedSeconds - 90) / 240)
  */
 export function calculateSpeedXp(elapsedSeconds: number): number {
-  const overtime = Math.max(0, elapsedSeconds - 60);
+  const overtime = Math.max(0, elapsedSeconds - 90);
   const factor = Math.max(0, 1 - overtime / 240);
   return Math.round(600 * factor);
 }
@@ -191,6 +195,10 @@ export interface ScoringState {
 
   // Speed tracking
   speedXp: number; // 0..600
+
+  // Coins collected while climbing
+  coinsCollected: number;
+  coinXp: number;
 
   // Mistakes tracking
   totalMistakes: number;
@@ -225,6 +233,8 @@ export function createInitialScoringState(): ScoringState {
     summitCompleted: false,
     summitXp: 0,
     speedXp: 0,
+    coinsCollected: 0,
+    coinXp: 0,
     totalMistakes: 0,
     totalAttempts: 0,
     hasMadeMistake: false,
@@ -266,6 +276,7 @@ export class ScoringEngine {
       this.state.streakXp +
       this.state.summitXp +
       this.state.speedXp +
+      this.state.coinXp +
       this.state.achievementXp;
   }
 
@@ -408,14 +419,6 @@ export class ScoringEngine {
         }
       }
 
-      // 2. Check LIGHTNING_FAST achievement (< 5.0 seconds on first attempt)
-      if (
-        solveDurationSeconds < 5.0 &&
-        !this.state.unlockedAchievements.includes('LIGHTNING_FAST')
-      ) {
-        this.unlockAchievement('LIGHTNING_FAST', unlockedList);
-      }
-
       // 3. Check PHOENIX_COMEBACK
       // "After making a mistake, solve the next TWO gates correctly on their first attempts."
       if (this.state.hasMadeMistake) {
@@ -448,9 +451,18 @@ export class ScoringEngine {
    * - Calculate Speed XP: 600 * max(0, 1 - max(0, elapsedSeconds - 60) / 240).
    * - Check UNTOUCHABLE achievement: complete all 5 gates with 0 mistakes (+150 XP).
    */
+  /** A coin was picked up while climbing: +10 XP each. */
+  public recordCoin(): number {
+    this.state.coinsCollected += 1;
+    this.state.coinXp += COIN_XP;
+    this.recalculateTotalXp();
+    return COIN_XP;
+  }
+
   public recordSummitCompletion(
     elapsedSeconds: number,
-    totalGatesRequired: number = 5
+    totalGatesRequired: number = 5,
+    totalCoinsInTower: number = 0
   ): {
     summitXpEarned: number;
     speedXpEarned: number;
@@ -505,6 +517,11 @@ export class ScoringEngine {
       !this.state.unlockedAchievements.includes('UNTOUCHABLE')
     ) {
       this.unlockAchievement('UNTOUCHABLE', unlockedList);
+    }
+
+    // Check TREASURE_HUNTER achievement (every coin in the tower collected)
+    if (totalCoinsInTower > 0 && this.state.coinsCollected >= totalCoinsInTower) {
+      this.unlockAchievement('TREASURE_HUNTER', unlockedList);
     }
 
     this.recalculateTotalXp();

@@ -4,7 +4,7 @@ import {
   TowerConfigRuntime,
   getMaxStepForSection,
 } from '../data/towerConfig';
-import { PlatformManager } from './PlatformManager';
+import { PlatformManager, PlatformData } from './PlatformManager';
 import { Player } from './Player';
 import { CameraManager } from './CameraManager';
 import { CheckpointManager } from './CheckpointManager';
@@ -23,6 +23,9 @@ export class TowerScene extends Phaser.Scene {
   private isCompleted: boolean = false;
   private isLandingSequence: boolean = false;
   private lastReportedStep: number = 0;
+  /** Platform under the climber this frame (set by the physics collision, cleared each update). */
+  private groundPlatform: PlatformData | null = null;
+  private musicLevel: number = 1;
   private unsubscribeFns: Array<() => void> = [];
 
   constructor() {
@@ -102,6 +105,8 @@ export class TowerScene extends Phaser.Scene {
 
     this.unsubscribeFns.push(
       gameEvents.on('cmd:start-game', () => {
+        this.musicLevel = 1;
+        sfx.startMusic(1);
         this.isPlaying = true;
         this.isPausedAtCheckpoint = false;
         this.isCompleted = false;
@@ -198,6 +203,17 @@ export class TowerScene extends Phaser.Scene {
       return;
     }
 
+    this.groundPlatform = matchedPlatform;
+
+    // Special platform behaviours
+    if (matchedPlatform.kind === 'spring') {
+      this.player.springLaunch(-930);
+      this.platformManager.animateSpring(matchedPlatform);
+      sfx.spring();
+    } else if (matchedPlatform.kind === 'crumble') {
+      this.platformManager.onPlayerStanding(matchedPlatform);
+    }
+
     const progress = this.checkpointManager.updateStepProgress(
       matchedPlatform.stepNumber
     );
@@ -217,8 +233,8 @@ export class TowerScene extends Phaser.Scene {
       if (this.isCompleted || this.isLandingSequence) return;
       this.isLandingSequence = true;
 
-      // Allow 850ms so player sees the character land, dust puffs rise, and land animation complete
-      this.time.delayedCall(850, () => {
+      // Brief landing beat before celebrating victory
+      this.time.delayedCall(400, () => {
         this.handleSummitCompletion();
         this.isLandingSequence = false;
       });
@@ -235,8 +251,8 @@ export class TowerScene extends Phaser.Scene {
       if (this.isPausedAtCheckpoint || this.isLandingSequence) return;
       this.isLandingSequence = true;
 
-      // Allow 800ms so the user clearly sees the character touch down, land, and settle into idle
-      this.time.delayedCall(800, () => {
+      // Trigger checkpoint promptly upon landing so the gate lock feels responsive
+      this.time.delayedCall(180, () => {
         this.triggerCheckpointPause(
           cpResult.checkpointNumber!,
           matchedPlatform.stepNumber
@@ -254,6 +270,7 @@ export class TowerScene extends Phaser.Scene {
     this.player.freeze();
     this.physics.world.pause();
     sfx.checkpoint();
+    sfx.duckMusic(true);
 
     const platform = this.platformManager.getPlatform(stepNumber);
     if (platform) {
@@ -281,6 +298,11 @@ export class TowerScene extends Phaser.Scene {
     const nextSectionIndex = checkpointNumber + 1;
     this.platformManager.unlockSection(nextSectionIndex);
     sfx.unlockGate();
+    this.cameras.main.shake(260, 0.0045);
+    // Each section raises the music's energy a little
+    this.musicLevel = nextSectionIndex;
+    sfx.duckMusic(false);
+    sfx.setMusicLevel(nextSectionIndex);
 
     const unlockedUpToStep = getMaxStepForSection(
       nextSectionIndex,
@@ -305,6 +327,7 @@ export class TowerScene extends Phaser.Scene {
     this.player.freeze();
     this.player.setPose('victory');
     this.physics.world.pause();
+    sfx.stopMusic();
     sfx.victory();
 
     const summitPlatform = this.platformManager.getPlatform(
@@ -346,20 +369,37 @@ export class TowerScene extends Phaser.Scene {
     this.player.resetPosition();
     this.cameraManager.resetToBottom();
     this.lastReportedStep = 0;
+    this.groundPlatform = null;
     this.isPausedAtCheckpoint = false;
     this.isCompleted = false;
     this.isLandingSequence = false;
     this.isPlaying = true;
+    this.musicLevel = 1;
+    sfx.startMusic(1);
     this.physics.world.resume();
   }
 
-  public update(time: number, delta: number): void {
+  public update(time: number, rawDelta: number): void {
+    const delta = Math.min(rawDelta, 50);
     const canControl =
       this.isPlaying &&
       !this.isPausedAtCheckpoint &&
       !this.isCompleted &&
       !this.isLandingSequence;
-    this.player.update(delta, canControl);
-    this.platformManager.update(time, delta);
+    const worldRunning = !this.physics.world.isPaused;
+    const standing = this.groundPlatform;
+    this.groundPlatform = null;
+
+    // Move platforms first; a moving platform carries the climber standing on it
+    const carryDx = this.platformManager.update(time, delta, worldRunning, standing);
+    if (carryDx !== 0 && worldRunning) {
+      this.player.sprite.x += carryDx;
+    }
+
+    this.player.update(delta, canControl, standing?.kind === 'ice');
+
+    if (this.isPlaying && !this.isCompleted) {
+      this.platformManager.collectCoinsNear(this.player.sprite.x, this.player.sprite.y);
+    }
   }
 }

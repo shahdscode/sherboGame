@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from 'react';
+import { RotateCcw, Smartphone } from 'lucide-react';
+import { gameEvents } from './game/EventBus';
 import { TowerGame } from './game/TowerGame';
 import { GameHUD } from './components/GameHUD';
 import { StartScreen } from './components/StartScreen';
@@ -74,16 +76,37 @@ const TowerApp: React.FC<TowerAppProps> = ({ customQuestions }) => {
     startGame,
     selectOption,
     submitAnswer,
+    nextQuestionAfterReview,
     continueAfterCorrectAnswer,
     restartGame,
     setTouchControls,
   } = useTowerGame(customQuestions);
 
+  // Graphics context lost (low memory on a phone): offer a reload if it does not come back
+  const [contextLost, setContextLost] = useState(false);
+  useEffect(() => {
+    let timer = 0;
+    const unsub = gameEvents.on('evt:context-lost', ({ lost }) => {
+      window.clearTimeout(timer);
+      if (lost) {
+        timer = window.setTimeout(() => setContextLost(true), 1500);
+      } else {
+        setContextLost(false);
+      }
+    });
+    return () => {
+      window.clearTimeout(timer);
+      unsub();
+    };
+  }, []);
+
   const isQuestionVisible =
     (gameState === 'QUESTION_ACTIVE' || gameState === 'CHECKPOINT_REACHED') &&
     activeQuestion !== null;
 
+  // Preview of the completion screen — local development only, never in production
   const isDebugCompleted =
+    import.meta.env.DEV &&
     typeof window !== 'undefined' &&
     new URLSearchParams(window.location.search).get('screen') === 'completed';
 
@@ -116,6 +139,7 @@ const TowerApp: React.FC<TowerAppProps> = ({ customQuestions }) => {
           feedback={feedback}
           onSelectOption={selectOption}
           onSubmitAnswer={submitAnswer}
+          onNextQuestion={nextQuestionAfterReview}
           onContinue={continueAfterCorrectAnswer}
         />
       )}
@@ -131,6 +155,26 @@ const TowerApp: React.FC<TowerAppProps> = ({ customQuestions }) => {
           scoringState={scoringState}
           onPlayAgain={restartGame}
         />
+      )}
+
+      {/* Phones held sideways: the tower is tall, so ask for portrait */}
+      <div className="rotate-device-overlay" role="alert">
+        <Smartphone size={54} className="rotate-device-icon" />
+        <p>Rotate your phone upright to climb the tower</p>
+      </div>
+
+      {contextLost && (
+        <div className="context-lost-overlay" role="alert" data-testid="context-lost">
+          <p>The game paused to free up memory.</p>
+          <button
+            type="button"
+            className="primary-cta-btn"
+            onClick={() => window.location.reload()}
+          >
+            <RotateCcw size={18} />
+            <span>Reload</span>
+          </button>
+        </div>
       )}
 
       {!showCompletion && (

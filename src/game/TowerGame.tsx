@@ -21,7 +21,8 @@ const getViewport = () => {
   const vv = typeof window !== 'undefined' ? window.visualViewport : null;
   const w = Math.max(320, Math.round(vv?.width ?? window.innerWidth));
   const h = Math.max(320, Math.round(vv?.height ?? window.innerHeight));
-  const deviceDpr = Math.min(Math.max(window.devicePixelRatio || 1, 1), MAX_RENDER_DPR);
+  const maxDpr = w * h > 900_000 ? 1.5 : 1.75;
+  const deviceDpr = Math.min(Math.max(window.devicePixelRatio || 1, 1), maxDpr);
   const dpr = Math.max(MIN_RENDER_DPR, deviceDpr * qualityScale);
   return { w, h, dpr };
 };
@@ -244,6 +245,7 @@ export const TowerGame: React.FC = () => {
           antialias: true,
           pixelArt: false,
           roundPixels: false,
+          powerPreference: 'high-performance',
         },
         fps: {
           target: 60,
@@ -254,6 +256,7 @@ export const TowerGame: React.FC = () => {
           arcade: {
             gravity: { x: 0, y: 0 },
             debug: false,
+            useTree: false,
           },
         },
         input: {
@@ -264,6 +267,17 @@ export const TowerGame: React.FC = () => {
 
       gameInstanceRef.current = new Phaser.Game(config);
       activeGame = gameInstanceRef.current;
+
+      // Phones under memory pressure can drop the WebGL context: the picture freezes.
+      // Phaser restores it when the browser gives it back; meanwhile tell the UI so the
+      // student sees a message (and a Reload button) instead of a frozen game.
+      const canvas = gameInstanceRef.current.canvas;
+      canvas.addEventListener('webglcontextlost', () => {
+        gameEvents.emit('evt:context-lost', { lost: true });
+      });
+      canvas.addEventListener('webglcontextrestored', () => {
+        gameEvents.emit('evt:context-lost', { lost: false });
+      });
       qualityTimer = window.setInterval(checkPerformance, 2500);
 
       window.addEventListener('resize', handleResize);

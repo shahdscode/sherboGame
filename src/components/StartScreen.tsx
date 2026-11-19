@@ -48,7 +48,7 @@ export const StartScreen: React.FC<StartScreenProps> = ({
         <div className="start-hero-banner">
           <div className="start-hero-sticker-wrap">
             <img
-              src="/stickers/climbing-figure.webp"
+              src="/stickers/main-sticker.png"
               alt="Sherbo Climber"
               className="start-hero-sticker"
               width={512}
@@ -68,7 +68,9 @@ export const StartScreen: React.FC<StartScreenProps> = ({
             </div>
             <p>
               Climb, solve and choose the correct answers to achieve the
-              highest score and unlock the gates.
+              highest score and unlock the gates. Every level adds new
+              platforms — moving, crumbling, icy and springs. Grab coins
+              for +10 XP!
             </p>
           </div>
 

@@ -43,6 +43,10 @@ export interface TowerEventMap {
   'evt:section-unlocked': SectionUnlockedPayload;
   'evt:summit-reached': void;
   'evt:summit-celebrated': void;
+  /** A coin was picked up (collected so far / total coins in the tower) */
+  'evt:coin-collected': { collected: number; total: number };
+  /** The WebGL context was lost (true) or restored (false) — phones under memory pressure */
+  'evt:context-lost': { lost: boolean };
 }
 
 type Listener<T> = (payload: T) => void;
@@ -55,6 +59,9 @@ class TowerEventBus {
    * The UI must not send 'cmd:start-game' before this (it would be silently lost).
    */
   public sceneReady = false;
+
+  /** Number of coins placed in the tower (set by the scene once the world is built). */
+  public totalCoins = 0;
 
   public on<K extends keyof TowerEventMap>(
     event: K,

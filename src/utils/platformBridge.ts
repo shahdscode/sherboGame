@@ -88,7 +88,8 @@ export function notifyPlatformGameCompleted(data: CompletionDataInput): GameComp
       composed: true,
       detail: payload,
     });
-    window.dispatchEvent(customEvent);
+    // Dispatch ONCE on document: the event bubbles up to window, so listeners on either
+    // receive it exactly one time (dispatching on both made window listeners fire twice).
     document.dispatchEvent(customEvent);
   } catch {
     // Ignore environments where CustomEvent might be restricted

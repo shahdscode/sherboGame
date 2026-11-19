@@ -138,10 +138,6 @@ export const TouchControls: React.FC<TouchControlsProps> = ({
         </button>
       </div>
 
-      <div className="touch-control-hint">
-        Hold Left / Right to run • Tap Jump to climb
-      </div>
-
       <div className="touch-action">
         <button
           ref={btnJumpRef}

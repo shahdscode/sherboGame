@@ -12,12 +12,15 @@ import {
 } from 'lucide-react';
 import { CheckpointQuestion, towerConfig } from '../data/towerConfig';
 import { QuestionAttemptFeedback } from '../hooks/useTowerGame';
+import { sfx } from '../game/sfx';
 
 interface QuestionModalProps {
   question: CheckpointQuestion;
   feedback: QuestionAttemptFeedback;
   onSelectOption: (index: number) => void;
   onSubmitAnswer: () => void;
+  /** After a wrong answer the solution is reviewed; this moves on to a fresh question. */
+  onNextQuestion: () => void;
   onContinue: () => void;
 }
 
@@ -181,10 +184,26 @@ export const QuestionModal: React.FC<QuestionModalProps> = ({
   feedback,
   onSelectOption,
   onSubmitAnswer,
+  onNextQuestion,
   onContinue,
 }) => {
   const isCorrect = feedback.status === 'correct';
   const isIncorrect = feedback.status === 'incorrect';
+  const isReview = feedback.status === 'review';
+
+  // Duck background music while question is open so options and voice clips are crystal clear
+  useEffect(() => {
+    sfx.duckMusic(true);
+    return () => {
+      sfx.duckMusic(false);
+    };
+  }, []);
+
+  // Free clue: the student can reveal the question's hint whenever they want
+  const [hintVisible, setHintVisible] = useState(false);
+  useEffect(() => {
+    setHintVisible(false);
+  }, [question.id]);
 
   // Fire mini confetti burst when gate is unlocked
   useEffect(() => {
@@ -211,11 +230,23 @@ export const QuestionModal: React.FC<QuestionModalProps> = ({
         return;
       }
 
+      if (isReview) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          onNextQuestion();
+        }
+        return;
+      }
+
       if (e.key === 'Enter') {
         e.preventDefault();
         onSubmitAnswer();
         return;
       }
+
+      // Ignore auto-repeat so a movement key still held from climbing (A / D) cannot
+      // pre-select an answer the moment the question opens
+      if (e.repeat) return;
 
       const key = e.key.toUpperCase();
       if (key === '1' || key === 'A') onSelectOption(0);
@@ -226,7 +257,7 @@ export const QuestionModal: React.FC<QuestionModalProps> = ({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isCorrect, onContinue, onSelectOption, onSubmitAnswer]);
+  }, [isCorrect, isReview, onContinue, onNextQuestion, onSelectOption, onSubmitAnswer]);
 
   // Pick one celebration sticker per question and preload it immediately so transition is instant and zero-flicker
   const celebrationSticker = useMemo(() => {
@@ -237,8 +268,7 @@ export const QuestionModal: React.FC<QuestionModalProps> = ({
 
   useEffect(() => {
     const urls = [
-      '/stickers/question.webp',
-      '/stickers/retry.webp',
+      '/stickers/main-sticker.png',
       celebrationSticker,
     ];
     urls.forEach((url) => {
@@ -250,9 +280,7 @@ export const QuestionModal: React.FC<QuestionModalProps> = ({
   // Determine which sticker character to display
   const characterImgSrc = isCorrect
     ? celebrationSticker
-    : isIncorrect
-      ? '/stickers/retry.webp'
-      : '/stickers/question.webp';
+    : '/stickers/main-sticker.png';
 
   const characterImgAlt = isCorrect
     ? 'Good Job Character'
@@ -278,7 +306,9 @@ export const QuestionModal: React.FC<QuestionModalProps> = ({
   const mistakeCount = feedback.attemptsForCurrentQuestion;
   const characterMoodTag = isCorrect
     ? 'GATE UNLOCKED!'
-    : mistakeCount === 1
+    : isReview
+      ? 'LEARN FROM IT!'
+      : mistakeCount === 1
       ? 'NEXT QUESTION! (450 XP Bounty)'
       : mistakeCount === 2
         ? 'KEEP TRYING! (300 XP Bounty)'
@@ -365,7 +395,7 @@ export const QuestionModal: React.FC<QuestionModalProps> = ({
               className={`sticker-halo ${
                 isCorrect
                   ? 'halo-correct'
-                  : isIncorrect
+                  : isIncorrect || isReview
                     ? 'halo-incorrect'
                     : 'halo-active'
               }`}
@@ -393,7 +423,7 @@ export const QuestionModal: React.FC<QuestionModalProps> = ({
               className={`sticker-mood-pill ${
                 isCorrect
                   ? 'mood-correct'
-                  : isIncorrect
+                  : isIncorrect || isReview
                     ? 'mood-incorrect'
                     : 'mood-active'
               }`}
@@ -406,14 +436,13 @@ export const QuestionModal: React.FC<QuestionModalProps> = ({
           <div className="modal-card question-modal-card">
             {/* Comic Speech Bubble from Sherbo */}
             <div className="sherbo-speech-bubble">
-              <div className="speech-header-row">
-                <h2 id="question-modal-heading" className="question-title">
-                  {question.title}
-                </h2>
-                <span className="step-milestone-tag">
-                  Step {towerConfig.checkpointSteps[question.checkpointNumber - 1] ?? (question.checkpointNumber * 5)}
-                </span>
-              </div>
+              {question.title && (
+                <div className="speech-header-row">
+                  <h2 id="question-modal-heading" className="question-title">
+                    {question.title}
+                  </h2>
+                </div>
+              )}
 
               {question.image && (
                 <img
@@ -470,7 +499,9 @@ export const QuestionModal: React.FC<QuestionModalProps> = ({
               <span>
                 {isCorrect
                   ? 'Gate code unlocked! Ready to climb!'
-                  : 'Tap the correct Power Stone to unlock the gate:'}
+                  : isReview
+                    ? 'Here is the correct answer — study it, then try a new question:'
+                    : 'Tap the correct Power Stone to unlock the gate:'}
               </span>
             </div>
 
@@ -484,7 +515,7 @@ export const QuestionModal: React.FC<QuestionModalProps> = ({
                 const isSelected = feedback.selectedOptionIndex === index;
                 const isWrongTried = feedback.wrongOptionIndices.includes(index);
                 const isSolvedRight =
-                  isCorrect && index === question.correctAnswer;
+                  (isCorrect || isReview) && index === question.correctAnswer;
                 const optionPenalty = feedback.wrongPenalties?.[index];
 
                 let stateClass = BLOCK_THEMES[index % BLOCK_THEMES.length];
@@ -502,7 +533,7 @@ export const QuestionModal: React.FC<QuestionModalProps> = ({
                     type="button"
                     role="radio"
                     aria-checked={isSelected}
-                    disabled={isCorrect || isWrongTried}
+                    disabled={isCorrect || isReview || isWrongTried}
                     className={`option-btn arcade-power-tile ${stateClass}`}
                     onClick={() => onSelectOption(index)}
                     data-testid={`question-option-${index}`}
@@ -527,6 +558,56 @@ export const QuestionModal: React.FC<QuestionModalProps> = ({
               })}
             </div>
 
+            {/* Free clue (never costs XP) */}
+            {!isCorrect && !isReview && question.hint && (
+              hintVisible ? (
+                <div className="feedback-hint clue-box" data-testid="feedback-hint">
+                  <Lightbulb size={16} className="hint-icon" />
+                  <span>
+                    <strong>Sherbo&apos;s Clue:</strong>{' '}
+                    {renderFormattedMathText(question.hint)}
+                  </span>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  className="clue-toggle-btn"
+                  onClick={() => setHintVisible(true)}
+                  data-testid="show-clue-btn"
+                >
+                  <Lightbulb size={15} />
+                  <span>Need a clue?</span>
+                </button>
+              )
+            )}
+
+            {/* Solution review after a wrong answer */}
+            {isReview && (
+              <div
+                className="feedback-banner feedback-incorrect feedback-review"
+                role="alert"
+                data-testid="feedback-review"
+              >
+                <div className="feedback-title">
+                  <ShieldAlert size={18} />
+                  <span>
+                    Not quite!{' '}
+                    {feedback.currentLoss ? (
+                      <strong>−{feedback.currentLoss} XP</strong>
+                    ) : (
+                      <>This gate now awards <strong>0 XP</strong></>
+                    )}
+                    . Here is how to solve it:
+                  </span>
+                </div>
+                {feedback.explanation && (
+                  <p className="feedback-explanation" data-testid="review-explanation">
+                    {renderFormattedMathText(feedback.explanation)}
+                  </p>
+                )}
+              </div>
+            )}
+
             {/* Feedback Banner for Incorrect Attempts + Instant Hint */}
             {isIncorrect && (
               <div
@@ -538,25 +619,16 @@ export const QuestionModal: React.FC<QuestionModalProps> = ({
                   <ShieldAlert size={18} />
                   <span>
                     {mistakeCount === 1 && (
-                      <>Incorrect! <strong>−50 XP</strong> penalty. Solve this next question for <strong>+450 XP</strong>!</>
+                      <>New question! Solve it for <strong>+450 XP</strong>.</>
                     )}
                     {mistakeCount === 2 && (
-                      <>Incorrect! <strong>−150 XP</strong> penalty. Solve this next question for <strong>+300 XP</strong>!</>
+                      <>New question! Solve it for <strong>+300 XP</strong>.</>
                     )}
                     {mistakeCount >= 3 && (
                       <>3+ mistakes — this checkpoint now awards <strong>0 XP</strong>, but solve a question to advance!</>
                     )}
                   </span>
                 </div>
-                {feedback.hint && (
-                  <div className="feedback-hint" data-testid="feedback-hint">
-                    <Lightbulb size={16} className="hint-icon" />
-                    <span>
-                      <strong>Sherbo&apos;s Clue:</strong>{' '}
-                      {renderFormattedMathText(feedback.hint)}
-                    </span>
-                  </div>
-                )}
               </div>
             )}
 
@@ -586,7 +658,17 @@ export const QuestionModal: React.FC<QuestionModalProps> = ({
 
             {/* Action Bar */}
             <div className="question-actions">
-              {!isCorrect ? (
+              {isReview ? (
+                <button
+                  type="button"
+                  className="primary-cta-btn submit-answer-btn arcade-hint-cta cta-ready"
+                  onClick={onNextQuestion}
+                  data-testid="next-question-btn"
+                >
+                  <span>Try a New Question</span>
+                  <ArrowRight size={18} />
+                </button>
+              ) : !isCorrect ? (
                 <button
                   type="button"
                   className={`primary-cta-btn submit-answer-btn arcade-hint-cta ${
