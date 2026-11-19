@@ -3401,3 +3401,103 @@ body {
   text-align: center;
   padding: 24px;
 }
+
+/* ==========================================================================
+   Thumb-friendly touch controls: big round buttons in the bottom corners,
+   Left/Right under the left thumb, Jump under the right thumb. Each button
+   also has an invisible hit area larger than it looks, so near-misses count.
+   ========================================================================== */
+.touch-controls-bar {
+  left: 0;
+  right: 0;
+  width: auto;
+  transform: none;
+  bottom: max(18px, calc(env(safe-area-inset-bottom, 0px) + 12px));
+  padding: 0 max(16px, env(safe-area-inset-left, 0px)) 0
+    max(16px, env(safe-area-inset-right, 0px));
+  align-items: flex-end;
+}
+
+.touch-dpad {
+  gap: 18px;
+}
+
+.touch-btn {
+  position: relative;
+  min-width: 0;
+  width: 74px;
+  height: 74px;
+  padding: 0;
+  border-radius: 50%;
+  gap: 0;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+  background: linear-gradient(180deg, rgba(39, 59, 112, 0.94) 0%, rgba(18, 28, 56, 0.94) 100%);
+  box-shadow: 0 5px 0 #0f1830, 0 10px 20px rgba(15, 24, 48, 0.35);
+}
+
+/* Invisible, larger touch target (stops short of the neighbouring button) */
+.touch-btn::before {
+  content: '';
+  position: absolute;
+  inset: -8px;
+  border-radius: 50%;
+}
+
+.touch-jump-btn {
+  min-width: 0;
+  width: 88px;
+  height: 88px;
+  flex-direction: column;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  line-height: 1;
+  gap: 1px;
+  background: linear-gradient(180deg, #f8995f 0%, #ee7b3c 100%);
+  box-shadow: 0 5px 0 #8f4012, 0 10px 22px rgba(238, 123, 60, 0.4);
+}
+
+.touch-jump-btn::before {
+  inset: -14px;
+}
+
+.touch-btn-active {
+  transform: translateY(3px) scale(0.96);
+}
+
+.touch-jump-btn.touch-btn-active {
+  transform: translateY(3px) scale(0.96);
+}
+
+@media (max-width: 380px) {
+  .touch-btn {
+    min-width: 0;
+    width: 66px;
+    height: 66px;
+  }
+  .touch-dpad {
+    gap: 14px;
+  }
+  .touch-jump-btn {
+    min-width: 0;
+    width: 80px;
+    height: 80px;
+  }
+}
+
+/* Landscape phones: short screen, so keep the buttons compact and tucked into the corners */
+@media (max-height: 500px) and (orientation: landscape) {
+  .touch-controls-bar {
+    bottom: max(10px, env(safe-area-inset-bottom, 0px));
+  }
+  .touch-btn {
+    width: 62px;
+    height: 62px;
+  }
+  .touch-jump-btn {
+    width: 74px;
+    height: 74px;
+  }
+}

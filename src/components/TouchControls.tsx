@@ -120,8 +120,7 @@ export const TouchControls: React.FC<TouchControlsProps> = ({
           data-testid="touch-left-btn"
           {...bindPressHandlers('left')}
         >
-          <ArrowLeft size={22} />
-          <span>Left</span>
+          <ArrowLeft size={30} strokeWidth={2.75} />
         </button>
 
         <button
@@ -133,8 +132,7 @@ export const TouchControls: React.FC<TouchControlsProps> = ({
           data-testid="touch-right-btn"
           {...bindPressHandlers('right')}
         >
-          <ArrowRight size={22} />
-          <span>Right</span>
+          <ArrowRight size={30} strokeWidth={2.75} />
         </button>
       </div>
 
@@ -148,7 +146,7 @@ export const TouchControls: React.FC<TouchControlsProps> = ({
           data-testid="touch-jump-btn"
           {...bindPressHandlers('jump')}
         >
-          <ArrowUp size={22} />
+          <ArrowUp size={34} strokeWidth={2.75} />
           <span>Jump</span>
         </button>
       </div>
