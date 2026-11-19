@@ -51,6 +51,8 @@ it for grades or prizes without server-side validation.
 ## Production deployment
 
 Production is served by Nginx at `https://sherbogame.shiftup-solutions.com`.
+Until that hostname is available, the same release is reachable directly at
+`http://187.77.71.97:3201`.
 Pushes to `main` deploy through `.github/workflows/deploy.yml`; the repository
 requires the `SSH_HOST`, `SSH_USER`, and `SSH_KEY` GitHub Actions secrets. The
 VPS keeps its production `VITE_API_URL` in the untracked `.env` file, builds a
