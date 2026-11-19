@@ -16,10 +16,10 @@ const MIN_VISIBLE_WORLD_WIDTH = 600;
 const MIN_VISIBLE_WORLD_HEIGHT = 400;
 /**
  * On wide screens the view shows this much of the outer wall on each side of the tower,
- * which zooms out a little (≈ 525 world units visible vertically on a 16:10 laptop instead
- * of 450) while still filling the screen edge to edge.
+ * which zooms out a little (≈ 575 world units visible vertically on a 16:10 laptop instead
+ * of 450) while still filling the screen edge to edge. Must stay ≤ OUTER_WALL_EXTENT.
  */
-const WIDE_SIDE_MARGIN = 60;
+const WIDE_SIDE_MARGIN = 100;
 /**
  * How far the tower's outer walls are drawn beyond the play area on each side. Must cover
  * the widest view (ultra-wide 21:9 at MIN_VISIBLE_WORLD_HEIGHT shows ~115 per side).
