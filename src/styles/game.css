@@ -3273,38 +3273,26 @@ body {
   gap: 12px;
   padding: 32px 24px;
   text-align: center;
+}
+
 .clue-toggle-btn {
   align-self: flex-start;
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  padding: 8px 16px;
-  border-radius: 12px;
-  border: 2px solid #b85720;
-  background: linear-gradient(180deg, #ff9248 0%, #ee7b3c 100%);
-  box-shadow: 0 4px 0 #b85720, 0 6px 14px rgba(238, 123, 60, 0.28);
-  color: #ffffff;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1.5px dashed rgba(238, 123, 60, 0.7);
+  background: #fff7ef;
+  color: #b85720;
   font-family: var(--font-display);
-  font-weight: 800;
-  font-size: 0.9rem;
-  letter-spacing: 0.2px;
+  font-weight: 700;
+  font-size: 0.86rem;
   cursor: pointer;
-  transition: transform 0.1s ease, filter 0.15s ease, box-shadow 0.1s ease;
-}
-
-.clue-toggle-btn svg {
-  color: #fef08a;
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.25));
 }
 
 .clue-toggle-btn:hover {
-  transform: translateY(-1px);
-  filter: brightness(1.06);
-}
-
-.clue-toggle-btn:active {
-  transform: translateY(3px);
-  box-shadow: 0 1px 0 #b85720;
+  background: #ffedd8;
 }
 
 .clue-box {
