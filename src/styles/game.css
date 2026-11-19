@@ -3253,6 +3253,26 @@ body {
   }
 }
 
+
+/* Question image (games built in the admin) */
+.question-image {
+  display: block;
+  width: 100%;
+  max-height: min(32vh, 260px);
+  object-fit: contain;
+  margin: 8px 0 12px;
+  border-radius: 12px;
+  background: #fff;
+}
+
+/* Loading / unavailable card for games opened with ?game= */
+.game-load-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 32px 24px;
+  text-align: center;
 .clue-toggle-btn {
   align-self: flex-start;
   display: inline-flex;

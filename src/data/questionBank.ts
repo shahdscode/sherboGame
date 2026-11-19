@@ -1,4 +1,4 @@
-import type { CheckpointQuestion } from './towerConfig.ts';
+import { towerConfig, type CheckpointQuestion } from './towerConfig.ts';
 import defaultQuestionsData from './questions.json' with { type: 'json' };
 
 /**
@@ -79,6 +79,11 @@ export function normalizeQuestion(
       ? raw.explanation.trim()
       : `Option ${String.fromCharCode(65 + correctAnswer)} is correct!`;
 
+  const image =
+    typeof raw.image === 'string' && /^https?:///i.test(raw.image.trim())
+      ? raw.image.trim()
+      : undefined;
+
   return {
     id,
     checkpointNumber,
@@ -89,6 +94,7 @@ export function normalizeQuestion(
     correctAnswer,
     hint,
     explanation,
+    image,
   };
 }
 
@@ -249,12 +255,12 @@ export function advanceCheckpointRotation(
 }
 
 /**
- * Selects 1 question per checkpoint (Checkpoints 1 through 5) from the question bank.
+ * Selects 1 question per checkpoint (1 through the tower's number of levels) from the question bank.
  * If multiple questions exist for a checkpoint, one is randomly selected to give variety on every run.
  */
 export function selectSessionQuestions(
   bank: CheckpointQuestion[] = defaultQuestionBank,
-  totalCheckpoints: number = 5
+  totalCheckpoints: number = towerConfig.numberOfCheckpoints
 ): CheckpointQuestion[] {
   const selected: CheckpointQuestion[] = [];
 
