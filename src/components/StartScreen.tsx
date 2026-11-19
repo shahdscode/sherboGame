@@ -28,7 +28,6 @@ const SLOW_LOAD_MS = 25000;
 export const StartScreen: React.FC<StartScreenProps> = ({
   onStart,
   ready,
-  progress,
   loadFailed,
 }) => {
   const [isSlow, setIsSlow] = useState(false);
@@ -39,7 +38,6 @@ export const StartScreen: React.FC<StartScreenProps> = ({
     return () => window.clearTimeout(id);
   }, [ready]);
 
-  const percent = Math.max(0, Math.min(100, Math.round(progress * 100)));
   const showReload = !ready && (loadFailed || isSlow);
 
   return (
@@ -127,31 +125,6 @@ export const StartScreen: React.FC<StartScreenProps> = ({
             </div>
           </div>
         </div>
-
-        {!ready && (
-          <div
-            className="start-loading"
-            role="progressbar"
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={percent}
-            data-testid="start-loading"
-          >
-            <div className="start-loading-track">
-              <div
-                className="start-loading-fill"
-                style={{ width: `${Math.max(6, percent)}%` }}
-              />
-            </div>
-            <span className="start-loading-label">
-              {loadFailed
-                ? 'Connection problem while loading the tower.'
-                : isSlow
-                  ? 'Still loading… your connection looks slow.'
-                  : `Loading the tower… ${percent}%`}
-            </span>
-          </div>
-        )}
 
         {showReload ? (
           <button
