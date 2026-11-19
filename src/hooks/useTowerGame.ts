@@ -145,6 +145,9 @@ export function useTowerGame(
   const [sceneReady, setSceneReady] = useState<boolean>(gameEvents.sceneReady);
   const [loadProgress, setLoadProgress] = useState<number>(0);
   const [loadFailed, setLoadFailed] = useState<boolean>(false);
+  /** Start was pressed before the scene finished loading. */
+  const pendingStartRef = useRef<boolean>(false);
+  const startGameRef = useRef<(() => void) | null>(null);
 
   const buildInitialCheckpoints = (): CheckpointStateItem[] =>
     Array.from({ length: towerConfig.numberOfCheckpoints }, (_, idx) => {
@@ -186,6 +189,8 @@ export function useTowerGame(
     const unsubReady = gameEvents.on('evt:scene-ready', () => {
       setLoadProgress(1);
       setSceneReady(true);
+      // The player already pressed Start while assets were still loading
+      if (pendingStartRef.current) startGameRef.current?.();
     });
     const unsubProgress = gameEvents.on('evt:load-progress', ({ progress }) => {
       setLoadProgress(progress);
@@ -356,8 +361,14 @@ export function useTowerGame(
 
   const startGame = useCallback(() => {
     // Never start before the scene is listening — the command would be lost and the
-    // game would sit frozen behind a dismissed start screen.
-    if (!gameEvents.sceneReady) return;
+    // game would sit frozen behind a dismissed start screen. Instead remember the tap and
+    // start as soon as the scene reports ready (see the 'evt:scene-ready' listener).
+    if (!gameEvents.sceneReady) {
+      sfx.unlock(); // must happen inside the tap itself for mobile audio
+      pendingStartRef.current = true;
+      return;
+    }
+    pendingStartRef.current = false;
     sfx.unlock();
     sfx.click();
     sfx.preloadVoices();
@@ -376,6 +387,7 @@ export function useTowerGame(
     setGameState('PLAYING');
     gameEvents.emit('cmd:start-game', undefined);
   }, [customQuestions]);
+  startGameRef.current = startGame;
 
   const activeQuestion: CheckpointQuestion | null =
     activeCheckpointNumber !== null

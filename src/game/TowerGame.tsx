@@ -8,22 +8,23 @@ import { towerConfig } from '../data/towerConfig';
  * Rendering resolution.
  *
  * The canvas is rendered above CSS size so art stays crisp, then shown at CSS size via
- * Phaser's `zoom`. Rendering at the full 3x of modern phones means ~3.5 million pixels per
- * frame, which overheats mid-range devices and makes the game stutter — and beyond 2x the
- * extra sharpness is not visible in motion. So the density is capped at 2x, and
- * `qualityScale` lowers it further at runtime if the device still can't keep up.
+ * Phaser's `zoom`. It starts at the screen's full sharpness (up to 2x — beyond that the
+ * difference isn't visible in motion), limited by a total pixel budget so huge monitors don't
+ * render 8+ million pixels a frame. If a device can't keep up, `qualityScale` lowers the
+ * density at runtime (see `checkPerformance`), never below 1x.
  */
 const MAX_RENDER_DPR = 2;
 const MIN_RENDER_DPR = 1;
+/** Max rendered pixels per frame: a Retina laptop (1440x900 css) still gets the full 2x. */
+const PIXEL_BUDGET = 5_300_000;
 let qualityScale = 1;
 
 const getViewport = () => {
   const vv = typeof window !== 'undefined' ? window.visualViewport : null;
   const w = Math.max(320, Math.round(vv?.width ?? window.innerWidth));
   const h = Math.max(320, Math.round(vv?.height ?? window.innerHeight));
-  // Big laptop/desktop windows already have plenty of pixels; 1.25x keeps art crisp while
-  // cutting the GPU fill cost by ~30% compared to 1.5x on a Retina laptop.
-  const maxDpr = w * h > 900_000 ? 1.25 : 1.75;
+  const budgetDpr = Math.sqrt(PIXEL_BUDGET / (w * h));
+  const maxDpr = Math.min(MAX_RENDER_DPR, budgetDpr);
   const deviceDpr = Math.min(Math.max(window.devicePixelRatio || 1, 1), maxDpr);
   const dpr = Math.max(MIN_RENDER_DPR, deviceDpr * qualityScale);
   return { w, h, dpr };
@@ -199,27 +200,40 @@ export const TowerGame: React.FC = () => {
       resizeTimer = window.setTimeout(applySize, 140);
     };
 
-    // Adaptive quality: if the device keeps dropping well below 60fps, lower the render
-    // resolution one notch (never below 1x). A slightly softer picture beats a stuttering game.
-    let slowChecks = 0;
-    const checkPerformance = () => {
+    // Adaptive quality: frame times are sampled while the climber is actually playing
+    // (not on the start card or a question). If a ~1s window is slow or stuttery twice in a
+    // row, the render resolution drops one notch (never below 1x). A slightly softer picture
+    // beats a stuttering game, and it usually settles within 2–3 seconds on a slow device.
+    const frameTimes: number[] = [];
+    let slowWindows = 0;
+    let graceUntil = 0;
+    const onPostStep = (_time: number, delta: number) => {
       const game = gameInstanceRef.current;
-      if (!game || document.hidden || !gameEvents.sceneReady) {
-        slowChecks = 0;
+      const scene = game?.scene.getScene('TowerScene') as TowerScene | null;
+      const playing = !!scene?.physics?.world && !scene.physics.world.isPaused;
+      if (!playing || document.hidden) {
+        frameTimes.length = 0;
+        graceUntil = performance.now() + 1500; // ignore warm-up hitches after resuming
         return;
       }
-      const fps = game.loop.actualFps;
-      if (fps > 0 && fps < 42) {
-        slowChecks += 1;
-      } else {
-        slowChecks = 0;
-      }
-      if (slowChecks >= 2) {
-        slowChecks = 0;
+      if (performance.now() < graceUntil) return;
+      frameTimes.push(delta);
+    };
+    const checkPerformance = () => {
+      if (frameTimes.length < 20) return;
+      const sorted = [...frameTimes].sort((a, b) => a - b);
+      const median = sorted[Math.floor(sorted.length / 2)];
+      const hitches = frameTimes.filter((d) => d > 26).length / frameTimes.length;
+      frameTimes.length = 0;
+      const slow = median > 18.5 || hitches > 0.1; // below ~54fps, or >10% visibly dropped frames
+      slowWindows = slow ? slowWindows + 1 : 0;
+      if (slowWindows >= 2) {
+        slowWindows = 0;
         const { dpr } = getViewport();
         if (dpr > MIN_RENDER_DPR) {
-          qualityScale = Math.max(0.5, qualityScale - 0.25);
+          qualityScale = Math.max(0.4, qualityScale - 0.15);
           applySize();
+          graceUntil = performance.now() + 1500;
         }
       }
     };
@@ -283,7 +297,8 @@ export const TowerGame: React.FC = () => {
       canvas.addEventListener('webglcontextrestored', () => {
         gameEvents.emit('evt:context-lost', { lost: false });
       });
-      qualityTimer = window.setInterval(checkPerformance, 2500);
+      gameInstanceRef.current.events.on(Phaser.Core.Events.POST_STEP, onPostStep);
+      qualityTimer = window.setInterval(checkPerformance, 1000);
 
       window.addEventListener('resize', handleResize);
       window.addEventListener('orientationchange', handleResize);

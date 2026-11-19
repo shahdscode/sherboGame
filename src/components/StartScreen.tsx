@@ -6,7 +6,6 @@ import {
   ArrowUp,
   Flag,
   Gamepad2,
-  Loader2,
   RotateCcw,
   Award,
 } from 'lucide-react';
@@ -141,15 +140,10 @@ export const StartScreen: React.FC<StartScreenProps> = ({
             type="button"
             className="primary-cta-btn start-climbing-btn"
             onClick={onStart}
-            disabled={!ready}
             data-testid="start-climbing-btn"
           >
-            {ready ? (
-              <Play size={20} fill="currentColor" />
-            ) : (
-              <Loader2 size={20} className="spin-icon" />
-            )}
-            <span>{ready ? 'Start Climbing!' : 'Loading…'}</span>
+            <Play size={20} fill="currentColor" />
+            <span>Start Climbing!</span>
           </button>
         )}
       </div>

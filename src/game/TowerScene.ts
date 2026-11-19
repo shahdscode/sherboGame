@@ -7,6 +7,7 @@ import {
 import { PlatformManager, PlatformData } from './PlatformManager';
 import { Player } from './Player';
 import { CameraManager } from './CameraManager';
+import { OffscreenCuller } from './OffscreenCuller';
 import { CheckpointManager } from './CheckpointManager';
 import { gameEvents } from './EventBus';
 import { sfx } from './sfx';
@@ -58,6 +59,9 @@ export class TowerScene extends Phaser.Scene {
 
     this.platformManager = new PlatformManager(this, this.config);
     this.platformManager.buildTower();
+    // Measure the tower's static decorations now — before the player exists — so only
+    // tower objects are ever skipped when they are far off screen.
+    new OffscreenCuller(this).snapshot([this.platformManager.getCeilingBarrier()]);
 
     this.player = new Player(this, this.config);
     this.cameraManager = new CameraManager(this, this.config);
