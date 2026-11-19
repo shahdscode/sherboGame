@@ -8,7 +8,10 @@ type Wave = OscillatorType;
 let ctx: AudioContext | null = null;
 let muted =
   typeof localStorage !== 'undefined' && localStorage.getItem('kt-muted') === '1';
+let musicMuted =
+  typeof localStorage !== 'undefined' && localStorage.getItem('kt-music-muted') === '1';
 const muteListeners = new Set<(m: boolean) => void>();
+const musicMuteListeners = new Set<(m: boolean) => void>();
 
 function audio(): AudioContext | null {
   if (typeof window === 'undefined') return null;
@@ -206,7 +209,8 @@ function stopBgmSource(): void {
 
 function applyMusicVolume(fadeTimeConstant: unknown = 0.22): void {
   const tc = typeof fadeTimeConstant === 'number' ? fadeTimeConstant : 0.22;
-  const target = muted ? 0 : getTargetMusicVolume();
+  const isSilence = muted || musicMuted;
+  const target = isSilence ? 0 : getTargetMusicVolume();
   if (bgmGain && ctx) {
     try {
       bgmGain.gain.cancelScheduledValues(ctx.currentTime);
@@ -216,13 +220,13 @@ function applyMusicVolume(fadeTimeConstant: unknown = 0.22): void {
     }
   }
   if (bgmAudio) {
-    bgmAudio.muted = muted;
+    bgmAudio.muted = isSilence;
     bgmAudio.volume = target;
   }
 }
 
 function ensureBgmPlaying(): void {
-  if (typeof window === 'undefined' || !bgmStarted || muted) return;
+  if (typeof window === 'undefined' || !bgmStarted || muted || musicMuted) return;
   if (typeof document !== 'undefined' && document.hidden) return;
 
   const ac = audio();
@@ -254,7 +258,7 @@ function ensureBgmPlaying(): void {
     }
 
     void loadBgmBuffer(ac).then((buf) => {
-      if (buf && bgmStarted && !muted && !(typeof document !== 'undefined' && document.hidden)) {
+      if (buf && bgmStarted && !muted && !musicMuted && !(typeof document !== 'undefined' && document.hidden)) {
         ensureBgmPlaying();
       }
     });
@@ -295,7 +299,7 @@ if (typeof document !== 'undefined') {
     if (!bgmStarted) return;
     if (document.hidden) {
       stopBgmSource();
-    } else if (!muted) {
+    } else if (!muted && !musicMuted) {
       ensureBgmPlaying();
     }
   });
@@ -485,7 +489,7 @@ export const sfx = {
       /* ignore */
     }
     applyMusicVolume();
-    if (!value && bgmStarted) {
+    if (!value && !musicMuted && bgmStarted) {
       ensureBgmPlaying();
     }
     muteListeners.forEach((fn) => fn(value));
@@ -494,8 +498,28 @@ export const sfx = {
     muteListeners.add(fn);
     return () => muteListeners.delete(fn);
   },
+  isMusicMuted(): boolean {
+    return musicMuted;
+  },
+  setMusicMuted(value: boolean): void {
+    musicMuted = value;
+    try {
+      localStorage.setItem('kt-music-muted', value ? '1' : '0');
+    } catch {
+      /* ignore */
+    }
+    applyMusicVolume();
+    if (!value && !muted && bgmStarted) {
+      ensureBgmPlaying();
+    }
+    musicMuteListeners.forEach((fn) => fn(value));
+  },
+  onMusicMuteChange(fn: (m: boolean) => void): () => void {
+    musicMuteListeners.add(fn);
+    return () => musicMuteListeners.delete(fn);
+  },
   getMusicVolume(): number {
-    if (muted) return 0;
+    if (muted || musicMuted) return 0;
     return getTargetMusicVolume();
   },
   isMusicDucked(): boolean {

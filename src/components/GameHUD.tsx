@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Flag, Zap, Timer, Volume2, VolumeX, Flame } from 'lucide-react';
+import { Flag, Zap, Timer, Volume2, VolumeX, Flame, Music } from 'lucide-react';
 import { CheckpointStateItem } from '../hooks/useTowerGame';
 import { towerConfig, formatStopwatchTime } from '../data/towerConfig';
 import { sfx } from '../game/sfx';
@@ -26,11 +26,17 @@ export const GameHUD: React.FC<GameHUDProps> = ({
   currentStreak = 0,
 }) => {
   const [muted, setMutedState] = useState<boolean>(() => sfx.isMuted());
+  const [musicMuted, setMusicMutedState] = useState<boolean>(() => sfx.isMusicMuted());
   const [floatingGains, setFloatingGains] = useState<FloatingGain[]>([]);
   const prevXpRef = useRef<number>(xpPoints);
 
   useEffect(() => {
-    return sfx.onMuteChange((m) => setMutedState(m));
+    const unsubAll = sfx.onMuteChange((m) => setMutedState(m));
+    const unsubMusic = sfx.onMusicMuteChange((m) => setMusicMutedState(m));
+    return () => {
+      unsubAll();
+      unsubMusic();
+    };
   }, []);
 
   // Track XP increases for floating +XP animations
@@ -60,6 +66,15 @@ export const GameHUD: React.FC<GameHUDProps> = ({
       sfx.click();
     }
   };
+
+  const toggleMusic = () => {
+    const next = !musicMuted;
+    sfx.setMusicMuted(next);
+    sfx.unlock();
+    sfx.click();
+  };
+
+  const isBgMusicSilenced = muted || musicMuted;
 
   return (
     <>
@@ -111,10 +126,24 @@ export const GameHUD: React.FC<GameHUDProps> = ({
 
         <button
           type="button"
+          className={`hud-sound-btn hud-music-btn ${isBgMusicSilenced ? 'is-muted' : ''}`}
+          onClick={toggleMusic}
+          aria-label={musicMuted ? 'Unmute background music' : 'Mute background music'}
+          title={musicMuted ? 'Unmute Background Music' : 'Mute Background Music'}
+          data-testid="hud-music-toggle"
+        >
+          <span className="hud-icon-slash-wrap">
+            <Music size={17} className={isBgMusicSilenced ? 'icon-muted' : 'icon-gold'} />
+            {isBgMusicSilenced && <span className="hud-icon-slash" aria-hidden="true" />}
+          </span>
+        </button>
+
+        <button
+          type="button"
           className="hud-sound-btn"
           onClick={toggleSound}
           aria-label={muted ? 'Unmute game sound' : 'Mute game sound'}
-          title={muted ? 'Unmute Sound' : 'Mute Sound'}
+          title={muted ? 'Unmute All Sound' : 'Mute All Sound'}
           data-testid="hud-sound-toggle"
         >
           {muted ? (
