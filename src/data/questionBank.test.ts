@@ -12,6 +12,8 @@ import {
   getCheckpointPool,
   initCheckpointRotation,
   advanceCheckpointRotation,
+  initOrderedCheckpointRotation,
+  advanceOrderedCheckpointRotation,
 } from './questionBank.ts';
 
 console.log('Running Question Bank unit tests...');
@@ -130,6 +132,30 @@ for (let cp = 1; cp <= 5; cp++) {
   }
 }
 console.log('✓ 3-question rotation, reshuffling, indefinite retry, and no-consecutive-repeat verified.');
+
+// Backend-managed question pools should rotate in their configured order.
+{
+  const pool = getCheckpointPool(defaultQuestionBank, 1);
+  let rotation = initOrderedCheckpointRotation(pool);
+  assert(
+    rotation.queue.map((question) => question.id).join(',') ===
+      pool.map((question) => question.id).join(','),
+    'Ordered rotation must preserve the supplied pool order'
+  );
+  for (let index = 1; index < pool.length; index++) {
+    rotation = advanceOrderedCheckpointRotation(rotation, pool);
+    assert(
+      rotation.queue[rotation.currentIndex].id === pool[index].id,
+      `Ordered rotation must advance to question ${index + 1}`
+    );
+  }
+  rotation = advanceOrderedCheckpointRotation(rotation, pool);
+  assert(
+    rotation.queue[rotation.currentIndex].id === pool[0].id,
+    'Ordered rotation must restart at the first question after the pool ends'
+  );
+}
+console.log('✓ Ordered rotation preserves backend question order.');
 
 // Clues are optional: a question without one gets no made-up clue
 {

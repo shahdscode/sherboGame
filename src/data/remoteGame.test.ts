@@ -29,4 +29,17 @@ assert(nullClue.hint === '', 'A null clue must hide the clue button');
 assert(savedBeforeClues.hint === '', 'A question saved before clues must have no clue');
 assert(withClue.correctAnswer === 1 && withClue.checkpointNumber === 1, 'Other fields still map');
 
+const orderedQuestions = toCheckpointQuestions([
+  { questions: [question('first'), question('second')] },
+  { questions: [question('third')] },
+]);
+assert(
+  orderedQuestions.map((item) => item.id).join(',') === 'first,second,third',
+  'Remote questions must retain backend level and question order'
+);
+assert(
+  orderedQuestions[0].options.join(',') === '11,12',
+  'Remote answer choices must retain backend order'
+);
+
 console.log('ALL REMOTE GAME TESTS PASSED! 🎉');

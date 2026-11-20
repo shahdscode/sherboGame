@@ -14,6 +14,8 @@ import {
   getCheckpointPool,
   initCheckpointRotation,
   advanceCheckpointRotation,
+  initOrderedCheckpointRotation,
+  advanceOrderedCheckpointRotation,
   CheckpointRotationState,
 } from '../data/questionBank';
 import {
@@ -216,13 +218,20 @@ export function useTowerGame(
         setGameState('CHECKPOINT_REACHED');
         isSubmittingRef.current = false;
 
-        // Initialize randomized question rotation for this checkpoint's 3-question pool
+        // Keep backend question and option order; randomize only the local bank.
+        const hasCustomQuestionOrder =
+          (customQuestionsRef.current?.length ?? 0) > 0;
         const activeBank =
           customQuestionsRef.current && customQuestionsRef.current.length > 0
             ? customQuestionsRef.current
             : questionBankRef.current;
-        const pool = shufflePool(getCheckpointPool(activeBank, checkpointNumber));
-        setCheckpointRotation(initCheckpointRotation(pool));
+        const rawPool = getCheckpointPool(activeBank, checkpointNumber);
+        const pool = hasCustomQuestionOrder ? rawPool : shufflePool(rawPool);
+        setCheckpointRotation(
+          hasCustomQuestionOrder
+            ? initOrderedCheckpointRotation(pool)
+            : initCheckpointRotation(pool)
+        );
 
         // Check if gate was already attempted/solved
         const currentGateAttempts =
@@ -514,14 +523,24 @@ export function useTowerGame(
   const nextQuestionAfterReview = useCallback(() => {
     if (activeCheckpointNumber === null || feedback.status !== 'review') return;
     sfx.click();
+    const hasCustomQuestionOrder =
+      (customQuestionsRef.current?.length ?? 0) > 0;
     const activeBank =
       customQuestionsRef.current && customQuestionsRef.current.length > 0
         ? customQuestionsRef.current
         : questionBankRef.current;
-    const pool = shufflePool(getCheckpointPool(activeBank, activeCheckpointNumber));
-    setCheckpointRotation((prev) =>
-      prev ? advanceCheckpointRotation(prev, pool) : initCheckpointRotation(pool)
-    );
+    const rawPool = getCheckpointPool(activeBank, activeCheckpointNumber);
+    const pool = hasCustomQuestionOrder ? rawPool : shufflePool(rawPool);
+    setCheckpointRotation((prev) => {
+      if (hasCustomQuestionOrder) {
+        return prev
+          ? advanceOrderedCheckpointRotation(prev, pool)
+          : initOrderedCheckpointRotation(pool);
+      }
+      return prev
+        ? advanceCheckpointRotation(prev, pool)
+        : initCheckpointRotation(pool);
+    });
     setFeedback((prev) => ({
       ...prev,
       status: 'incorrect',

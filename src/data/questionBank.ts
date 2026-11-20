@@ -227,6 +227,18 @@ export function initCheckpointRotation(
   };
 }
 
+/** Initializes a question rotation without changing the supplied order. */
+export function initOrderedCheckpointRotation(
+  pool: CheckpointQuestion[]
+): CheckpointRotationState {
+  const queue = [...pool];
+  return {
+    queue,
+    currentIndex: 0,
+    lastShownId: queue[0]?.id,
+  };
+}
+
 /**
  * Advances to the next question in the checkpoint rotation.
  * Once all questions in the cycle are attempted, reshuffles the pool
@@ -250,6 +262,23 @@ export function advanceCheckpointRotation(
     queue: newQueue,
     currentIndex: 0,
     lastShownId: newQueue[0]?.id,
+  };
+}
+
+/** Advances through a question pool in its supplied order, then starts over. */
+export function advanceOrderedCheckpointRotation(
+  state: CheckpointRotationState,
+  pool: CheckpointQuestion[]
+): CheckpointRotationState {
+  const queue = [...pool];
+  if (queue.length === 0) {
+    return { queue, currentIndex: 0 };
+  }
+  const currentIndex = (state.currentIndex + 1) % queue.length;
+  return {
+    queue,
+    currentIndex,
+    lastShownId: queue[currentIndex]?.id,
   };
 }
 
