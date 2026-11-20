@@ -170,4 +170,16 @@ console.log('✓ Ordered rotation preserves backend question order.');
 }
 console.log('✓ Optional clues: kept when given, empty otherwise.');
 
+// Question images: only absolute http(s) URLs are kept
+{
+  const base = { prompt: 'Q?', options: ['1', '2'], correctAnswer: 0 };
+  const withUrl = normalizeQuestion({ ...base, image: ' https://cdn.example.com/a.webp ' }, 1, 0);
+  assert(withUrl.image === 'https://cdn.example.com/a.webp', 'absolute image URL should be kept (trimmed)');
+  const relative = normalizeQuestion({ ...base, image: 'uploads/a.webp' }, 1, 0);
+  assert(relative.image === undefined, 'relative image path should be dropped');
+  const bogus = normalizeQuestion({ ...base, image: 'javascript:alert(1)' }, 1, 0);
+  assert(bogus.image === undefined, 'non-http image should be dropped');
+}
+console.log('✓ Question images: only absolute http(s) URLs kept.');
+
 console.log('ALL QUESTION BANK TESTS PASSED! 🎉');

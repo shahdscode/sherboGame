@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import confetti from 'canvas-confetti';
 import {
   Sparkles,
@@ -9,6 +10,8 @@ import {
   Lock,
   Unlock,
   ShieldAlert,
+  Maximize2,
+  X,
 } from 'lucide-react';
 import { CheckpointQuestion, towerConfig } from '../data/towerConfig';
 import { QuestionAttemptFeedback } from '../hooks/useTowerGame';
@@ -205,6 +208,12 @@ export const QuestionModal: React.FC<QuestionModalProps> = ({
     setHintVisible(false);
   }, [question.id]);
 
+  // Tap the question image to see it full screen (pinch-zoom is disabled in the game)
+  const [imageZoomed, setImageZoomed] = useState(false);
+  useEffect(() => {
+    setImageZoomed(false);
+  }, [question.id]);
+
   // Fire mini confetti burst when gate is unlocked
   useEffect(() => {
     if (!isCorrect) return;
@@ -222,6 +231,15 @@ export const QuestionModal: React.FC<QuestionModalProps> = ({
   // Keyboard shortcuts: 1-4 or A-D to pick a power block, Enter to confirm, Enter/Space to continue after solving
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // While the image is enlarged, keys must not pick or submit answers behind it
+      if (imageZoomed) {
+        if (e.key === 'Escape' || e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          setImageZoomed(false);
+        }
+        return;
+      }
+
       if (isCorrect) {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
@@ -257,7 +275,7 @@ export const QuestionModal: React.FC<QuestionModalProps> = ({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isCorrect, isReview, onContinue, onNextQuestion, onSelectOption, onSubmitAnswer]);
+  }, [imageZoomed, isCorrect, isReview, onContinue, onNextQuestion, onSelectOption, onSubmitAnswer]);
 
   // Pick one celebration sticker per question and preload it immediately so transition is instant and zero-flicker
   const celebrationSticker = useMemo(() => {
@@ -449,12 +467,23 @@ export const QuestionModal: React.FC<QuestionModalProps> = ({
               </p>
 
               {question.image && (
-                <img
-                  className="question-image"
-                  src={question.image}
-                  alt=""
-                  loading="eager"
-                />
+                <button
+                  type="button"
+                  className="question-image-btn"
+                  onClick={() => setImageZoomed(true)}
+                  aria-label="Enlarge image"
+                  data-testid="question-image-zoom"
+                >
+                  <img
+                    className="question-image"
+                    src={question.image}
+                    alt=""
+                    loading="eager"
+                  />
+                  <span className="question-image-zoom-badge" aria-hidden="true">
+                    <Maximize2 size={14} />
+                  </span>
+                </button>
               )}
 
               {/* Visual Stepping-Stone Sequence Track */}
@@ -701,6 +730,31 @@ export const QuestionModal: React.FC<QuestionModalProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Portal: the backdrop's blur/transform would trap a fixed overlay inside it */}
+      {imageZoomed &&
+        question.image &&
+        createPortal(
+          <div
+            className="image-lightbox"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Question image"
+            onClick={() => setImageZoomed(false)}
+            data-testid="question-image-lightbox"
+          >
+            <img className="image-lightbox-img" src={question.image} alt="" />
+            <button
+              type="button"
+              className="image-lightbox-close"
+              aria-label="Close image"
+              onClick={() => setImageZoomed(false)}
+            >
+              <X size={22} />
+            </button>
+          </div>,
+          document.body
+        )}
     </div>
   );
 };
