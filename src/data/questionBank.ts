@@ -79,7 +79,7 @@ export function normalizeQuestion(
         `The correct answer is ${options[correctAnswer]}.`;
 
   const image =
-    typeof raw.image === 'string' && /^https?:///i.test(raw.image.trim())
+    typeof raw.image === 'string' && /^https?:\/\//i.test(raw.image.trim())
       ? raw.image.trim()
       : undefined;
 
