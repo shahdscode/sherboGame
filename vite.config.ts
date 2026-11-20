@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { defineConfig } from 'vite';
+import { defineConfig, type Plugin, type Rollup } from 'vite';
 import react from '@vitejs/plugin-react';
 
 /**
@@ -22,10 +22,72 @@ function hashPublicAssets(): Record<string, string> {
   return hashes;
 }
 
+/** Files the start screen waits on, besides the JS/CSS chunks (bgm loads after Start). */
+const PRELOADED_PUBLIC_ASSETS = [
+  '/stickers/character-atlas.webp',
+  '/stickers/actions-atlas.webp',
+  '/stickers/main-sticker.webp',
+];
+
+/**
+ * Emits dist/preload.html: a page that only downloads the game's JS/CSS chunks and
+ * start-screen images into the HTTP cache, one at a time at low priority, without
+ * running the game. The student app opens it in a hidden frame ~45s before a tower
+ * game appears in a video. It has to be a frame on this origin: browsers partition
+ * the HTTP cache per frame site, so a prefetch from the student app's own page would
+ * not be reused by the game's frame. Skipped when the viewer has Data Saver or 2G.
+ */
+function preloadPage(hashes: Record<string, string>): Plugin {
+  return {
+    name: 'sherbo-preload-page',
+    apply: 'build',
+    generateBundle(_options, bundle) {
+      const entry = Object.values(bundle).find(
+        (file): file is Rollup.OutputChunk => file.type === 'chunk' && file.isEntry,
+      );
+      if (!entry) throw new Error('preload.html: no entry chunk in the bundle');
+      const css = [...(entry.viteMetadata?.importedCss ?? [])];
+      const urls = [
+        ...[entry.fileName, ...entry.imports, ...css].map((file) => `/${file}`),
+        ...PRELOADED_PUBLIC_ASSETS.map((path) => {
+          if (!hashes[path]) throw new Error(`preload.html: missing public asset ${path}`);
+          return `${path}?v=${hashes[path]}`;
+        }),
+      ];
+      const script = `(function () {
+  var c = navigator.connection;
+  if (c && (c.saveData || /2g$/.test(c.effectiveType || ''))) return;
+  var urls = ${JSON.stringify(urls)};
+  var i = 0;
+  function next() {
+    if (i >= urls.length) return;
+    fetch(urls[i++], { priority: 'low' })
+      .then(function (res) { return res.arrayBuffer(); })
+      .catch(function () {})
+      .then(next);
+  }
+  next();
+})();`;
+      this.emitFile({
+        type: 'asset',
+        fileName: 'preload.html',
+        source: `<!doctype html>
+<html><head><meta charset="utf-8"><meta name="robots" content="noindex"><title>Sherbo Tower preload</title></head>
+<body><script>
+${script}
+</script></body></html>
+`,
+      });
+    },
+  };
+}
+
+const publicAssetHashes = hashPublicAssets();
+
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), preloadPage(publicAssetHashes)],
   define: {
-    __PUBLIC_ASSET_HASHES__: JSON.stringify(hashPublicAssets()),
+    __PUBLIC_ASSET_HASHES__: JSON.stringify(publicAssetHashes),
   },
   build: {
     rollupOptions: {
