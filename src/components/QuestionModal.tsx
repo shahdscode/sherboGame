@@ -466,7 +466,7 @@ export const QuestionModal: React.FC<QuestionModalProps> = ({
                   {question.sequence.map((item, idx) => {
                     const isMystery = item.includes('?');
                     const displayValue =
-                      isMystery && isCorrect ? solvedAnswerText : item;
+                      isMystery && (isCorrect || isReview) ? solvedAnswerText : item;
 
                     return (
                       <React.Fragment key={idx}>
@@ -514,9 +514,8 @@ export const QuestionModal: React.FC<QuestionModalProps> = ({
               {question.options.map((optionText, index) => {
                 const isSelected = feedback.selectedOptionIndex === index;
                 const isWrongTried = feedback.wrongOptionIndices.includes(index);
-                // The right answer is only revealed once the gate is solved:
-                // after a mistake the student just sees which choice was wrong
-                const isSolvedRight = isCorrect && index === question.correctAnswer;
+                const isSolvedRight =
+                  (isCorrect || isReview) && index === question.correctAnswer;
                 const optionPenalty = feedback.wrongPenalties?.[index];
 
                 let stateClass = BLOCK_THEMES[index % BLOCK_THEMES.length];
@@ -582,7 +581,7 @@ export const QuestionModal: React.FC<QuestionModalProps> = ({
               )
             )}
 
-            {/* Wrong answer: no solution shown, a new question comes next */}
+            {/* Show the solution during the short review before the next question. */}
             {isReview && (
               <div
                 className="feedback-banner feedback-incorrect feedback-review"
@@ -601,6 +600,12 @@ export const QuestionModal: React.FC<QuestionModalProps> = ({
                     . Try a new question to open the gate.
                   </span>
                 </div>
+                <p
+                  className="feedback-explanation"
+                  data-testid="feedback-correct-answer"
+                >
+                  Correct answer: {renderFormattedMathText(solvedAnswerText)}
+                </p>
               </div>
             )}
 

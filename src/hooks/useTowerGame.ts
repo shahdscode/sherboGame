@@ -43,7 +43,7 @@ export interface CheckpointStateItem {
 export interface QuestionAttemptFeedback {
   /**
    * idle      – fresh question, nothing answered yet
-   * review    – wrong answer: the wrong choice is marked (not the solution) before moving on
+   * review    – wrong answer: mark the choice and reveal the solution before moving on
    * incorrect – a new question is shown after a mistake
    * correct   – gate solved
    */
@@ -491,9 +491,8 @@ export function useTowerGame(
         // XP this mistake cost at the gate: 50, then 150, then 300 (none after that)
         const penaltyApplied = calculateMistakeXpLoss(result.attemptNumber);
 
-        // Mark the wrong choice only (the right answer is NOT revealed, so the
-        // pool can repeat questions); a fresh question comes when they press
-        // "Try a New Question".
+        // Mark the wrong choice and reveal the solution during review. A fresh
+        // question comes when they press "Try a New Question".
         setFeedback({
           status: 'review',
           selectedOptionIndex: chosen,
