@@ -77,14 +77,47 @@ interface BackgroundCloud {
   width: number;
 }
 
+/**
+ * Vertical two-color gradient in a rounded rect, drawn as 1-unit rows. Graphics'
+ * fillGradientStyle only works in WebGL, and bake() renders through the Canvas renderer,
+ * which ignores it.
+ */
+function fillVerticalGradientRoundedRect(
+  g: Phaser.GameObjects.Graphics,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  radius: number,
+  top: number,
+  bottom: number
+): void {
+  const rows = Math.ceil(h);
+  const rowH = h / rows;
+  const channel = (color: number, shift: number) => (color >> shift) & 0xff;
+  for (let i = 0; i < rows; i++) {
+    const t = (i + 0.5) / rows;
+    const mix = (shift: number) =>
+      Math.round(channel(top, shift) + (channel(bottom, shift) - channel(top, shift)) * t);
+    // Inset rows inside the top/bottom corner arcs so the corners stay rounded.
+    const fromEdge = Math.min((i + 0.5) * rowH, h - (i + 0.5) * rowH);
+    const inset =
+      fromEdge < radius ? radius - Math.sqrt(radius * radius - (radius - fromEdge) ** 2) : 0;
+    g.fillStyle((mix(16) << 16) | (mix(8) << 8) | mix(0), 1);
+    // +0.3 overlap hides hairline seams between rows.
+    g.fillRect(x + inset, y + i * rowH, w - inset * 2, rowH + 0.3);
+  }
+}
+
 interface CheckpointDoor {
   checkpointNumber: number;
   container: Phaser.GameObjects.Container;
-  doorFrame: Phaser.GameObjects.Graphics;
-  doorInterior: Phaser.GameObjects.Graphics;
-  doorLeft: Phaser.GameObjects.Graphics;
-  doorRight: Phaser.GameObjects.Graphics;
-  lightRays: Phaser.GameObjects.Graphics;
+  /** Arch frame + interior, baked into one texture. */
+  doorBase: Phaser.GameObjects.Image;
+  /** Each leaf is a container pivoting on the door's center line (the open tween scales x). */
+  doorLeft: Phaser.GameObjects.Container;
+  doorRight: Phaser.GameObjects.Container;
+  lightRays: Phaser.GameObjects.Image;
   lockIcon: Phaser.GameObjects.Text;
   glow: Phaser.GameObjects.Arc;
   lockY: number;
@@ -1455,23 +1488,6 @@ export class PlatformManager {
     const container = this.scene.add.container(platformCenterX, 0);
     container.setDepth(6);
 
-    // 1. Outer Heavy Architectural Stone Arch Frame (Deep Navy with Sherbeni Orange border & keystone)
-    const doorFrame = this.scene.add.graphics();
-    // Shadow backing
-    doorFrame.fillStyle(0x0a1020, 0.98);
-    doorFrame.fillRoundedRect(-doorW / 2 - 8, doorTopY - 8, doorW + 16, doorH + 8, 10);
-    // Deep Navy stone arch
-    doorFrame.fillStyle(0x1b2a53, 1);
-    doorFrame.fillRoundedRect(-doorW / 2 - 4, doorTopY - 4, doorW + 8, doorH + 4, 8);
-    // Sherbeni Flame Orange inner casing
-    doorFrame.lineStyle(2.5, 0xee7b3c, 0.95);
-    doorFrame.strokeRoundedRect(-doorW / 2 - 1, doorTopY - 1, doorW + 2, doorH + 1, 6);
-    // Arch Keystone at top center
-    doorFrame.fillStyle(0xee7b3c, 1);
-    doorFrame.fillRect(-6, doorTopY - 7, 12, 7);
-    doorFrame.fillStyle(0xfef08a, 1);
-    doorFrame.fillRect(-2, doorTopY - 5, 4, 3);
-
     const doorThemes: Record<
       number,
       {
@@ -1522,58 +1538,90 @@ export class PlatformManager {
     };
 
     const theme = doorThemes[checkpointNumber] || doorThemes[1];
+    const themeKey = doorThemes[checkpointNumber] ? checkpointNumber : 1;
 
-    // 2. Interior Portal Room / Sky Cutout matching current level background
-    const doorInterior = this.scene.add.graphics();
-    doorInterior.fillGradientStyle(theme.top, theme.top, theme.bottom, theme.bottom, 1);
-    doorInterior.fillRoundedRect(-doorW / 2 + 2, doorTopY + 2, doorW - 4, doorH - 4, 4);
+    // Every door part is static art, so each is baked ONCE into a texture (see bake()).
+    // As live Graphics, the rounded rects were re-tessellated (earcut) every frame, which
+    // was the single biggest CPU cost on slow phones. Coordinates below are door-local:
+    // x = 0 is the door's center line, y = 0 is the top of the doorway (doorTopY).
 
-    if (theme.stars) {
-      doorInterior.fillStyle(0xffffff, 0.9);
-      doorInterior.fillCircle(-doorW * 0.22, doorTopY + doorH * 0.28, 1.4);
-      doorInterior.fillCircle(doorW * 0.24, doorTopY + doorH * 0.22, 1.2);
-      doorInterior.fillCircle(-doorW * 0.08, doorTopY + doorH * 0.55, 1.5);
-      doorInterior.fillCircle(doorW * 0.18, doorTopY + doorH * 0.65, 1.3);
-      doorInterior.fillStyle(theme.rays, 0.85);
-      doorInterior.fillCircle(doorW * 0.05, doorTopY + doorH * 0.35, 1.6);
-    }
+    // 1+2. Stone arch frame and the interior "sky" behind the doors (never animated).
+    const baseKey = `tex-door-base-${themeKey}`;
+    this.bake(baseKey, -doorW / 2 - 9, -9, doorW + 18, doorH + 10, (g) => {
+      // Shadow backing
+      g.fillStyle(0x0a1020, 0.98);
+      g.fillRoundedRect(-doorW / 2 - 8, -8, doorW + 16, doorH + 8, 10);
+      // Deep Navy stone arch
+      g.fillStyle(0x1b2a53, 1);
+      g.fillRoundedRect(-doorW / 2 - 4, -4, doorW + 8, doorH + 4, 8);
+      // Sherbeni Flame Orange inner casing
+      g.lineStyle(2.5, 0xee7b3c, 0.95);
+      g.strokeRoundedRect(-doorW / 2 - 1, -1, doorW + 2, doorH + 1, 6);
+      // Arch Keystone at top center
+      g.fillStyle(0xee7b3c, 1);
+      g.fillRect(-6, -7, 12, 7);
+      g.fillStyle(0xfef08a, 1);
+      g.fillRect(-2, -5, 4, 3);
 
-    // 3. Volumetric Light Rays pouring outward when opened
-    const lightRays = this.scene.add.graphics();
-    lightRays.fillStyle(theme.rays, 0.28);
-    lightRays.fillTriangle(-15, footY - 10, -55, footY + 12, 10, footY + 12);
-    lightRays.fillTriangle(15, footY - 10, -10, footY + 12, 55, footY + 12);
-    lightRays.fillTriangle(0, doorTopY + 20, -45, footY + 15, 45, footY + 15);
+      // Interior portal room / sky cutout matching the level background
+      fillVerticalGradientRoundedRect(g, -doorW / 2 + 2, 2, doorW - 4, doorH - 4, 4, theme.top, theme.bottom);
+      if (theme.stars) {
+        g.fillStyle(0xffffff, 0.9);
+        g.fillCircle(-doorW * 0.22, doorH * 0.28, 1.4);
+        g.fillCircle(doorW * 0.24, doorH * 0.22, 1.2);
+        g.fillCircle(-doorW * 0.08, doorH * 0.55, 1.5);
+        g.fillCircle(doorW * 0.18, doorH * 0.65, 1.3);
+        g.fillStyle(theme.rays, 0.85);
+        g.fillCircle(doorW * 0.05, doorH * 0.35, 1.6);
+      }
+    });
+    const doorBase = this.addBaked(baseKey, -doorW / 2 - 9, doorTopY - 9, 0);
+
+    // 3. Volumetric light rays pouring outward when opened (only alpha is animated)
+    const raysKey = `tex-door-rays-${themeKey}`;
+    this.bake(raysKey, -56, 19, 112, doorH - 3, (g) => {
+      g.fillStyle(theme.rays, 0.28);
+      g.fillTriangle(-15, doorH - 10, -55, doorH + 12, 10, doorH + 12);
+      g.fillTriangle(15, doorH - 10, -10, doorH + 12, 55, doorH + 12);
+      g.fillTriangle(0, 20, -45, doorH + 15, 45, doorH + 15);
+    });
+    const lightRays = this.addBaked(raysKey, -56, doorTopY + 19, 0);
     lightRays.setAlpha(0); // Starts invisible while locked
 
-    // 4. Two Heavy Wooden / Reinforced Iron Door Leaves
+    // 4. Two heavy reinforced door leaves. The open tween scales each leaf's x around
+    //    the door's center line, so each image sits in a container pivoting at x = 0.
     const halfW = doorW / 2 - 2;
-    // Left Door Leaf (x position will pivot / translate left on open)
-    const doorLeft = this.scene.add.graphics();
-    doorLeft.fillStyle(0x152244, 1);
-    doorLeft.fillRoundedRect(-halfW - 1, doorTopY + 2, halfW, doorH - 4, { tl: 4, bl: 0, tr: 0, br: 0 });
-    // Wood / Iron planking grooves & rivets
-    doorLeft.lineStyle(1.5, 0x0f1830, 0.85);
-    doorLeft.strokeRect(-halfW + 3, doorTopY + 6, halfW - 7, doorH - 12);
-    doorLeft.fillStyle(0xee7b3c, 1);
-    doorLeft.fillCircle(-halfW + 7, doorTopY + 16, 2.2);
-    doorLeft.fillCircle(-halfW + 7, footY - 18, 2.2);
-    // Brass handle ring
-    doorLeft.lineStyle(2, 0xfef08a, 1);
-    doorLeft.strokeCircle(-5, doorTopY + doorH * 0.52, 4);
-
-    // Right Door Leaf (x position will pivot / translate right on open)
-    const doorRight = this.scene.add.graphics();
-    doorRight.fillStyle(0x152244, 1);
-    doorRight.fillRoundedRect(1, doorTopY + 2, halfW, doorH - 4, { tr: 4, br: 0, tl: 0, bl: 0 });
-    doorRight.lineStyle(1.5, 0x0f1830, 0.85);
-    doorRight.strokeRect(4, doorTopY + 6, halfW - 7, doorH - 12);
-    doorRight.fillStyle(0xee7b3c, 1);
-    doorRight.fillCircle(halfW - 5, doorTopY + 16, 2.2);
-    doorRight.fillCircle(halfW - 5, footY - 18, 2.2);
-    // Brass handle ring
-    doorRight.lineStyle(2, 0xfef08a, 1);
-    doorRight.strokeCircle(5, doorTopY + doorH * 0.52, 4);
+    this.bake('tex-door-leaf-left', -halfW - 2, 1, halfW + 3, doorH - 2, (g) => {
+      g.fillStyle(0x152244, 1);
+      g.fillRoundedRect(-halfW - 1, 2, halfW, doorH - 4, { tl: 4, bl: 0, tr: 0, br: 0 });
+      // Wood / Iron planking grooves & rivets
+      g.lineStyle(1.5, 0x0f1830, 0.85);
+      g.strokeRect(-halfW + 3, 6, halfW - 7, doorH - 12);
+      g.fillStyle(0xee7b3c, 1);
+      g.fillCircle(-halfW + 7, 16, 2.2);
+      g.fillCircle(-halfW + 7, doorH - 18, 2.2);
+      // Brass handle ring
+      g.lineStyle(2, 0xfef08a, 1);
+      g.strokeCircle(-5, doorH * 0.52, 4);
+    });
+    this.bake('tex-door-leaf-right', -1, 1, halfW + 3, doorH - 2, (g) => {
+      g.fillStyle(0x152244, 1);
+      g.fillRoundedRect(1, 2, halfW, doorH - 4, { tr: 4, br: 0, tl: 0, bl: 0 });
+      g.lineStyle(1.5, 0x0f1830, 0.85);
+      g.strokeRect(4, 6, halfW - 7, doorH - 12);
+      g.fillStyle(0xee7b3c, 1);
+      g.fillCircle(halfW - 5, 16, 2.2);
+      g.fillCircle(halfW - 5, doorH - 18, 2.2);
+      // Brass handle ring
+      g.lineStyle(2, 0xfef08a, 1);
+      g.strokeCircle(5, doorH * 0.52, 4);
+    });
+    const doorLeft = this.scene.add.container(0, 0, [
+      this.addBaked('tex-door-leaf-left', -halfW - 2, doorTopY + 1, 0),
+    ]);
+    const doorRight = this.scene.add.container(0, 0, [
+      this.addBaked('tex-door-leaf-right', -1, doorTopY + 1, 0),
+    ]);
 
     // 5. Central Pulsing Lock Core
     const lockY = doorTopY + doorH * 0.52;
@@ -1586,13 +1634,12 @@ export class PlatformManager {
       .setResolution(TEXT_RES)
       .setOrigin(0.5, 0.5);
 
-    container.add([doorFrame, doorInterior, lightRays, doorLeft, doorRight, glow, lockIcon]);
+    container.add([doorBase, lightRays, doorLeft, doorRight, glow, lockIcon]);
 
     return {
       checkpointNumber,
       container,
-      doorFrame,
-      doorInterior,
+      doorBase,
       doorLeft,
       doorRight,
       lightRays,

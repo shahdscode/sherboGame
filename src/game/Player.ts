@@ -3,6 +3,13 @@ import { TowerConfigRuntime, getSectionIndexForStep } from '../data/towerConfig'
 import { TouchInputState, CharacterPose } from './EventBus';
 import { sfx } from './sfx';
 import { assetUrl } from '../utils/assetUrl';
+import { HD_ATLAS, pickCharacterAtlas } from './characterAtlas';
+
+/** SD sheets on phones, full size elsewhere (screen size doesn't change during a session). */
+const ATLAS =
+  typeof window !== 'undefined' && window.screen
+    ? pickCharacterAtlas(Math.min(window.screen.width, window.screen.height))
+    : HD_ATLAS;
 
 /** Single sprite sheet holding every character animation frame (see scripts/pack-sprites.py). */
 const CHAR_ATLAS_KEY = 'char-atlas';
@@ -95,8 +102,8 @@ export class Player {
     jump: false,
   };
   private currentPose: CharacterPose = 'climbing';
-  // Character frames are 240x360 (2x HD); 360 * 0.29 ≈ 104px world height
-  private baseScale: number = 0.29;
+  // ≈104px world height whichever sheet is loaded (360 * 0.29 for the 240x360 HD frames)
+  private baseScale: number = (0.29 * HD_ATLAS.frameHeight) / ATLAS.frameHeight;
   private jumpBufferTimer: number = 0;
   private coyoteTimer: number = 0;
   private landLockTimer: number = 0;
@@ -116,21 +123,16 @@ export class Player {
   private dustCursor: number = 0;
 
   public static preloadAssets(scene: Phaser.Scene): void {
-    // 1. Extracted 2x HD character sheet animation frames
+    const frames = {
+      frameWidth: ATLAS.frameWidth,
+      frameHeight: ATLAS.frameHeight,
+      spacing: ATLAS.spacing,
+    };
     // 1. All 64 character frames packed into ONE WebP sprite sheet (8 columns x 8 rows).
-    //    One request (~0.5 MB) instead of 61 separate PNGs (~6.5 MB).
-    scene.load.spritesheet(CHAR_ATLAS_KEY, assetUrl('/stickers/character-atlas.webp'), {
-      frameWidth: 240,
-      frameHeight: 360,
-      spacing: 4,
-    });
+    scene.load.spritesheet(CHAR_ATLAS_KEY, assetUrl(ATLAS.character), frames);
 
     // 2. Flip, victory, and celebration animations (12 columns x 8 rows WebP)
-    scene.load.spritesheet(CHAR_ACTIONS_KEY, assetUrl('/stickers/actions-atlas.webp'), {
-      frameWidth: 240,
-      frameHeight: 360,
-      spacing: 4,
-    });
+    scene.load.spritesheet(CHAR_ACTIONS_KEY, assetUrl(ATLAS.actions), frames);
 
     // (The big sticker image used to be loaded here three times as three GPU textures,
     //  but the in-game character never shows it — the question card does, in the DOM.)

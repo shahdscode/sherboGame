@@ -3,6 +3,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { defineConfig, type Plugin, type Rollup } from 'vite';
 import react from '@vitejs/plugin-react';
+import { HD_ATLAS, SD_ATLAS, SD_ATLAS_MAX_SCREEN_SIDE } from './src/game/characterAtlas';
 
 /**
  * Content hash of every file under public/stickers and public/sounds, keyed by its
@@ -22,12 +23,14 @@ function hashPublicAssets(): Record<string, string> {
   return hashes;
 }
 
-/** Files the start screen waits on, besides the JS/CSS chunks (bgm loads after Start). */
-const PRELOADED_PUBLIC_ASSETS = [
-  '/stickers/character-atlas.webp',
-  '/stickers/actions-atlas.webp',
-  '/stickers/main-sticker.webp',
-];
+/**
+ * Files the start screen waits on, besides the JS/CSS chunks (bgm loads after Start).
+ * The character sheets depend on the screen (src/game/characterAtlas.ts), so the page
+ * picks the same set as the game.
+ */
+const PRELOADED_START_ASSETS = ['/stickers/main-sticker.webp'];
+const PRELOADED_HD_SHEETS = [HD_ATLAS.character, HD_ATLAS.actions];
+const PRELOADED_SD_SHEETS = [SD_ATLAS.character, SD_ATLAS.actions];
 
 /**
  * Emits dist/preload.html: a page that only downloads the game's JS/CSS chunks and
@@ -47,17 +50,23 @@ function preloadPage(hashes: Record<string, string>): Plugin {
       );
       if (!entry) throw new Error('preload.html: no entry chunk in the bundle');
       const css = [...(entry.viteMetadata?.importedCss ?? [])];
-      const urls = [
-        ...[entry.fileName, ...entry.imports, ...css].map((file) => `/${file}`),
-        ...PRELOADED_PUBLIC_ASSETS.map((path) => {
+      const versioned = (paths: string[]) =>
+        paths.map((path) => {
           if (!hashes[path]) throw new Error(`preload.html: missing public asset ${path}`);
           return `${path}?v=${hashes[path]}`;
-        }),
+        });
+      const urls = [
+        ...[entry.fileName, ...entry.imports, ...css].map((file) => `/${file}`),
+        ...versioned(PRELOADED_START_ASSETS),
       ];
       const script = `(function () {
   var c = navigator.connection;
   if (c && (c.saveData || /2g$/.test(c.effectiveType || ''))) return;
-  var urls = ${JSON.stringify(urls)};
+  var side = Math.min(screen.width, screen.height);
+  var sd = side > 0 && side < ${SD_ATLAS_MAX_SCREEN_SIDE};
+  var urls = ${JSON.stringify(urls)}.concat(sd ? ${JSON.stringify(
+    versioned(PRELOADED_SD_SHEETS),
+  )} : ${JSON.stringify(versioned(PRELOADED_HD_SHEETS))});
   var i = 0;
   function next() {
     if (i >= urls.length) return;
