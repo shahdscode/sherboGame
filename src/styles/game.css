@@ -940,6 +940,11 @@ kbd {
   animation: penaltyDrop 0.35s ease;
 }
 
+.option-correct-badge {
+  background: #3f9f9b;
+  box-shadow: 0 2px 4px rgba(40, 109, 106, 0.35);
+}
+
 @keyframes penaltyDrop {
   0% {
     transform: translateY(-8px) scale(0.6);
@@ -1404,8 +1409,12 @@ kbd {
   border-color: rgba(216, 53, 108, 0.65) !important;
   background: #fdf0f4 !important;
   opacity: 0.65;
-  text-decoration: line-through;
   animation: blockShake 0.32s ease;
+}
+
+/* Strike the answer only: a line on the button would also cross out its badge */
+.option-incorrect .option-text {
+  text-decoration: line-through;
 }
 
 .option-incorrect .option-letter {

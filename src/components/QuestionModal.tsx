@@ -582,6 +582,11 @@ export const QuestionModal: React.FC<QuestionModalProps> = ({
                         Incorrect
                       </span>
                     )}
+                    {isSolvedRight && (
+                      <span className="option-penalty-badge option-correct-badge">
+                        Correct
+                      </span>
+                    )}
                   </button>
                 );
               })}
