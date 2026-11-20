@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { TowerConfigRuntime, getSectionIndexForStep } from '../data/towerConfig';
 import { TouchInputState, CharacterPose } from './EventBus';
 import { sfx } from './sfx';
+import { assetUrl } from '../utils/assetUrl';
 
 /** Single sprite sheet holding every character animation frame (see scripts/pack-sprites.py). */
 const CHAR_ATLAS_KEY = 'char-atlas';
@@ -118,14 +119,14 @@ export class Player {
     // 1. Extracted 2x HD character sheet animation frames
     // 1. All 64 character frames packed into ONE WebP sprite sheet (8 columns x 8 rows).
     //    One request (~0.5 MB) instead of 61 separate PNGs (~6.5 MB).
-    scene.load.spritesheet(CHAR_ATLAS_KEY, '/stickers/character-atlas.webp', {
+    scene.load.spritesheet(CHAR_ATLAS_KEY, assetUrl('/stickers/character-atlas.webp'), {
       frameWidth: 240,
       frameHeight: 360,
       spacing: 4,
     });
 
     // 2. Flip, victory, and celebration animations (12 columns x 8 rows WebP)
-    scene.load.spritesheet(CHAR_ACTIONS_KEY, '/stickers/actions-atlas.webp', {
+    scene.load.spritesheet(CHAR_ACTIONS_KEY, assetUrl('/stickers/actions-atlas.webp'), {
       frameWidth: 240,
       frameHeight: 360,
       spacing: 4,

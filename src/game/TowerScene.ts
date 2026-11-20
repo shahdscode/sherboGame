@@ -101,6 +101,7 @@ export class TowerScene extends Phaser.Scene {
 
     gameEvents.sceneReady = true;
     gameEvents.emit('evt:scene-ready', undefined);
+    sfx.prefetchMusic();
   }
 
   private registerEventListeners(): void {

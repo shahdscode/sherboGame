@@ -10,6 +10,7 @@ import {
   Award,
 } from 'lucide-react';
 import { PERFORMANCE_GRADES } from '../game/scoring';
+import { assetUrl } from '../utils/assetUrl';
 
 interface StartScreenProps {
   onStart: () => void;
@@ -45,7 +46,7 @@ export const StartScreen: React.FC<StartScreenProps> = ({
         <div className="start-hero-banner">
           <div className="start-hero-sticker-wrap">
             <img
-              src="/stickers/main-sticker.png"
+              src={assetUrl('/stickers/main-sticker.webp')}
               alt="Sherbo Climber"
               className="start-hero-sticker"
               width={512}

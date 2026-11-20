@@ -16,6 +16,7 @@ import {
 import { CheckpointQuestion, towerConfig } from '../data/towerConfig';
 import { QuestionAttemptFeedback } from '../hooks/useTowerGame';
 import { sfx } from '../game/sfx';
+import { assetUrl } from '../utils/assetUrl';
 
 interface QuestionModalProps {
   question: CheckpointQuestion;
@@ -35,13 +36,15 @@ const BLOCK_THEMES = [
   'arcade-tile-coral',
 ];
 
+const MAIN_STICKER = assetUrl('/stickers/main-sticker.webp');
+
 const CELEBRATION_STICKERS = [
-  '/stickers/celebrate-clap.webp',
-  '/stickers/celebrate-confetti.webp',
-  '/stickers/celebrate-happy.webp',
-  '/stickers/celebrate-cheer.webp',
-  '/stickers/celebrate-clap-cheer.webp',
-  '/stickers/celebrate-confetti-dance.webp',
+  assetUrl('/stickers/celebrate-clap.webp'),
+  assetUrl('/stickers/celebrate-confetti.webp'),
+  assetUrl('/stickers/celebrate-happy.webp'),
+  assetUrl('/stickers/celebrate-cheer.webp'),
+  assetUrl('/stickers/celebrate-clap-cheer.webp'),
+  assetUrl('/stickers/celebrate-confetti-dance.webp'),
 ];
 
 const UNICODE_SUBSCRIPT_MAP: Record<string, string> = {
@@ -286,7 +289,7 @@ export const QuestionModal: React.FC<QuestionModalProps> = ({
 
   useEffect(() => {
     const urls = [
-      '/stickers/main-sticker.png',
+      MAIN_STICKER,
       celebrationSticker,
     ];
     urls.forEach((url) => {
@@ -298,7 +301,7 @@ export const QuestionModal: React.FC<QuestionModalProps> = ({
   // Determine which sticker character to display
   const characterImgSrc = isCorrect
     ? celebrationSticker
-    : '/stickers/main-sticker.png';
+    : MAIN_STICKER;
 
   const characterImgAlt = isCorrect
     ? 'Good Job Character'

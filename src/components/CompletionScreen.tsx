@@ -13,6 +13,7 @@ import { getPerformanceGrade, ScoringState } from "../game/scoring";
 import { captureGameFrame, getSummitViewCrop } from "../game/TowerGame";
 import { gameEvents } from "../game/EventBus";
 import { sfx } from "../game/sfx";
+import { assetUrl } from "../utils/assetUrl";
 
 export interface CompletionScreenProps {
   scoringState?: ScoringState;
@@ -212,7 +213,7 @@ export function getPerformanceTier(
       heroHeadline: "Legendary Summit!",
       subtitle: "Flawless mastery! You conquered the tower with peak perfection!",
       quote: "Flawless mastery! Every rune gate cracked with supreme focus. You are a true tower legend!",
-      stickerSrc: "/stickers/victory.webp",
+      stickerSrc: assetUrl("/stickers/victory.webp"),
       stickerAlt: "Sherbo Legendary Victory",
       themeClass: "theme-legendary",
       badgeBg: "#fef3c7",
@@ -236,7 +237,7 @@ export function getPerformanceTier(
       heroHeadline: "Master Climber!",
       subtitle: "Outstanding performance! Blazing speed and sharp focus conquered the tower!",
       quote: "Brilliant climbing! Razor-sharp thinking and incredible precision. You're in the elite league!",
-      stickerSrc: "/stickers/celebrate-confetti-dance.webp",
+      stickerSrc: assetUrl("/stickers/celebrate-confetti-dance.webp"),
       stickerAlt: "Sherbo Gold Celebration",
       themeClass: "theme-gold",
       badgeBg: "#fff7ed",
@@ -260,7 +261,7 @@ export function getPerformanceTier(
       heroHeadline: "Elite Explorer!",
       subtitle: "Remarkable skill! You navigated the gates and dominated the climb!",
       quote: "Solid climbing! You pushed through tough challenges and reached the crown. Well done!",
-      stickerSrc: "/stickers/celebrate-cheer.webp",
+      stickerSrc: assetUrl("/stickers/celebrate-cheer.webp"),
       stickerAlt: "Sherbo Silver Cheer",
       themeClass: "theme-gold",
       badgeBg: "#fff7ed",
@@ -284,7 +285,7 @@ export function getPerformanceTier(
       heroHeadline: "Silver Milestone!",
       subtitle: "Resilient climb! You tackled the gates and conquered the tower!",
       quote: "Solid climbing! You pushed through tough challenges and reached the crown. Well done!",
-      stickerSrc: "/stickers/celebrate-cheer.webp",
+      stickerSrc: assetUrl("/stickers/celebrate-cheer.webp"),
       stickerAlt: "Sherbo Silver Cheer",
       themeClass: "theme-silver",
       badgeBg: "#f0f9ff",
@@ -308,7 +309,7 @@ export function getPerformanceTier(
       heroHeadline: "Rising Climber!",
       subtitle: "You conquered the tower steps! Ready to reach the top ranks?",
       quote: "Great effort! You kept going and reached the summit. Keep practicing to reach higher ranks!",
-      stickerSrc: "/stickers/celebrate-happy.webp",
+      stickerSrc: assetUrl("/stickers/celebrate-happy.webp"),
       stickerAlt: "Sherbo Comeback Cheer",
       themeClass: "theme-comeback",
       badgeBg: "#fff1f2",
@@ -332,7 +333,7 @@ export function getPerformanceTier(
     heroHeadline: "Summit Reached!",
     subtitle: "You made it to the top! Every master started with a climb!",
     quote: "Every master started with a climb! You never gave up and reached the top. One more run and you'll crush it!",
-    stickerSrc: "/stickers/celebrate-happy.webp",
+    stickerSrc: assetUrl("/stickers/celebrate-happy.webp"),
     stickerAlt: "Sherbo Comeback Cheer",
     themeClass: "theme-comeback",
     badgeBg: "#fff1f2",

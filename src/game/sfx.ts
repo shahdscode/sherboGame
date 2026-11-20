@@ -3,6 +3,8 @@
  * Tuned for mobile phone speakers (audible harmonics) with bulletproof iOS/Android gesture unlocking.
  */
 
+import { assetUrl } from '../utils/assetUrl';
+
 type Wave = OscillatorType;
 
 let ctx: AudioContext | null = null;
@@ -119,7 +121,6 @@ function tone(
  *    power and clarity is dedicated to the voice line.
  * ------------------------------------------------------------------------ */
 export const BGM_PATH = '/sounds/bgm.m4a';
-const AUDIO_CACHE_BUSTER = Date.now();
 export const BGM_DESKTOP_NORMAL_VOLUME = 0.14;
 export const BGM_DESKTOP_DUCKED_VOLUME = 0.055;
 export const BGM_MOBILE_NORMAL_VOLUME = 0.08;
@@ -160,19 +161,14 @@ function prefetchBgmBytes(): Promise<ArrayBuffer | null> {
   if (typeof window === 'undefined' || typeof window.fetch !== 'function') {
     return Promise.resolve(null);
   }
-  const url = `${BGM_PATH}?v=${AUDIO_CACHE_BUSTER}`;
   bgmRawBytesPromise = window
-    .fetch(url)
+    .fetch(assetUrl(BGM_PATH))
     .then((res) => (res.ok ? res.arrayBuffer() : Promise.reject(new Error('BGM fetch failed'))))
     .catch(() => {
       bgmRawBytesPromise = null;
       return null;
     });
   return bgmRawBytesPromise;
-}
-
-if (typeof window !== 'undefined') {
-  void prefetchBgmBytes();
 }
 
 function loadBgmBuffer(ac: AudioContext): Promise<AudioBuffer | null> {
@@ -311,9 +307,7 @@ const audioCache = new Map<string, HTMLAudioElement>();
 function getAudioElement(relativePath: string): HTMLAudioElement {
   let el = audioCache.get(relativePath);
   if (!el) {
-    const separator = relativePath.includes('?') ? '&' : '?';
-    const busterUrl = `${relativePath}${separator}v=${AUDIO_CACHE_BUSTER}`;
-    el = new Audio(busterUrl);
+    el = new Audio(assetUrl(relativePath));
     el.preload = 'auto';
     audioCache.set(relativePath, el);
   }
@@ -413,6 +407,14 @@ export const sfx = {
   },
   crumbleFall(): void {
     tone(300, 0.3, 'triangle', 0.2, 110);
+  },
+  /**
+   * Start downloading the background music without playing it. Called once the game
+   * scene is ready, so the 2.8MB track doesn't compete with the assets the start
+   * screen waits on.
+   */
+  prefetchMusic(): void {
+    if (typeof window !== 'undefined') void prefetchBgmBytes();
   },
   /** Start (or restart) the looping background music. Must follow a user gesture. */
   startMusic(_level: number = 1): void {
