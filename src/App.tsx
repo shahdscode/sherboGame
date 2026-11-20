@@ -48,16 +48,24 @@ export const App: React.FC = () => {
   if (remote.status !== 'ready') {
     return <GameLoadScreen failed={remote.status === 'failed'} />;
   }
-  return <TowerApp customQuestions={remote.questions} passScore={remote.passScore ?? null} />;
+  return (
+    <TowerApp
+      customQuestions={remote.questions}
+      passScore={remote.passScore ?? null}
+      isVideoGame={!!gameId}
+    />
+  );
 };
 
 interface TowerAppProps {
   customQuestions?: CheckpointQuestion[];
   /** Score needed to continue the video (games built in the admin). */
   passScore: number | null;
+  /** Opened from a video (`?game=`): no replay once the run is good enough. */
+  isVideoGame: boolean;
 }
 
-const TowerApp: React.FC<TowerAppProps> = ({ customQuestions, passScore }) => {
+const TowerApp: React.FC<TowerAppProps> = ({ customQuestions, passScore, isVideoGame }) => {
   const {
     gameState,
     currentStep,
@@ -156,6 +164,7 @@ const TowerApp: React.FC<TowerAppProps> = ({ customQuestions, passScore }) => {
           speedBonus={speedBonus}
           scoringState={scoringState}
           passScore={passScore}
+          isVideoGame={isVideoGame}
           onPlayAgain={restartGame}
         />
       )}

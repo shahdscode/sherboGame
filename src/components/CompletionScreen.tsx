@@ -24,6 +24,8 @@ export interface CompletionScreenProps {
   speedBonus: number;
   /** Score needed to continue the video; null when the game has none. */
   passScore?: number | null;
+  /** Opened from a video (`?game=`), where a good-enough run ends the game. */
+  isVideoGame?: boolean;
   onPlayAgain: () => void;
 }
 
@@ -903,6 +905,7 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
   speedBonus: rawSpeedBonus,
   scoringState,
   passScore = null,
+  isVideoGame = false,
   onPlayAgain,
 }) => {
   const [isExporting, setIsExporting] = useState(false);
@@ -910,6 +913,10 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
   // Single source of truth: prioritize finalized scoringState to avoid any timing or batching discrepancies
   const xpPoints = scoringState?.totalXp ?? rawXpPoints;
   const speedBonus = scoringState?.speedXp ?? rawSpeedBonus;
+
+  // In a video, a run that reaches the pass score (or any finished run when the
+  // admin set none) is final: the student goes back to the video, not the tower.
+  const canReplay = !isVideoGame || (passScore !== null && xpPoints < passScore);
 
   const tierConfig = useMemo(
     () => getPerformanceTier(xpPoints, firstTryCount, elapsedTime),
@@ -1199,6 +1206,15 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
                 : `🎯 You need ${passScore.toLocaleString()} XP to continue the video — climb again!`}
             </div>
           )}
+          {passScore === null && isVideoGame && (
+            <div
+              className="pass-target-banner pass-target-met"
+              data-testid="pass-target-banner"
+              role="status"
+            >
+              ✅ Tower complete — you can continue the video!
+            </div>
+          )}
         </div>
 
         <div className="stats-summary-grid">
@@ -1257,16 +1273,18 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
             <span>{isExporting ? "Saving..." : "Save Score"}</span>
           </button>
 
-          <button
-            type="button"
-            className="primary-cta-btn play-again-btn"
-            onClick={onPlayAgain}
-            disabled={isExporting}
-            data-testid="play-again-btn"
-          >
-            <RotateCcw size={18} />
-            <span>Climb Again</span>
-          </button>
+          {canReplay && (
+            <button
+              type="button"
+              className="primary-cta-btn play-again-btn"
+              onClick={onPlayAgain}
+              disabled={isExporting}
+              data-testid="play-again-btn"
+            >
+              <RotateCcw size={18} />
+              <span>Climb Again</span>
+            </button>
+          )}
         </div>
       </div>
     </div>
