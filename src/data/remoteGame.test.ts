@@ -4,7 +4,7 @@ function assert(condition: boolean, msg?: string) {
   }
 }
 
-import { toCheckpointQuestions } from './remoteGame.ts';
+import { getPlayToken, toCheckpointQuestions } from './remoteGame.ts';
 
 console.log('Running remote game unit tests...');
 
@@ -41,5 +41,15 @@ assert(
   orderedQuestions[0].options.join(',') === '11,12',
   'Remote answer choices must retain backend order'
 );
+
+// Play token from the link fragment the student app builds (`?game=<id>#token=<jwt>`)
+const withHash = (hash: string) => {
+  (globalThis as unknown as { window: unknown }).window = { location: { hash } };
+  return getPlayToken();
+};
+assert(withHash('#token=abc.def.ghi') === 'abc.def.ghi', 'Play token must be read from #token=');
+assert(withHash('') === null, 'No fragment means no play token');
+assert(withHash('#token=') === null, 'An empty token is no token');
+delete (globalThis as unknown as { window?: unknown }).window;
 
 console.log('ALL REMOTE GAME TESTS PASSED! 🎉');

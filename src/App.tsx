@@ -9,7 +9,7 @@ import { CompletionScreen } from './components/CompletionScreen';
 import { TouchControls } from './components/TouchControls';
 import { GameLoadScreen } from './components/GameLoadScreen';
 import { useTowerGame } from './hooks/useTowerGame';
-import { fetchRemoteGame, getRequestedGameId } from './data/remoteGame';
+import { fetchRemoteGame, getPlayToken, getRequestedGameId } from './data/remoteGame';
 import { applyTowerLevels, type CheckpointQuestion } from './data/towerConfig';
 
 type RemoteGameState =
@@ -31,7 +31,7 @@ export const App: React.FC = () => {
   useEffect(() => {
     if (!gameId) return;
     let cancelled = false;
-    fetchRemoteGame(gameId)
+    fetchRemoteGame(gameId, getPlayToken())
       .then((game) => {
         if (cancelled) return;
         applyTowerLevels(game.levelCount);

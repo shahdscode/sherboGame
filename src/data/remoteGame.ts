@@ -76,11 +76,23 @@ export function toCheckpointQuestions(
   );
 }
 
-export async function fetchRemoteGame(gameId: string): Promise<RemoteGame> {
+/**
+ * Play token the student app puts in the link (`#token=...`). It is in the fragment so
+ * it never reaches a server log, and it stays on reload so the Reload button still works.
+ */
+export function getPlayToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  const token = new URLSearchParams(window.location.hash.slice(1)).get('token')?.trim();
+  return token || null;
+}
+
+export async function fetchRemoteGame(gameId: string, playToken: string | null): Promise<RemoteGame> {
   if (!apiBaseUrl) throw new Error('VITE_API_URL is not set');
-  const res = await fetch(
-    `${apiBaseUrl}/video-games/${encodeURIComponent(gameId)}/play`
-  );
+  // Only send the header when there is a token: it makes the request CORS-preflighted,
+  // and an API that predates X-Game-Token would refuse the preflight.
+  const res = await fetch(`${apiBaseUrl}/video-games/${encodeURIComponent(gameId)}/play`, {
+    headers: playToken ? { 'X-Game-Token': playToken } : undefined,
+  });
   if (!res.ok) throw new Error(`Game request failed (${res.status})`);
   const body = (await res.json()) as PlayResponse;
   const levels = body.data?.levels ?? [];
