@@ -7,6 +7,9 @@ import {
   Zap,
   Download,
   Award,
+  Play,
+  CheckCircle2,
+  LockKeyhole,
 } from "lucide-react";
 import { towerConfig, formatStopwatchTime } from "../data/towerConfig";
 import { getPerformanceGrade, ScoringState } from "../game/scoring";
@@ -14,6 +17,8 @@ import { captureGameFrame, getSummitViewCrop } from "../game/TowerGame";
 import { gameEvents } from "../game/EventBus";
 import { sfx } from "../game/sfx";
 import { assetUrl } from "../utils/assetUrl";
+import type { StudentProfile } from "../App";
+import { requestPlatformVideoContinue } from "../utils/platformBridge";
 
 export interface CompletionScreenProps {
   scoringState?: ScoringState;
@@ -27,6 +32,7 @@ export interface CompletionScreenProps {
   passScore?: number | null;
   /** Opened from a video (`?game=`), where a good-enough run ends the game. */
   isVideoGame?: boolean;
+  studentProfile?: StudentProfile | null;
   onPlayAgain: () => void;
 }
 
@@ -385,7 +391,9 @@ function drawMobileScoreCard(
   speedBonus: number,
   firstTryCount: number,
   bestScore: number,
-  starCount: number
+  starCount: number,
+  studentName: string | null,
+  studentImg: HTMLImageElement | null
 ) {
   const baseW = 1080;
   const baseH = 1920;
@@ -665,15 +673,133 @@ function drawMobileScoreCard(
     );
   }
 
+  const cleanStudentName = studentName?.trim() || null;
+
   // Centered Title: "Sherbo's Tower" with large bold typography
   ctx.fillStyle = "#ffffff";
   ctx.font = "800 86px 'Fredoka', sans-serif";
   ctx.textAlign = "center";
   ctx.fillText("Sherbo's Tower", headerContentCenterX, heroFrameY + 154);
 
-  // 4. Hero Final Score Banner (Pushed down by larger hero frame)
+  const playerFrameX = cardX + 36;
+  const playerFrameY = heroFrameY + heroFrameH + 18;
+  const playerFrameW = cardW - 72;
+  const playerFrameH = 104;
+  if (cleanStudentName) {
+    ctx.fillStyle = "#006d7d";
+    ctx.beginPath();
+    ctx.roundRect(playerFrameX, playerFrameY + 7, playerFrameW, playerFrameH, 22);
+    ctx.fill();
+
+    const playerFrameGrad = ctx.createLinearGradient(
+      playerFrameX,
+      playerFrameY,
+      playerFrameX + playerFrameW,
+      playerFrameY + playerFrameH
+    );
+    playerFrameGrad.addColorStop(0, "#102947");
+    playerFrameGrad.addColorStop(0.55, "#1a3158");
+    playerFrameGrad.addColorStop(1, "#14213d");
+    ctx.fillStyle = playerFrameGrad;
+    ctx.beginPath();
+    ctx.roundRect(playerFrameX, playerFrameY, playerFrameW, playerFrameH, 22);
+    ctx.fill();
+    ctx.lineWidth = 3.5;
+    ctx.strokeStyle = "#00e5ff";
+    ctx.stroke();
+
+    ctx.fillStyle = "#ff7828";
+    ctx.beginPath();
+    ctx.roundRect(playerFrameX + 10, playerFrameY + 15, 7, playerFrameH - 30, 999);
+    ctx.fill();
+
+    const avatarSize = 68;
+    const avatarX = playerFrameX + 34;
+    const avatarY = playerFrameY + (playerFrameH - avatarSize) / 2;
+    const maxNameWidth = 490;
+    let displayName = cleanStudentName;
+    ctx.font = "800 34px 'Fredoka', sans-serif";
+    let visibleNameLength = cleanStudentName.length;
+    while (
+      visibleNameLength > 1 &&
+      ctx.measureText(`${cleanStudentName.slice(0, visibleNameLength)}...`).width > maxNameWidth
+    ) {
+      visibleNameLength -= 1;
+    }
+    if (visibleNameLength < cleanStudentName.length) {
+      displayName = `${cleanStudentName.slice(0, visibleNameLength).trimEnd()}...`;
+    }
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(
+      avatarX + avatarSize / 2,
+      avatarY + avatarSize / 2,
+      avatarSize / 2,
+      0,
+      Math.PI * 2
+    );
+    ctx.clip();
+    if (studentImg) {
+      ctx.drawImage(studentImg, avatarX, avatarY, avatarSize, avatarSize);
+    } else {
+      ctx.fillStyle = "#314776";
+      ctx.fillRect(avatarX, avatarY, avatarSize, avatarSize);
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "800 34px 'Fredoka', sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(
+        cleanStudentName.charAt(0).toUpperCase(),
+        avatarX + avatarSize / 2,
+        avatarY + 47
+      );
+    }
+    ctx.restore();
+
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = "#ffcc00";
+    ctx.beginPath();
+    ctx.arc(
+      avatarX + avatarSize / 2,
+      avatarY + avatarSize / 2,
+      avatarSize / 2,
+      0,
+      Math.PI * 2
+    );
+    ctx.stroke();
+
+    const playerTextX = avatarX + avatarSize + 20;
+    ctx.fillStyle = "#67e8f9";
+    ctx.font = "800 18px 'Fredoka', sans-serif";
+    ctx.textAlign = "left";
+    ctx.fillText("PLAYER PROFILE", playerTextX, playerFrameY + 35);
+
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "800 34px 'Fredoka', sans-serif";
+    ctx.fillText(displayName, playerTextX, playerFrameY + 76, maxNameWidth);
+
+    const playerTagW = 142;
+    const playerTagH = 44;
+    const playerTagX = playerFrameX + playerFrameW - playerTagW - 24;
+    const playerTagY = playerFrameY + (playerFrameH - playerTagH) / 2;
+    ctx.fillStyle = "#2c2412";
+    ctx.beginPath();
+    ctx.roundRect(playerTagX, playerTagY, playerTagW, playerTagH, 999);
+    ctx.fill();
+    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = "#ffcc00";
+    ctx.stroke();
+    ctx.fillStyle = "#ffcc00";
+    ctx.font = "800 18px 'Fredoka', sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("STAR PLAYER", playerTagX + playerTagW / 2, playerTagY + 29);
+  }
+
+  // 4. Hero Final Score Banner
   const bannerX = cardX + 36;
-  const bannerY = heroFrameY + heroFrameH + 22; // 930
+  const bannerY = cleanStudentName
+    ? playerFrameY + playerFrameH + 18
+    : heroFrameY + heroFrameH + 22;
   const bannerW = cardW - 72; // 912
   const bannerH = 196;
   const bannerR = 24;
@@ -797,11 +923,11 @@ function drawMobileScoreCard(
   ];
 
   const gridStartX = cardX + 36;
-  const gridStartY = bannerY + bannerH + 22; // 1148
+  const gridStartY = bannerY + bannerH + 18;
   const gapX = 24;
-  const gapY = 20;
+  const gapY = 18;
   const boxW = (cardW - 72 - gapX) / 2; // 444
-  const boxH = 210;
+  const boxH = cleanStudentName ? 190 : 210;
   const boxR = 24;
 
   stats.forEach((st, i) => {
@@ -826,7 +952,7 @@ function drawMobileScoreCard(
     ctx.strokeStyle = st.border;
     ctx.stroke();
 
-    const iconBoxSize = 98;
+    const iconBoxSize = cleanStudentName ? 88 : 98;
     const iconBoxX = bx + 22;
     const iconBoxY = by + (boxH - iconBoxSize) / 2;
     ctx.fillStyle = st.badgeBg;
@@ -849,11 +975,11 @@ function drawMobileScoreCard(
     ctx.fillStyle = "#ffffff";
     ctx.font = "800 46px 'Fredoka', sans-serif";
     ctx.textAlign = "left";
-    ctx.fillText(st.val, textX, by + 96);
+    ctx.fillText(st.val, textX, by + (cleanStudentName ? 88 : 96));
 
     ctx.fillStyle = st.labelColor;
     ctx.font = "700 23px 'Fredoka', sans-serif";
-    ctx.fillText(st.label, textX, by + 144);
+    ctx.fillText(st.label, textX, by + (cleanStudentName ? 132 : 144));
   });
 
   // 6. Branded Arcade Footer Frame (Enlarged & Vibrant, perfectly centered in the space below)
@@ -907,9 +1033,11 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
   scoringState,
   passScore = null,
   isVideoGame = false,
+  studentProfile = null,
   onPlayAgain,
 }) => {
   const [isExporting, setIsExporting] = useState(false);
+  const [hasSavedScore, setHasSavedScore] = useState(false);
 
   // Single source of truth: prioritize finalized scoringState to avoid any timing or batching discrepancies
   const xpPoints = scoringState?.totalXp ?? rawXpPoints;
@@ -918,6 +1046,7 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
   // In a video, a run that reaches the pass score (or any finished run when the
   // admin set none) is final: the student goes back to the video, not the tower.
   const canReplay = !isVideoGame || (passScore !== null && xpPoints < passScore);
+  const canContinueVideo = isVideoGame && !canReplay;
 
   const tierConfig = useMemo(
     () => getPerformanceTier(xpPoints, firstTryCount, elapsedTime),
@@ -1062,9 +1191,12 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
 
     try {
       // true = freeze character in crisp static victory pose
-      const [frame, stickerImg] = await Promise.all([
+      const [frame, stickerImg, studentImg] = await Promise.all([
         captureGameFrame(true),
         loadImage(tierConfig.stickerSrc),
+        studentProfile?.profilePicture
+          ? loadImage(studentProfile.profilePicture)
+          : Promise.resolve(null),
       ]);
 
       const outW = 1080;
@@ -1088,10 +1220,17 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
         speedBonus,
         firstTryCount,
         bestScore,
-        starCount
+        starCount,
+        studentProfile?.name ?? null,
+        studentImg
       );
 
-      const fileName = `sherbos-tower-score-${xpPoints}xp.png`;
+      const studentFilePart = studentProfile?.name
+        ?.trim()
+        .replace(/[^\p{L}\p{N}]+/gu, "-")
+        .replace(/^-+|-+$/g, "")
+        .slice(0, 40);
+      const fileName = `sherbos-tower-${studentFilePart ? `${studentFilePart}-` : ""}${xpPoints}xp.png`;
       const blob: Blob | null = await new Promise((resolve) =>
         exportCanvas.toBlob((b) => resolve(b), "image/png")
       );
@@ -1108,6 +1247,7 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
               title: "Sherbo's Tower",
               text: `I scored ${xpPoints.toLocaleString()} XP in ${formatStopwatchTime(elapsedTime)} on Sherbo's Tower!`,
             });
+            setHasSavedScore(true);
             return;
           }
         } catch (shareErr) {
@@ -1123,6 +1263,7 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
       downloadLink.click();
       document.body.removeChild(downloadLink);
       window.setTimeout(() => URL.revokeObjectURL(objectUrl), 4000);
+      setHasSavedScore(true);
     } catch (err) {
       console.error("Failed to export score card image:", err);
     } finally {
@@ -1176,6 +1317,29 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
             <h1 className="completion-title">Sherbo's Tower</h1>
           </div>
         </div>
+
+        {studentProfile && (
+          <div className="completion-player-card" data-testid="student-profile">
+            <div className="completion-player-avatar-frame">
+              {studentProfile.profilePicture ? (
+                <img
+                  src={studentProfile.profilePicture}
+                  alt=""
+                  className="completion-student-avatar"
+                />
+              ) : (
+                <div className="completion-student-avatar completion-student-avatar-fallback">
+                  {studentProfile.name.charAt(0).toUpperCase()}
+                </div>
+              )}
+            </div>
+            <div className="completion-player-copy">
+              <span className="completion-player-label">Player Profile</span>
+              <strong className="completion-player-name">{studentProfile.name}</strong>
+            </div>
+            <span className="completion-player-tag">Star Player</span>
+          </div>
+        )}
 
         <div className="xp-reward-banner" data-testid="stat-total-xp">
           <div className="xp-banner-top">
@@ -1262,6 +1426,33 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
           </div>
         </div>
 
+        {canContinueVideo && (
+          <div
+            id="continue-video-save-status"
+            className={`continue-video-save-status ${
+              hasSavedScore
+                ? "continue-video-save-status-ready"
+                : "continue-video-save-status-required"
+            }`}
+            role="status"
+            aria-live="polite"
+            data-testid="continue-video-save-status"
+          >
+            {hasSavedScore ? (
+              <CheckCircle2 size={15} aria-hidden="true" />
+            ) : (
+              <LockKeyhole size={15} aria-hidden="true" />
+            )}
+            <span>
+              {isExporting
+                ? "Saving your score..."
+                : hasSavedScore
+                  ? "Score saved! Continue Video is now unlocked."
+                  : "Save your score first to unlock Continue Video."}
+            </span>
+          </div>
+        )}
+
         <div className="completion-actions-row">
           <button
             type="button"
@@ -1273,6 +1464,22 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({
             <Download size={18} />
             <span>{isExporting ? "Saving..." : "Save Score"}</span>
           </button>
+
+          {canContinueVideo && (
+            <button
+              type="button"
+              className="primary-cta-btn continue-video-btn"
+              onClick={() => {
+                if (hasSavedScore) requestPlatformVideoContinue();
+              }}
+              disabled={isExporting || !hasSavedScore}
+              aria-describedby="continue-video-save-status"
+              data-testid="continue-video-btn"
+            >
+              <Play size={18} />
+              <span>Continue Video</span>
+            </button>
+          )}
 
           {canReplay && (
             <button

@@ -12,6 +12,11 @@ import { useTowerGame } from './hooks/useTowerGame';
 import { fetchRemoteGame, getPlayToken, getRequestedGameId } from './data/remoteGame';
 import { applyTowerLevels, type CheckpointQuestion } from './data/towerConfig';
 
+export interface StudentProfile {
+  name: string;
+  profilePicture: string | null;
+}
+
 type RemoteGameState =
   | { status: 'loading' }
   | { status: 'failed' }
@@ -24,9 +29,29 @@ type RemoteGameState =
  */
 export const App: React.FC = () => {
   const [gameId] = useState(getRequestedGameId);
+  const [studentProfile, setStudentProfile] = useState<StudentProfile | null>(null);
   const [remote, setRemote] = useState<RemoteGameState>(() =>
     gameId ? { status: 'loading' } : { status: 'ready' }
   );
+
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (!event.data || typeof event.data !== 'object') return;
+      const message = event.data as Record<string, unknown>;
+      if (message.type !== 'SHERBO_STUDENT_PROFILE') return;
+      if (typeof message.name !== 'string' || !message.name.trim()) return;
+      const profilePicture =
+        typeof message.profilePicture === 'string' && /^https?:\/\//i.test(message.profilePicture)
+          ? message.profilePicture
+          : null;
+      setStudentProfile({ name: message.name.trim(), profilePicture });
+    };
+    window.addEventListener('message', handleMessage);
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage({ type: 'SHERBO_GAME_READY' }, '*');
+    }
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
 
   useEffect(() => {
     if (!gameId) return;
@@ -53,6 +78,7 @@ export const App: React.FC = () => {
       customQuestions={remote.questions}
       passScore={remote.passScore ?? null}
       isVideoGame={!!gameId}
+      studentProfile={studentProfile}
     />
   );
 };
@@ -63,9 +89,10 @@ interface TowerAppProps {
   passScore: number | null;
   /** Opened from a video (`?game=`): no replay once the run is good enough. */
   isVideoGame: boolean;
+  studentProfile: StudentProfile | null;
 }
 
-const TowerApp: React.FC<TowerAppProps> = ({ customQuestions, passScore, isVideoGame }) => {
+const TowerApp: React.FC<TowerAppProps> = ({ customQuestions, passScore, isVideoGame, studentProfile }) => {
   const {
     gameState,
     currentStep,
@@ -165,6 +192,7 @@ const TowerApp: React.FC<TowerAppProps> = ({ customQuestions, passScore, isVideo
           scoringState={scoringState}
           passScore={passScore}
           isVideoGame={isVideoGame}
+          studentProfile={studentProfile}
           onPlayAgain={restartGame}
         />
       )}

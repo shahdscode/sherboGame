@@ -6,6 +6,7 @@ function assert(condition: boolean, msg?: string) {
 
 import {
   notifyPlatformGameCompleted,
+  requestPlatformVideoContinue,
   setupPlatformMessageListener,
 } from './platformBridge.ts';
 
@@ -79,6 +80,16 @@ assert(result.grade === 'S+', 'Grade must be S+');
 assert(messagesSent.length >= 2, 'Should send postMessage to parent and opener');
 const parentMsg = messagesSent.find((m) => m.target === 'parent')?.data;
 assert(parentMsg && parentMsg.completed === true, 'Parent message must have completed: true');
+
+const continueResult = requestPlatformVideoContinue();
+assert(continueResult.type === 'SHERBO_CONTINUE_VIDEO', 'Continue payload must use the bridge type');
+assert(
+  messagesSent.some(
+    (message) =>
+      message.target === 'parent' && message.data?.type === 'SHERBO_CONTINUE_VIDEO',
+  ),
+  'Continue request must be sent to the parent player',
+);
 
 // Check CustomEvent
 assert(customEventsDispatched.length >= 1, 'CustomEvent should be dispatched');

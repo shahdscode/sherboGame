@@ -22,6 +22,24 @@ export interface CompletionDataInput {
   firstTryCount: number;
 }
 
+export interface ContinueVideoPayload {
+  type: 'SHERBO_CONTINUE_VIDEO';
+}
+
+/** Asks the trusted parent player to close the passed game and resume the video. */
+export function requestPlatformVideoContinue(): ContinueVideoPayload {
+  const payload: ContinueVideoPayload = { type: 'SHERBO_CONTINUE_VIDEO' };
+  if (typeof window === 'undefined') return payload;
+  try {
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage(payload, '*');
+    }
+  } catch {
+    // Ignore cross-origin access errors; postMessage normally handles this path.
+  }
+  return payload;
+}
+
 /**
  * Notifies the hosting educational platform that the student has completed the game
  * and reached the finish line.
