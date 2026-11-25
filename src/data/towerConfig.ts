@@ -8,13 +8,17 @@ export type GameState =
 
 export type CheckpointStatus = 'locked' | 'active' | 'passed';
 
+export type GameContentPart = { kind: 'text' | 'math'; value: string };
+
 export interface CheckpointQuestion {
   id: string;
   checkpointNumber: number;
   title: string;
   prompt: string;
+  promptContent?: GameContentPart[];
   sequence?: string[];
   options: string[];
+  optionContents?: (GameContentPart[] | undefined)[];
   correctAnswer: number;
   hint: string;
   explanation: string;

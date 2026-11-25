@@ -74,6 +74,7 @@ function shuffleQuestionOptions(q: CheckpointQuestion): CheckpointQuestion {
   return {
     ...q,
     options: order.map((i) => q.options[i]),
+    optionContents: q.optionContents && order.map((i) => q.optionContents?.[i]),
     correctAnswer: order.indexOf(q.correctAnswer),
   };
 }

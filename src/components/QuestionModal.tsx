@@ -17,6 +17,7 @@ import { CheckpointQuestion, towerConfig } from '../data/towerConfig';
 import { QuestionAttemptFeedback } from '../hooks/useTowerGame';
 import { sfx } from '../game/sfx';
 import { assetUrl } from '../utils/assetUrl';
+import { GameMathContent } from './GameMathContent';
 
 interface QuestionModalProps {
   question: CheckpointQuestion;
@@ -466,7 +467,7 @@ export const QuestionModal: React.FC<QuestionModalProps> = ({
               )}
 
               <p className="question-prompt" data-testid="question-prompt">
-                {renderFormattedMathText(question.prompt)}
+                <GameMathContent content={question.promptContent} fallback={renderFormattedMathText(question.prompt)} />
               </p>
 
               {question.image && (
@@ -578,7 +579,7 @@ export const QuestionModal: React.FC<QuestionModalProps> = ({
                           : OPTION_LETTERS[index]}
                     </span>
                     <span className="option-text">
-                      {renderFormattedMathText(optionText)}
+                      <GameMathContent content={question.optionContents?.[index]} fallback={renderFormattedMathText(optionText)} />
                     </span>
                     {isWrongTried && (
                       <span className="option-penalty-badge">
@@ -641,7 +642,7 @@ export const QuestionModal: React.FC<QuestionModalProps> = ({
                   className="feedback-explanation"
                   data-testid="feedback-correct-answer"
                 >
-                  Correct answer: {renderFormattedMathText(solvedAnswerText)}
+                  Correct answer: <GameMathContent content={question.optionContents?.[question.correctAnswer]} fallback={renderFormattedMathText(solvedAnswerText)} />
                 </p>
               </div>
             )}
@@ -688,7 +689,9 @@ export const QuestionModal: React.FC<QuestionModalProps> = ({
                     className="feedback-explanation"
                     data-testid="feedback-explanation"
                   >
-                    {renderFormattedMathText(feedback.explanation)}
+                    {question.optionContents?.[question.correctAnswer] ? (
+                      <>The correct answer is <GameMathContent content={question.optionContents[question.correctAnswer]} fallback={renderFormattedMathText(solvedAnswerText)} />.</>
+                    ) : renderFormattedMathText(feedback.explanation)}
                   </p>
                 )}
               </div>

@@ -42,6 +42,19 @@ assert(
   'Remote answer choices must retain backend order'
 );
 
+const fraction = { kind: 'math' as const, value: '<math xmlns="http://www.w3.org/1998/Math/MathML"><mfrac><mn>1</mn><mn>2</mn></mfrac></math>' };
+const [rich] = toCheckpointQuestions([{ questions: [{
+  ...question('rich'),
+  content: [{ kind: 'text', value: 'أوجد قيمة ' }, fraction],
+  choices: [
+    { label: 'A', text: '1/4' },
+    { label: 'B', text: '1/2', content: [fraction] },
+  ],
+}] }]);
+assert(rich.promptContent?.[1].value === fraction.value, 'Inline formulas reach the prompt');
+assert(rich.optionContents?.[0] === undefined, 'Plain choices retain the fallback');
+assert(rich.optionContents?.[rich.correctAnswer]?.[0].value === fraction.value, 'Formula matches correct option');
+
 // Play token from the link fragment the student app builds (`?game=<id>#token=<jwt>`)
 const withHash = (hash: string) => {
   (globalThis as unknown as { window: unknown }).window = { location: { hash } };

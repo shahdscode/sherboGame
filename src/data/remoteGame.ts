@@ -1,4 +1,4 @@
-import type { CheckpointQuestion } from './towerConfig.ts';
+import type { CheckpointQuestion, GameContentPart } from './towerConfig.ts';
 import { normalizeQuestion } from './questionBank.ts';
 
 /**
@@ -9,11 +9,13 @@ import { normalizeQuestion } from './questionBank.ts';
 interface PlayChoice {
   label: string;
   text: string;
+  content?: GameContentPart[];
 }
 
 interface PlayQuestion {
   id: string;
   text: string;
+  content?: GameContentPart[];
   image: string | null;
   choices: PlayChoice[];
   correctAnswer: number;
@@ -58,8 +60,8 @@ export function toCheckpointQuestions(
   levels: { questions: PlayQuestion[] }[]
 ): CheckpointQuestion[] {
   return levels.flatMap((level, levelIndex) =>
-    level.questions.map((question, questionIndex) =>
-      normalizeQuestion(
+    level.questions.map((question, questionIndex) => ({
+      ...normalizeQuestion(
         {
           id: question.id,
           checkpointNumber: levelIndex + 1,
@@ -71,8 +73,10 @@ export function toCheckpointQuestions(
         },
         levelIndex + 1,
         questionIndex
-      )
-    )
+      ),
+      promptContent: question.content,
+      optionContents: question.choices.map((choice) => choice.content),
+    }))
   );
 }
 

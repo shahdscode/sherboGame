@@ -1137,6 +1137,13 @@ kbd {
   letter-spacing: 0.1px;
 }
 
+.game-inline-equation {
+  display: inline-block;
+  max-inline-size: 100%;
+  overflow-x: auto;
+  vertical-align: middle;
+}
+
 /* Visual Stepping-Stone Sequence Track */
 .sequence-stones-track {
   display: flex;
